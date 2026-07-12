@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_membership_level_view_list" model="ir.ui.view">
+        <field name="name">pos.membership.level.list</field>
+        <field name="model">pos.membership.level</field>
+        <field name="arch" type="xml">
+            <list string="Membership Levels" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="discount"/>
+                <field name="color" widget="color_picker"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_membership_level_view_form" model="ir.ui.view">
+        <field name="name">pos.membership.level.form</field>
+        <field name="model">pos.membership.level</field>
+        <field name="arch" type="xml">
+            <form string="Membership Level">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Gold"/></h1>
+                    </div>
+                    <group>
+                        <field name="active" invisible="1"/>
+                        <field name="sequence"/>
+                        <field name="discount"/>
+                        <field name="color" widget="color_picker"/>
+                        <field name="description"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_membership_level_action" model="ir.actions.act_window">
+        <field name="name">Membership Levels</field>
+        <field name="res_model">pos.membership.level</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a membership tier</p>
+            <p>Assign tiers to customers, then drive tier discounts through Loyalty/Promotion programs.</p>
+        </field>
+    </record>
+
+</odoo>

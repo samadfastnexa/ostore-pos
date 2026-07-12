@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_config_settings_view_form_pos_retail" model="ir.ui.view">
+        <field name="name">res.config.settings.pos.retail.return.policy</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='pos_receipt_footer']/parent::div" position="after">
+                <div>
+                    <label string="Return Policy" for="pos_return_policy" class="col-lg-2 o_light_label"/>
+                    <field name="pos_return_policy"
+                           placeholder="e.g. Returns within 7 days with the original receipt"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="product_brand_view_list" model="ir.ui.view">
+        <field name="name">product.brand.list</field>
+        <field name="model">product.brand</field>
+        <field name="arch" type="xml">
+            <list string="Brands">
+                <field name="name"/>
+                <field name="product_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="product_brand_view_form" model="ir.ui.view">
+        <field name="name">product.brand.form</field>
+        <field name="model">product.brand</field>
+        <field name="arch" type="xml">
+            <form string="Brand">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_products" type="object"
+                                class="oe_stat_button" icon="fa-cubes">
+                            <field name="product_count" widget="statinfo" string="Products"/>
+                        </button>
+                    </div>
+                    <field name="image" widget="image" class="oe_avatar"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Nestle"/></h1>
+                    </div>
+                    <group>
+                        <field name="active" invisible="1"/>
+                        <field name="description"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="product_brand_view_search" model="ir.ui.view">
+        <field name="name">product.brand.search</field>
+        <field name="model">product.brand</field>
+        <field name="arch" type="xml">
+            <search string="Brands">
+                <field name="name"/>
+                <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="product_brand_action" model="ir.actions.act_window">
+        <field name="name">Product Brands</field>
+        <field name="res_model">product.brand</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first brand</p>
+            <p>Group products by brand (e.g. Nestle, Coca-Cola) for reporting and filtering.</p>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <!-- The core template exposes an explicit `before-footer` anchor. -->
+        <xpath expr="//div[hasclass('before-footer')]" position="before">
+
+            <!-- Return policy block -->
+            <div t-if="order.config.return_policy"
+                 class="pos-retail-return-policy pt-3 mt-2 text-center"
+                 style="white-space:pre-line; border-top:1px dashed currentColor; padding-top:6px;">
+                <div class="fw-bolder">Return Policy</div>
+                <div style="font-size:80%;"><t t-esc="order.config.return_policy"/></div>
+            </div>
+
+            <!-- Receipt reference QR code -->
+            <div t-if="posRetailReceiptQR" class="pos-retail-receipt-qr text-center pt-3">
+                <img t-att-src="posRetailReceiptQR"
+                     style="width:104px; height:104px;" alt="Receipt reference QR"/>
+                <div style="font-size:70%;">Scan for receipt reference</div>
+            </div>
+
+        </xpath>
+    </t>
+
+</templates>

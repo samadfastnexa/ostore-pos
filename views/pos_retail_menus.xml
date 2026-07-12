@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Products > Product Brands -->
+    <menuitem id="menu_product_brand"
+        name="Product Brands"
+        parent="point_of_sale.pos_config_menu_catalog"
+        action="product_brand_action"
+        sequence="7"/>
+
+    <!-- Configuration > Membership Levels -->
+    <menuitem id="menu_pos_membership_level"
+        name="Membership Levels"
+        parent="point_of_sale.menu_point_config_product"
+        action="pos_membership_level_action"
+        sequence="60"
+        groups="point_of_sale.group_pos_manager"/>
+
+    <!--
+        Hide the Discuss app tile from the apps switcher for this store.
+        The `mail` module itself stays installed and fully functional (it's a
+        hard dependency of point_of_sale/purchase/account for chatter, activities
+        and outgoing email) — this only removes the standalone chat app icon.
+        To bring it back: set active back to True (or delete this record).
+    -->
+    <record id="mail.menu_root_discuss" model="ir.ui.menu">
+        <field name="active">False</field>
+    </record>
+
+</odoo>

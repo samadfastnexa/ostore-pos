@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Reproducible sample store. Loaded automatically on any demo/eval install
+        of pos_retail, so every fresh database (and every sales demo) gets a
+        realistic, ready-to-use retail shop. Production installs (no demo data)
+        stay clean.
+    -->
+
+    <!-- ============================ Brands ============================ -->
+    <record id="brand_nestle" model="product.brand"><field name="name">Nestle</field></record>
+    <record id="brand_coca_cola" model="product.brand"><field name="name">Coca-Cola</field></record>
+    <record id="brand_pepsi" model="product.brand"><field name="name">Pepsi</field></record>
+    <record id="brand_olpers" model="product.brand"><field name="name">Olpers</field></record>
+    <record id="brand_national" model="product.brand"><field name="name">National</field></record>
+
+    <!-- ===================== Product categories ====================== -->
+    <record id="categ_beverages" model="product.category">
+        <field name="name">Beverages</field>
+        <field name="parent_id" ref="product.product_category_goods"/>
+    </record>
+    <record id="categ_snacks" model="product.category">
+        <field name="name">Snacks</field>
+        <field name="parent_id" ref="product.product_category_goods"/>
+    </record>
+    <record id="categ_dairy" model="product.category">
+        <field name="name">Dairy</field>
+        <field name="parent_id" ref="product.product_category_goods"/>
+    </record>
+    <record id="categ_grocery" model="product.category">
+        <field name="name">Grocery</field>
+        <field name="parent_id" ref="product.product_category_goods"/>
+    </record>
+    <record id="categ_apparel" model="product.category">
+        <field name="name">Apparel</field>
+        <field name="parent_id" ref="product.product_category_goods"/>
+    </record>
+
+    <!-- ======================= POS categories ======================== -->
+    <record id="poscat_beverages" model="pos.category"><field name="name">Beverages</field></record>
+    <record id="poscat_snacks" model="pos.category"><field name="name">Snacks</field></record>
+    <record id="poscat_dairy" model="pos.category"><field name="name">Dairy</field></record>
+    <record id="poscat_grocery" model="pos.category"><field name="name">Grocery</field></record>
+    <record id="poscat_apparel" model="pos.category"><field name="name">Apparel</field></record>
+
+    <!-- ========================= Product tags ======================== -->
+    <record id="tag_imported" model="product.tag"><field name="name">Imported</field><field name="color">1</field></record>
+    <record id="tag_halal" model="product.tag"><field name="name">Halal</field><field name="color">10</field></record>
+    <record id="tag_local" model="product.tag"><field name="name">Local</field><field name="color">4</field></record>
+
+    <!-- ===================== Products (variants) ===================== -->
+    <record id="prod_coke" model="product.product">
+        <field name="name">Coca-Cola 500ml</field>
+        <field name="default_code">COKE500</field>
+        <field name="barcode">5449000000996</field>
+        <field name="type">consu</field>
+        <field name="is_storable">True</field>
+        <field name="available_in_pos">True</field>
+        <field name="list_price">80</field>
+        <field name="standard_price">55</field>
+        <field name="categ_id" ref="categ_beverages"/>
+        <field name="pos_categ_ids" eval="[(6, 0, [ref('poscat_beverages')])]"/>
+        <field name="brand_id" ref="brand_coca_cola"/>
+        <field name="product_tag_ids" eval="[(6, 0, [ref('tag_imported'), ref('tag_halal')])]"/>
+    </record>
+
+    <record id="prod_pepsi" model="product.product">
+        <field name="name">Pepsi 500ml</field>
+        <field name="default_code">PEPSI500</field>
+        <field name="barcode">5410000110015</field>
+        <field name="type">consu</field>
+        <field name="is_storable">True</field>
+        <field name="available_in_pos">True</field>
+        <field name="list_price">75</field>
+        <field name="standard_price">52</field>
+        <field name="categ_id" ref="categ_beverages"/>
+        <field name="pos_categ_ids" eval="[(6, 0, [ref('poscat_beverages')])]"/>
+        <field name="brand_id" ref="brand_pepsi"/>
+        <field name="product_tag_ids" eval="[(6, 0, [ref('tag_imported'), ref('tag_halal')])]"/>
+    </record>
+
+    <record id="prod_water" model="product.product">
+        <field name="name">Nestle Water 1.5L</field>
+        <field name="default_code">WATER15</field>
+        <field name="barcode">6001240000015</field>
+        <field name="type">consu</field>
+        <field name="is_storable">True</field>
+        <field name="available_in_pos">True</field>
+        <field name="list_price">60</field>
+        <field name="standard_price">40</field>
+        <field name="categ_id" ref="categ_beverages"/>
+        <field name="pos_categ_ids" eval="[(6, 0, [ref('poscat_beverages')])]"/>
+        <field name="brand_id" ref="brand_nestle"/>
+        <field name="product_tag_ids" eval="[(6, 0, [ref('tag_halal')])]"/>
+    </record>
+
+    <record id="prod_lays" model="product.product">
+        <field name="name">Lays Classic Chips</field>
+        <field name="default_code">LAYS-CL</field>
+        <field name="barcode">8964000110022</field>
+        <field name="type">consu</field>
+        <field name="is_storable">True</field>
+        <field name="available_in_pos">True</field>
+        <field name="list_price">50</field>
+        <field name="standard_price">33</field>
+        <field name="categ_id" ref="categ_snacks"/>
+        <field name="pos_categ_ids" eval="[(6, 0, [ref('poscat_snacks')])]"/>
+        <field name="product_tag_ids" eval="[(6, 0, [ref('tag_local'), ref('tag_halal')])]"/>
+    </record>
+
+    <record id="prod_masala" model="product.product">
+        <field name="name">National Chicken Masala</field>
+        <field name="default_code">NAT-MASALA</field>
+        <field name="barcode">8964000220033</field>
+        <field name="type">consu</field>
+        <field name="is_storable">True</field>
+        <field name="available_in_pos">True</field>
+        <field name="list_price">120</field>
+        <field name="standard_price">90</field>
+        <field name="categ_id" ref="categ_grocery"/>
+        <field name="pos_categ_ids" eval="[(6, 0, [ref('poscat_grocery')])]"/>
+        <field name="brand_id" ref="brand_national"/>
+        <field name="product_tag_ids" eval="[(6, 0, [ref('tag_local'), ref('tag_halal')])]"/>
+    </record>
+
+    <record id="prod_sugar" model="product.product">
+        <field name="name">Refined Sugar (per Kg)</field>
+        <field name="default_code">SUGAR-KG</field>
+        <field name="barcode">8964000330044</field>
+        <field name="type">consu</field>
+        <field name="is_storable">True</field>
+        <field name="available_in_pos">True</field>
+        <field name="list_price">140</field>
+        <field name="standard_price">120</field>
+        <field name="categ_id" ref="categ_grocery"/>
+        <field name="pos_categ_ids" eval="[(6, 0, [ref('poscat_grocery')])]"/>
+        <field name="uom_id" ref="uom.product_uom_kgm"/>
+        <field name="product_tag_ids" eval="[(6, 0, [ref('tag_local')])]"/>
+    </record>
+
+    <!-- Expiry-tracked product -->
+    <record id="prod_milk" model="product.product">
+        <field name="name">Olpers Milk 1L</field>
+        <field name="default_code">OLPERS1L</field>
+        <field name="barcode">8964000440055</field>
+        <field name="type">consu</field>
+        <field name="is_storable">True</field>
+        <field name="available_in_pos">True</field>
+        <field name="list_price">210</field>
+        <field name="standard_price">180</field>
+        <field name="categ_id" ref="categ_dairy"/>
+        <field name="pos_categ_ids" eval="[(6, 0, [ref('poscat_dairy')])]"/>
+        <field name="brand_id" ref="brand_olpers"/>
+        <field name="product_tag_ids" eval="[(6, 0, [ref('tag_local'), ref('tag_halal')])]"/>
+        <field name="tracking">lot</field>
+        <field name="use_expiration_date">True</field>
+        <field name="expiration_time">15</field>
+    </record>
+
+    <!-- ================== Variant product (Apparel) ================== -->
+    <record id="attr_size" model="product.attribute">
+        <field name="name">Size</field>
+        <field name="create_variant">always</field>
+    </record>
+    <record id="attr_size_s" model="product.attribute.value">
+        <field name="name">S</field><field name="attribute_id" ref="attr_size"/>
+    </record>
+    <record id="attr_size_m" model="product.attribute.value">
+        <field name="name">M</field><field name="attribute_id" ref="attr_size"/>
+    </record>
+    <record id="attr_size_l" model="product.attribute.value">
+        <field name="name">L</field><field name="attribute_id" ref="attr_size"/>
+    </record>
+    <record id="prod_tshirt" model="product.template">
+        <field name="name">Cotton T-Shirt</field>
+        <field name="default_code">TSHIRT</field>
+        <field name="type">consu</field>
+        <field name="is_storable">True</field>
+        <field name="available_in_pos">True</field>
+        <field name="list_price">500</field>
+        <field name="standard_price">300</field>
+        <field name="categ_id" ref="categ_apparel"/>
+        <field name="pos_categ_ids" eval="[(6, 0, [ref('poscat_apparel')])]"/>
+        <field name="attribute_line_ids" eval="[(0, 0, {
+            'attribute_id': ref('attr_size'),
+            'value_ids': [(6, 0, [ref('attr_size_s'), ref('attr_size_m'), ref('attr_size_l')])],
+        })]"/>
+    </record>
+
+    <!-- ========================== Combo ============================== -->
+    <record id="combo_drink" model="product.combo">
+        <field name="name">Choose a Drink</field>
+        <field name="combo_item_ids" eval="[
+            (0, 0, {'product_id': ref('prod_coke')}),
+            (0, 0, {'product_id': ref('prod_pepsi')}),
+            (0, 0, {'product_id': ref('prod_water')}),
+        ]"/>
+    </record>
+    <record id="combo_snack" model="product.combo">
+        <field name="name">Choose a Snack</field>
+        <field name="combo_item_ids" eval="[
+            (0, 0, {'product_id': ref('prod_lays')}),
+            (0, 0, {'product_id': ref('prod_masala')}),
+        ]"/>
+    </record>
+    <record id="prod_combo" model="product.template">
+        <field name="name">Snack + Drink Combo</field>
+        <field name="default_code">COMBO1</field>
+        <field name="type">combo</field>
+        <field name="available_in_pos">True</field>
+        <field name="list_price">120</field>
+        <field name="combo_ids" eval="[(6, 0, [ref('combo_drink'), ref('combo_snack')])]"/>
+    </record>
+
+    <!-- ==================== Initial stock (quants) =================== -->
+    <record id="stock_coke" model="stock.quant">
+        <field name="product_id" ref="prod_coke"/>
+        <field name="quantity">120</field>
+        <field name="location_id" model="stock.location" eval="obj().env.ref('stock.warehouse0').lot_stock_id.id"/>
+    </record>
+    <record id="stock_pepsi" model="stock.quant">
+        <field name="product_id" ref="prod_pepsi"/>
+        <field name="quantity">90</field>
+        <field name="location_id" model="stock.location" eval="obj().env.ref('stock.warehouse0').lot_stock_id.id"/>
+    </record>
+    <record id="stock_water" model="stock.quant">
+        <field name="product_id" ref="prod_water"/>
+        <field name="quantity">80</field>
+        <field name="location_id" model="stock.location" eval="obj().env.ref('stock.warehouse0').lot_stock_id.id"/>
+    </record>
+    <record id="stock_lays" model="stock.quant">
+        <field name="product_id" ref="prod_lays"/>
+        <field name="quantity">200</field>
+        <field name="location_id" model="stock.location" eval="obj().env.ref('stock.warehouse0').lot_stock_id.id"/>
+    </record>
+    <record id="stock_masala" model="stock.quant">
+        <field name="product_id" ref="prod_masala"/>
+        <field name="quantity">60</field>
+        <field name="location_id" model="stock.location" eval="obj().env.ref('stock.warehouse0').lot_stock_id.id"/>
+    </record>
+    <record id="stock_sugar" model="stock.quant">
+        <field name="product_id" ref="prod_sugar"/>
+        <field name="quantity">50</field>
+        <field name="location_id" model="stock.location" eval="obj().env.ref('stock.warehouse0').lot_stock_id.id"/>
+    </record>
+
+    <!-- ====================== Reorder rules ========================== -->
+    <record id="op_coke" model="stock.warehouse.orderpoint">
+        <field name="product_id" ref="prod_coke"/>
+        <field name="warehouse_id" ref="stock.warehouse0"/>
+        <field name="location_id" model="stock.location" eval="obj().env.ref('stock.warehouse0').lot_stock_id.id"/>
+        <field name="product_min_qty">20</field>
+        <field name="product_max_qty">150</field>
+    </record>
+    <record id="op_lays" model="stock.warehouse.orderpoint">
+        <field name="product_id" ref="prod_lays"/>
+        <field name="warehouse_id" ref="stock.warehouse0"/>
+        <field name="location_id" model="stock.location" eval="obj().env.ref('stock.warehouse0').lot_stock_id.id"/>
+        <field name="product_min_qty">30</field>
+        <field name="product_max_qty">250</field>
+    </record>
+
+    <!-- ========================= Customers =========================== -->
+    <record id="cust_ahmed" model="res.partner">
+        <field name="name">Ahmed Khan</field>
+        <field name="company_type">person</field>
+        <field name="customer_rank">1</field>
+        <field name="phone">+92 300 1234567</field>
+        <field name="email">ahmed@example.pk</field>
+        <field name="membership_level_id" ref="membership_level_gold"/>
+        <field name="birthday">1990-03-15</field>
+    </record>
+    <record id="cust_sara" model="res.partner">
+        <field name="name">Sara Malik</field>
+        <field name="company_type">person</field>
+        <field name="customer_rank">1</field>
+        <field name="phone">+92 321 7654321</field>
+        <field name="email">sara@example.pk</field>
+        <field name="membership_level_id" ref="membership_level_silver"/>
+        <field name="birthday">1995-11-02</field>
+    </record>
+    <record id="cust_bilal" model="res.partner">
+        <field name="name">Bilal Raza</field>
+        <field name="company_type">person</field>
+        <field name="customer_rank">1</field>
+        <field name="phone">+92 333 2223344</field>
+        <field name="email">bilal@example.pk</field>
+        <field name="membership_level_id" ref="membership_level_vip"/>
+        <field name="birthday">1988-07-20</field>
+    </record>
+    <record id="cust_fatima" model="res.partner">
+        <field name="name">Fatima Noor</field>
+        <field name="company_type">person</field>
+        <field name="customer_rank">1</field>
+        <field name="phone">+92 345 5556677</field>
+        <field name="email">fatima@example.pk</field>
+        <field name="membership_level_id" ref="membership_level_bronze"/>
+        <field name="birthday">2000-01-30</field>
+    </record>
+
+    <!-- ========================== Vendors ============================ -->
+    <record id="vendor_kbd" model="res.partner">
+        <field name="name">Karachi Beverages Distributors</field>
+        <field name="company_type">company</field>
+        <field name="supplier_rank">1</field>
+        <field name="phone">+92 21 111 222 333</field>
+        <field name="email">sales@kbd.example.pk</field>
+        <field name="street">SITE Area</field>
+        <field name="city">Karachi</field>
+        <field name="property_supplier_payment_term_id" ref="account.account_payment_term_30days"/>
+    </record>
+    <record id="vendor_ngs" model="res.partner">
+        <field name="name">National Grocery Suppliers</field>
+        <field name="company_type">company</field>
+        <field name="supplier_rank">1</field>
+        <field name="phone">+92 42 999 888 777</field>
+        <field name="email">info@ngs.example.pk</field>
+        <field name="street">Gulberg</field>
+        <field name="city">Lahore</field>
+        <field name="property_supplier_payment_term_id" ref="account.account_payment_term_immediate"/>
+    </record>
+
+    <!-- ======================= Supplier info ========================= -->
+    <record id="si_kbd_coke" model="product.supplierinfo">
+        <field name="partner_id" ref="vendor_kbd"/><field name="product_id" ref="prod_coke"/>
+        <field name="price">55</field><field name="min_qty">1</field>
+    </record>
+    <record id="si_kbd_pepsi" model="product.supplierinfo">
+        <field name="partner_id" ref="vendor_kbd"/><field name="product_id" ref="prod_pepsi"/>
+        <field name="price">52</field><field name="min_qty">1</field>
+    </record>
+    <record id="si_kbd_water" model="product.supplierinfo">
+        <field name="partner_id" ref="vendor_kbd"/><field name="product_id" ref="prod_water"/>
+        <field name="price">40</field><field name="min_qty">1</field>
+    </record>
+    <record id="si_ngs_masala" model="product.supplierinfo">
+        <field name="partner_id" ref="vendor_ngs"/><field name="product_id" ref="prod_masala"/>
+        <field name="price">90</field><field name="min_qty">1</field>
+    </record>
+    <record id="si_ngs_sugar" model="product.supplierinfo">
+        <field name="partner_id" ref="vendor_ngs"/><field name="product_id" ref="prod_sugar"/>
+        <field name="price">120</field><field name="min_qty">1</field>
+    </record>
+
+    <!-- ===================== Promotions / Offers ===================== -->
+
+    <!-- Product discount: Coke 20% off -->
+    <record id="promo_coke_20" model="loyalty.program">
+        <field name="name">Coca-Cola 20% Off</field>
+        <field name="program_type">promotion</field>
+        <field name="trigger">auto</field>
+        <field name="applies_on">current</field>
+    </record>
+    <record id="promo_coke_20_rule" model="loyalty.rule">
+        <field name="program_id" ref="promo_coke_20"/>
+        <field name="product_ids" eval="[(6, 0, [ref('prod_coke')])]"/>
+        <field name="minimum_qty">1</field>
+    </record>
+    <record id="promo_coke_20_reward" model="loyalty.reward">
+        <field name="program_id" ref="promo_coke_20"/>
+        <field name="reward_type">discount</field>
+        <field name="discount">20</field>
+        <field name="discount_mode">percent</field>
+        <field name="discount_applicability">specific</field>
+        <field name="discount_product_ids" eval="[(6, 0, [ref('prod_coke')])]"/>
+    </record>
+
+    <!-- Order discount: 10% off over 5000 -->
+    <record id="promo_order_10" model="loyalty.program">
+        <field name="name">10% Off Orders Over 5000</field>
+        <field name="program_type">promotion</field>
+        <field name="trigger">auto</field>
+        <field name="applies_on">current</field>
+    </record>
+    <record id="promo_order_10_rule" model="loyalty.rule">
+        <field name="program_id" ref="promo_order_10"/>
+        <field name="minimum_amount">5000</field>
+    </record>
+    <record id="promo_order_10_reward" model="loyalty.reward">
+        <field name="program_id" ref="promo_order_10"/>
+        <field name="reward_type">discount</field>
+        <field name="discount">10</field>
+        <field name="discount_mode">percent</field>
+        <field name="discount_applicability">order</field>
+    </record>
+
+    <!-- Category offer: Beverages 20% off -->
+    <record id="promo_bev_20" model="loyalty.program">
+        <field name="name">All Beverages 20% Off</field>
+        <field name="program_type">promotion</field>
+        <field name="trigger">auto</field>
+        <field name="applies_on">current</field>
+    </record>
+    <record id="promo_bev_20_rule" model="loyalty.rule">
+        <field name="program_id" ref="promo_bev_20"/>
+        <field name="product_category_id" ref="categ_beverages"/>
+        <field name="minimum_qty">1</field>
+    </record>
+    <record id="promo_bev_20_reward" model="loyalty.reward">
+        <field name="program_id" ref="promo_bev_20"/>
+        <field name="reward_type">discount</field>
+        <field name="discount">20</field>
+        <field name="discount_mode">percent</field>
+        <field name="discount_applicability">specific</field>
+        <field name="discount_product_ids" eval="[(6, 0, [ref('prod_coke'), ref('prod_pepsi'), ref('prod_water')])]"/>
+    </record>
+
+    <!-- Buy 1 Coke Get 1 Free -->
+    <record id="promo_bogo_coke" model="loyalty.program">
+        <field name="name">Buy 1 Coke Get 1 Free</field>
+        <field name="program_type">buy_x_get_y</field>
+        <field name="trigger">auto</field>
+        <field name="applies_on">current</field>
+    </record>
+    <record id="promo_bogo_coke_rule" model="loyalty.rule">
+        <field name="program_id" ref="promo_bogo_coke"/>
+        <field name="product_ids" eval="[(6, 0, [ref('prod_coke')])]"/>
+        <field name="minimum_qty">1</field>
+        <field name="reward_point_mode">unit</field>
+        <field name="reward_point_amount">1</field>
+    </record>
+    <record id="promo_bogo_coke_reward" model="loyalty.reward">
+        <field name="program_id" ref="promo_bogo_coke"/>
+        <field name="reward_type">product</field>
+        <field name="reward_product_id" ref="prod_coke"/>
+        <field name="reward_product_qty">1</field>
+        <field name="required_points">1</field>
+    </record>
+
+    <!-- Buy 2 snacks, 50% off 3rd (cheapest) -->
+    <record id="promo_snack_50" model="loyalty.program">
+        <field name="name">Buy 2 Snacks, 50% Off 3rd</field>
+        <field name="program_type">promotion</field>
+        <field name="trigger">auto</field>
+        <field name="applies_on">current</field>
+    </record>
+    <record id="promo_snack_50_rule" model="loyalty.rule">
+        <field name="program_id" ref="promo_snack_50"/>
+        <field name="product_category_id" ref="categ_snacks"/>
+        <field name="minimum_qty">3</field>
+    </record>
+    <record id="promo_snack_50_reward" model="loyalty.reward">
+        <field name="program_id" ref="promo_snack_50"/>
+        <field name="reward_type">discount</field>
+        <field name="discount">50</field>
+        <field name="discount_mode">percent</field>
+        <field name="discount_applicability">cheapest</field>
+    </record>
+
+    <!-- Spend 5000, free Water -->
+    <record id="promo_spend_gift" model="loyalty.program">
+        <field name="name">Spend 5000, Free Water</field>
+        <field name="program_type">promotion</field>
+        <field name="trigger">auto</field>
+        <field name="applies_on">current</field>
+    </record>
+    <record id="promo_spend_gift_rule" model="loyalty.rule">
+        <field name="program_id" ref="promo_spend_gift"/>
+        <field name="minimum_amount">5000</field>
+    </record>
+    <record id="promo_spend_gift_reward" model="loyalty.reward">
+        <field name="program_id" ref="promo_spend_gift"/>
+        <field name="reward_type">product</field>
+        <field name="reward_product_id" ref="prod_water"/>
+        <field name="reward_product_qty">1</field>
+        <field name="required_points">1</field>
+    </record>
+
+    <!-- Coupon / discount code WELCOME10 -->
+    <record id="promo_welcome10" model="loyalty.program">
+        <field name="name">Coupon WELCOME10</field>
+        <field name="program_type">promo_code</field>
+        <field name="trigger">with_code</field>
+        <field name="applies_on">current</field>
+    </record>
+    <record id="promo_welcome10_rule" model="loyalty.rule">
+        <field name="program_id" ref="promo_welcome10"/>
+        <field name="mode">with_code</field>
+        <field name="code">WELCOME10</field>
+    </record>
+    <record id="promo_welcome10_reward" model="loyalty.reward">
+        <field name="program_id" ref="promo_welcome10"/>
+        <field name="reward_type">discount</field>
+        <field name="discount">10</field>
+        <field name="discount_mode">percent</field>
+        <field name="discount_applicability">order</field>
+    </record>
+
+    <!-- Loyalty points: earn 1 pt / 100 spent, redeem 100 pts = 100 off -->
+    <record id="promo_points" model="loyalty.program">
+        <field name="name">Shop Rewards Points</field>
+        <field name="program_type">loyalty</field>
+        <field name="trigger">auto</field>
+        <field name="applies_on">both</field>
+    </record>
+    <record id="promo_points_rule" model="loyalty.rule">
+        <field name="program_id" ref="promo_points"/>
+        <field name="reward_point_mode">money</field>
+        <field name="reward_point_amount">0.01</field>
+        <field name="minimum_amount">0</field>
+    </record>
+    <record id="promo_points_reward" model="loyalty.reward">
+        <field name="program_id" ref="promo_points"/>
+        <field name="reward_type">discount</field>
+        <field name="discount">1</field>
+        <field name="discount_mode">per_point</field>
+        <field name="discount_applicability">order</field>
+        <field name="required_points">100</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.Dashboard">
+        <div class="o_pos_retail_dashboard o_action p-3">
+
+            <!-- Header -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+                <h1 class="h4 mb-0">
+                    <i class="fa fa-shopping-cart me-2"/>POS Dashboard
+                    <small class="text-muted ms-2" t-if="state.data" t-esc="state.data.company_name"/>
+                </h1>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm"
+                                t-att-class="state.period === 'today' ? 'btn-primary' : 'btn-outline-secondary'"
+                                t-on-click="() => this.setPeriod('today')">Today</button>
+                        <button class="btn btn-sm"
+                                t-att-class="state.period === 'week' ? 'btn-primary' : 'btn-outline-secondary'"
+                                t-on-click="() => this.setPeriod('week')">Week</button>
+                        <button class="btn btn-sm"
+                                t-att-class="state.period === 'month' ? 'btn-primary' : 'btn-outline-secondary'"
+                                t-on-click="() => this.setPeriod('month')">Month</button>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" t-on-click="() => this.refresh()">
+                        <i class="fa fa-refresh"/>
+                    </button>
+                </div>
+            </div>
+
+            <t t-if="state.loading">
+                <div class="text-center text-muted py-5">
+                    <i class="fa fa-spinner fa-spin fa-2x"/>
+                    <div class="mt-2">Loading dashboard…</div>
+                </div>
+            </t>
+
+            <t t-else="">
+                <!-- KPI tiles -->
+                <div class="row g-3 mb-1">
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_sales" t-on-click="() => this.openOrders([['state','in',['paid','done']]], 'Sales Orders')">
+                            <div class="o_kpi_label"><t t-esc="periodLabel"/> Sales</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.sales)"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_txn">
+                            <div class="o_kpi_label">Transactions</div>
+                            <div class="o_kpi_value" t-esc="state.data.kpis.transactions"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_basket">
+                            <div class="o_kpi_label">Avg. Basket</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.avg_basket)"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_profit">
+                            <div class="o_kpi_label">Gross Profit</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.gross_profit)"/>
+                            <div class="o_kpi_sub" t-esc="state.data.kpis.margin_pct.toFixed(1) + '% margin'"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_cash">
+                            <div class="o_kpi_label">Cash in Drawer</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.cash_in_drawer)"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_shifts">
+                            <div class="o_kpi_label">Open Shifts</div>
+                            <div class="o_kpi_value" t-esc="state.data.kpis.open_sessions"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_cust">
+                            <div class="o_kpi_label">Customers</div>
+                            <div class="o_kpi_value" t-esc="state.data.kpis.customers"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_refund" t-on-click="() => this.openOrders([['amount_total','&lt;',0],['state','in',['paid','done']]], 'Refunds')">
+                            <div class="o_kpi_label">Refunds</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.refunds.amount)"/>
+                            <div class="o_kpi_sub" t-esc="state.data.refunds.count + ' order(s)'"/>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-0">
+                    <!-- Sales trend -->
+                    <div class="col-12 col-lg-8">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">Sales — last 30 days</div>
+                            <svg class="o_sales_chart" viewBox="0 0 720 200" preserveAspectRatio="none">
+                                <line x1="0" t-att-y1="chart.baseline" x2="720" t-att-y2="chart.baseline" class="o_chart_axis"/>
+                                <t t-foreach="chart.bars" t-as="bar" t-key="bar.date">
+                                    <rect class="o_chart_bar" t-att-x="bar.x" t-att-y="bar.y"
+                                          t-att-width="bar.w" t-att-height="bar.h" rx="1.5">
+                                        <title t-esc="bar.label + ': ' + money(bar.total)"/>
+                                    </rect>
+                                </t>
+                            </svg>
+                            <div class="o_chart_caption text-muted">Peak day: <span t-esc="money(chart.max)"/></div>
+                        </div>
+                    </div>
+
+                    <!-- Payment breakdown -->
+                    <div class="col-12 col-lg-4">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">Payment methods</div>
+                            <t t-if="!payments.length">
+                                <div class="o_empty">No payments in this period.</div>
+                            </t>
+                            <t t-else="">
+                                <div t-foreach="payments" t-as="p" t-key="p.name" class="o_pay_row">
+                                    <div class="d-flex justify-content-between">
+                                        <span><span class="o_swatch" t-attf-style="background:{{p.color}}"/><t t-esc="p.name"/></span>
+                                        <span class="font-monospace" t-esc="money(p.amount)"/>
+                                    </div>
+                                    <div class="o_pay_track">
+                                        <div class="o_pay_fill" t-attf-style="width:{{p.pct}}%;background:{{p.color}}"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- Low stock -->
+                    <div class="col-12 col-lg-6">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">
+                                <i class="fa fa-exclamation-triangle text-warning me-1"/>Low stock alerts
+                            </div>
+                            <t t-if="!state.data.low_stock.length">
+                                <div class="o_empty">All products above their reorder level. 👍</div>
+                            </t>
+                            <table t-else="" class="table table-sm align-middle mb-0">
+                                <thead><tr><th>Product</th><th class="text-end">On hand</th><th class="text-end">Min</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="state.data.low_stock" t-as="s" t-key="s.product_id"
+                                        class="o_click_row" t-on-click="() => this.openProduct(s.product_id)">
+                                        <td t-esc="s.name"/>
+                                        <td class="text-end o_status_serious fw-bold" t-esc="s.on_hand"/>
+                                        <td class="text-end text-muted" t-esc="s.min"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Expiring soon -->
+                    <div class="col-12 col-lg-6">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">
+                                <i class="fa fa-clock-o text-danger me-1"/>Expiring soon (30 days)
+                            </div>
+                            <t t-if="!state.data.expiring_soon.length">
+                                <div class="o_empty">No lots expiring in the next 30 days.</div>
+                            </t>
+                            <table t-else="" class="table table-sm align-middle mb-0">
+                                <thead><tr><th>Product</th><th>Lot</th><th class="text-end">Expires</th><th class="text-end">Days</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="state.data.expiring_soon" t-as="e" t-key="e.lot">
+                                        <td t-esc="e.name"/>
+                                        <td class="text-muted" t-esc="e.lot"/>
+                                        <td class="text-end" t-esc="e.expiration_date"/>
+                                        <td class="text-end fw-bold" t-att-class="expiryClass(e.days_left)" t-esc="e.days_left"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Top products -->
+                    <div class="col-12">
+                        <div class="o_dash_panel">
+                            <div class="o_dash_panel_title">Top selling products — <t t-esc="periodLabel"/></div>
+                            <t t-if="!state.data.top_products.length">
+                                <div class="o_empty">No sales yet in this period.</div>
+                            </t>
+                            <table t-else="" class="table table-sm align-middle mb-0">
+                                <thead><tr><th style="width:3rem">#</th><th>Product</th><th class="text-end">Qty sold</th><th class="text-end">Revenue</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="state.data.top_products" t-as="p" t-key="p.product_id"
+                                        class="o_click_row" t-on-click="() => this.openProduct(p.product_id)">
+                                        <td class="text-muted" t-esc="p_index + 1"/>
+                                        <td t-esc="p.name"/>
+                                        <td class="text-end" t-esc="p.qty"/>
+                                        <td class="text-end" t-esc="money(p.revenue)"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>
