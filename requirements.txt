@@ -1,0 +1,9 @@
+# pos_retail is an Odoo 19 addon, not a standalone application.
+# It runs inside an existing Odoo 19 install and relies entirely on Odoo
+# core's own dependencies (psycopg2, Werkzeug, lxml, Pillow, reportlab, etc.)
+# See Odoo's own requirements.txt for the full server dependency list:
+# https://github.com/odoo/odoo/blob/19.0/requirements.txt
+
+# The only package this addon's own code imports directly (already a hard
+# Odoo 19 dependency, so nothing extra to install):
+pytz
