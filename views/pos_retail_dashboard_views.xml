@@ -7,11 +7,22 @@
     </record>
 
     <menuitem id="menu_pos_retail_dashboard"
-        name="Analytics"
+        name="Dashboard"
         parent="point_of_sale.menu_point_root"
         action="action_pos_retail_dashboard"
-        sequence="2"
+        sequence="1"
         groups="point_of_sale.group_pos_manager"/>
+
+    <!--
+        Hide the native "Dashboard" menu (the pos.config kanban used to open/
+        resume register sessions) so only ONE Dashboard menu remains — ours.
+        Session management stays reachable via the "Open Register" button in
+        the dashboard header (it opens this same native kanban action).
+        To bring the native menu back: set active to True (or delete this record).
+    -->
+    <record id="point_of_sale.menu_pos_dashboard" model="ir.ui.menu">
+        <field name="active">False</field>
+    </record>
 
     <!--
         Land every user on the POS Dashboard right after login, instead of the

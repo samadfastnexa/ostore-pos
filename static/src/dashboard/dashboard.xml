@@ -12,6 +12,9 @@
                     <small class="text-muted ms-2" t-if="state.data" t-esc="state.data.company_name"/>
                 </h1>
                 <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-success" t-on-click="() => this.openRegister()">
+                        <i class="fa fa-play me-1"/>Open Register
+                    </button>
                     <div class="btn-group" role="group">
                         <button class="btn btn-sm"
                                 t-att-class="state.period === 'today' ? 'btn-primary' : 'btn-outline-secondary'"

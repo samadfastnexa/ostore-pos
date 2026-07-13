@@ -19,6 +19,12 @@ class PosOrder(models.Model):
     @api.model
     def _load_pos_data_fields(self, config):
         result = super()._load_pos_data_fields(config)
+        # An empty list means "load every field" (pos.load.mixin default, which
+        # core pos.order relies on) — appending names to it would narrow the
+        # schema to only those fields and break the whole POS (no lines, no
+        # totals). Only append when a base module has set an explicit list.
+        if not result:
+            return result
         for field in ('discount_manager_id', 'discount_reason_id', 'discount_reason_notes', 'discount_input_type'):
             if field not in result:
                 result.append(field)

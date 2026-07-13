@@ -176,6 +176,12 @@ export class PosRetailDashboard extends Component {
         });
     }
 
+    openRegister() {
+        // The native session-management kanban (New Session / Resume) — its
+        // menu entry is hidden so this dashboard stays the single "Dashboard".
+        this.action.doAction("point_of_sale.action_pos_config_kanban");
+    }
+
     refresh() {
         this.load();
     }
