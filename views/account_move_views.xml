@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Report 3: Vendor Payment Summary — reuses account.move (vendor bills/refunds) -->
+    <record id="view_account_move_pivot_vendor_payment" model="ir.ui.view">
+        <field name="name">account.move.pivot.vendor.payment</field>
+        <field name="model">account.move</field>
+        <field name="arch" type="xml">
+            <pivot string="Vendor Payment Summary" sample="1">
+                <field name="partner_id" type="row"/>
+                <field name="payment_state" type="col"/>
+                <field name="amount_total" type="measure"/>
+                <field name="amount_residual" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_account_move_graph_vendor_payment" model="ir.ui.view">
+        <field name="name">account.move.graph.vendor.payment</field>
+        <field name="model">account.move</field>
+        <field name="arch" type="xml">
+            <graph string="Vendor Payment Summary" type="bar" sample="1">
+                <field name="partner_id"/>
+                <field name="amount_residual" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_vendor_payment_summary" model="ir.actions.act_window">
+        <field name="name">Vendor Payment Summary</field>
+        <field name="res_model">account.move</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="domain">[('move_type', 'in', ('in_invoice', 'in_refund'))]</field>
+        <field name="search_view_id" ref="account.view_account_bill_filter"/>
+    </record>
+
+</odoo>

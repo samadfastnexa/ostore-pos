@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Report 2: Vendor Purchase Summary — reuses purchase.report, existing views -->
+    <record id="action_vendor_purchase_summary" model="ir.actions.act_window">
+        <field name="name">Vendor Purchase Summary</field>
+        <field name="res_model">purchase.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="purchase.view_purchase_order_search"/>
+        <field name="context">{'search_default_group_partner_id': 1, 'search_default_orders': 1}</field>
+    </record>
+
+    <!-- Report 6: Top Vendors by Purchase Value — new bar graph (x=Vendor, measure=Total) -->
+    <record id="view_purchase_report_graph_top_vendors" model="ir.ui.view">
+        <field name="name">purchase.report.graph.top.vendors</field>
+        <field name="model">purchase.report</field>
+        <field name="arch" type="xml">
+            <graph string="Top Vendors by Purchase Value" type="bar" sample="1">
+                <field name="partner_id"/>
+                <field name="price_total" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_top_vendors_by_purchase_value" model="ir.actions.act_window">
+        <field name="name">Top Vendors by Purchase Value</field>
+        <field name="res_model">purchase.report</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="purchase.view_purchase_order_search"/>
+        <field name="context">{'search_default_orders': 1}</field>
+    </record>
+
+    <!-- Report 5: Purchase Price History — new line graph (x=Order Date, measure=Avg Unit Price) -->
+    <record id="view_purchase_report_graph_price_history" model="ir.ui.view">
+        <field name="name">purchase.report.graph.price.history</field>
+        <field name="model">purchase.report</field>
+        <field name="arch" type="xml">
+            <graph string="Purchase Price History" type="line" sample="1">
+                <field name="date_order" interval="day"/>
+                <field name="price_average" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    <record id="action_purchase_price_history" model="ir.actions.act_window">
+        <field name="name">Purchase Price History</field>
+        <field name="res_model">purchase.report</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="purchase.view_purchase_order_search"/>
+        <field name="context">{'search_default_group_product_id': 1, 'search_default_orders': 1}</field>
+    </record>
+
+    <!-- Report 8 (v1): Vendor Performance — rows=Vendor, measures=avg lead-time fields + count -->
+    <record id="view_purchase_report_pivot_vendor_performance" model="ir.ui.view">
+        <field name="name">purchase.report.pivot.vendor.performance</field>
+        <field name="model">purchase.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Vendor Performance" sample="1">
+                <field name="partner_id" type="row"/>
+                <field name="delay" type="measure"/>
+                <field name="delay_pass" type="measure"/>
+                <field name="nbr_lines" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="action_vendor_performance" model="ir.actions.act_window">
+        <field name="name">Vendor Performance</field>
+        <field name="res_model">purchase.report</field>
+        <field name="view_mode">pivot,list</field>
+        <field name="search_view_id" ref="purchase.view_purchase_order_search"/>
+        <field name="context">{'search_default_group_partner_id': 1, 'search_default_orders': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                "Days to Receive" uses the <b>planned</b> receipt date on the PO line, not the
+                actual goods-receipt date — a vendor who always promises 10 days and always
+                delivers late will still show ~10 days here. Rows are counted per
+                order&#215;product line, not per order.
+            </p>
+        </field>
+    </record>
+
+</odoo>

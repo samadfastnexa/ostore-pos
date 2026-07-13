@@ -13,4 +13,59 @@
         </field>
     </record>
 
+    <record id="view_partner_form_pos_retail_vendor" model="ir.ui.view">
+        <field name="name">res.partner.form.pos.retail.vendor</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button name="action_view_supplierinfo" type="object" class="oe_stat_button"
+                        icon="fa-cubes" groups="purchase.group_purchase_user"
+                        invisible="supplier_rank == 0">
+                    <field name="products_supplied_count" widget="statinfo" string="Products Supplied"/>
+                </button>
+                <button name="action_view_outstanding_bills" type="object" class="oe_stat_button"
+                        icon="fa-money" groups="account.group_account_invoice,account.group_account_readonly"
+                        invisible="supplier_rank == 0 or not debit">
+                    <field name="debit" widget="statinfo" string="Outstanding Balance"/>
+                </button>
+            </div>
+            <group name="purchase" position="inside">
+                <field name="mobile" widget="phone"/>
+                <field name="vendor_contact_person"/>
+            </group>
+        </field>
+    </record>
+
+    <record id="view_partner_form_pos_retail_products_supplied" model="ir.ui.view">
+        <field name="name">res.partner.form.pos.retail.products.supplied</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <page name="internal_notes" position="after">
+                <page string="Products Supplied" name="pos_retail_products_supplied"
+                      invisible="supplier_rank == 0">
+                    <field name="supplierinfo_ids" nolabel="1"
+                           context="{'default_partner_id': id, 'list_view_ref': 'pos_retail.product_supplierinfo_list_view_vendor_products'}"/>
+                </page>
+            </page>
+        </field>
+    </record>
+
+    <record id="res_partner_view_search_pos_retail_vendor" model="ir.ui.view">
+        <field name="name">res.partner.search.pos.retail.vendor</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <field name="category_id" position="after">
+                <field name="supplierinfo_ids" string="Product Supplied"
+                       filter_domain="['|', ('supplierinfo_ids.product_tmpl_id.name', 'ilike', self),
+                                            ('supplierinfo_ids.product_code', 'ilike', self)]"/>
+            </field>
+            <filter name="inactive" position="after">
+                <filter string="Outstanding Balance" name="pos_retail_outstanding_balance" domain="[('debit', '&gt;', 0)]"/>
+            </filter>
+        </field>
+    </record>
+
 </odoo>

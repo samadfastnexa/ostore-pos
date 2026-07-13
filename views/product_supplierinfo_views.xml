@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="product_supplierinfo_tree_view_pos_retail" model="ir.ui.view">
+        <field name="name">product.supplierinfo.list.pos.retail</field>
+        <field name="model">product.supplierinfo</field>
+        <field name="inherit_id" ref="product.product_supplierinfo_tree_view"/>
+        <field name="arch" type="xml">
+            <field name="partner_id" position="after">
+                <field name="is_preferred" optional="show"/>
+            </field>
+            <field name="delay" position="after">
+                <field name="last_purchase_price" optional="show" widget="monetary"/>
+                <field name="last_purchase_date" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="product_supplierinfo_form_view_pos_retail" model="ir.ui.view">
+        <field name="name">product.supplierinfo.form.pos.retail</field>
+        <field name="model">product.supplierinfo</field>
+        <field name="inherit_id" ref="product.product_supplierinfo_form_view"/>
+        <field name="arch" type="xml">
+            <field name="delay" position="after">
+                <field name="is_preferred"/>
+                <field name="last_purchase_price" readonly="1"/>
+                <field name="last_purchase_date" readonly="1"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="product_supplierinfo_search_view_pos_retail" model="ir.ui.view">
+        <field name="name">product.supplierinfo.search.pos.retail</field>
+        <field name="model">product.supplierinfo</field>
+        <field name="inherit_id" ref="product.product_supplierinfo_search_view"/>
+        <field name="arch" type="xml">
+            <field name="partner_id" position="after">
+                <filter string="Preferred" name="pos_retail_preferred" domain="[('is_preferred', '=', True)]"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Report 4: Products by Vendor — pivot rows=Product, cols=Vendor -->
+    <record id="view_product_supplierinfo_pivot_by_vendor" model="ir.ui.view">
+        <field name="name">product.supplierinfo.pivot.by.vendor</field>
+        <field name="model">product.supplierinfo</field>
+        <field name="arch" type="xml">
+            <pivot string="Products by Vendor" sample="1">
+                <field name="product_tmpl_id" type="row"/>
+                <field name="partner_id" type="col"/>
+                <field name="price" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="action_products_by_vendor" model="ir.actions.act_window">
+        <field name="name">Products by Vendor</field>
+        <field name="res_model">product.supplierinfo</field>
+        <field name="view_mode">pivot,list</field>
+        <field name="search_view_id" ref="product.product_supplierinfo_search_view"/>
+    </record>
+
+    <!-- Standalone "Products Supplied" list, embedded on the vendor form (Stage 3) -->
+    <record id="product_supplierinfo_list_view_vendor_products" model="ir.ui.view">
+        <field name="name">product.supplierinfo.list.vendor.products</field>
+        <field name="model">product.supplierinfo</field>
+        <field name="arch" type="xml">
+            <list string="Products Supplied" editable="bottom" default_order="product_display_name">
+                <field name="product_id" column_invisible="1"/>
+                <field name="product_tmpl_id" column_invisible="1"/>
+                <field name="currency_id" column_invisible="1"/>
+                <button name="action_open_product" type="object" icon="fa-external-link" string="" title="Open Product"/>
+                <field name="product_image" widget="image" nolabel="1" options="{'size': [40, 40]}"/>
+                <field name="product_display_name" string="Product"/>
+                <field name="product_sku" string="SKU"/>
+                <field name="product_barcode" string="Barcode"/>
+                <field name="price" string="Purchase Price" widget="monetary"/>
+                <field name="last_purchase_date"/>
+                <field name="current_stock"/>
+                <field name="total_purchased_qty"/>
+                <field name="product_active" string="Status" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+</odoo>
