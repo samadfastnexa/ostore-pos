@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_retail_expense_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.expense.list</field>
+        <field name="model">pos.retail.expense</field>
+        <field name="arch" type="xml">
+            <list string="Expenses">
+                <field name="date"/>
+                <field name="name"/>
+                <field name="category"/>
+                <field name="vendor_id" optional="show"/>
+                <field name="payment_method" optional="hide"/>
+                <field name="amount" sum="Total"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_expense_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.expense.form</field>
+        <field name="model">pos.retail.expense</field>
+        <field name="arch" type="xml">
+            <form string="Expense">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. July electricity bill"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="category"/>
+                            <field name="amount"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="payment_method"/>
+                        </group>
+                        <group>
+                            <field name="date"/>
+                            <field name="vendor_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" nolabel="1"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_expense_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.expense.search</field>
+        <field name="model">pos.retail.expense</field>
+        <field name="arch" type="xml">
+            <search string="Expenses">
+                <field name="name"/>
+                <field name="category"/>
+                <field name="vendor_id"/>
+                <filter string="This Month" name="filter_this_month"
+                        domain="[('date', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <separator/>
+                <filter string="Cash" name="filter_cash" domain="[('payment_method', '=', 'cash')]"/>
+                <filter string="Bank" name="filter_bank" domain="[('payment_method', '=', 'bank')]"/>
+                <group>
+                    <filter string="Category" name="group_category" context="{'group_by': 'category'}"/>
+                    <filter string="Vendor" name="group_vendor" context="{'group_by': 'vendor_id'}"/>
+                    <filter string="Date" name="group_date_month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_expense_view_pivot" model="ir.ui.view">
+        <field name="name">pos.retail.expense.pivot</field>
+        <field name="model">pos.retail.expense</field>
+        <field name="arch" type="xml">
+            <pivot string="Expenses by Category">
+                <field name="category" type="row"/>
+                <field name="date" type="col" interval="month"/>
+                <field name="amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="pos_retail_expense_view_graph" model="ir.ui.view">
+        <field name="name">pos.retail.expense.graph</field>
+        <field name="model">pos.retail.expense</field>
+        <field name="arch" type="xml">
+            <graph string="Expense Trend" type="line">
+                <field name="date" interval="month"/>
+                <field name="amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="pos_retail_expense_action" model="ir.actions.act_window">
+        <field name="name">Expenses</field>
+        <field name="res_model">pos.retail.expense</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="context">{'search_default_filter_this_month': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Log your first business expense</p>
+            <p>Track overhead costs like rent, electricity, salaries and marketing
+               alongside your POS sales for a complete profitability picture.</p>
+        </field>
+    </record>
+
+    <record id="pos_retail_expense_action_pivot" model="ir.actions.act_window">
+        <field name="name">Expenses by Category</field>
+        <field name="res_model">pos.retail.expense</field>
+        <field name="view_mode">pivot,graph,list</field>
+    </record>
+
+</odoo>

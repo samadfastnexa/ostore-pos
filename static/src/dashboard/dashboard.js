@@ -15,19 +15,32 @@ export class PosRetailDashboard extends Component {
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
-        this.state = useState({ loading: true, period: "month", data: null });
+        const today = new Date().toISOString().slice(0, 10);
+        this.today = today;
+        this.state = useState({
+            loading: true,
+            period: "month",
+            showCustom: false,
+            dateFrom: today,
+            dateTo: today,
+            data: null,
+        });
         onWillStart(() => this.load());
     }
 
     async load() {
         this.state.loading = true;
-        this.state.data = await this.orm.call("pos.retail.dashboard", "get_dashboard_data", [
-            this.state.period,
-        ]);
+        const kwargs = this.state.period === "custom"
+            ? { date_from: this.state.dateFrom, date_to: this.state.dateTo }
+            : {};
+        this.state.data = await this.orm.call(
+            "pos.retail.dashboard", "get_dashboard_data", [this.state.period], kwargs
+        );
         this.state.loading = false;
     }
 
     setPeriod(period) {
+        this.state.showCustom = false;
         if (period === this.state.period) {
             return;
         }
@@ -35,7 +48,20 @@ export class PosRetailDashboard extends Component {
         this.load();
     }
 
+    toggleCustom() {
+        this.state.showCustom = !this.state.showCustom;
+    }
+
+    applyCustom() {
+        this.state.period = "custom";
+        this.state.showCustom = false;
+        this.load();
+    }
+
     get periodLabel() {
+        if (this.state.period === "custom") {
+            return `${this.shortDate(this.state.dateFrom)} – ${this.shortDate(this.state.dateTo)}`;
+        }
         return { today: "Today", week: "This Week", month: "This Month" }[this.state.period];
     }
 
@@ -119,6 +145,34 @@ export class PosRetailDashboard extends Component {
             res_model: "product.product",
             res_id: productId,
             views: [[false, "form"]],
+        });
+    }
+
+    openCashier(employeeId, name) {
+        this.openOrders([["employee_id", "=", employeeId], ["state", "in", ["paid", "done"]]], name);
+    }
+
+    openCustomer(partnerId, name) {
+        this.openOrders([["partner_id", "=", partnerId], ["state", "in", ["paid", "done"]]], name);
+    }
+
+    openNegativeStock() {
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Negative Stock Warnings",
+            res_model: "pos.retail.inventory.movement",
+            views: [[false, "list"], [false, "form"]],
+            domain: [["has_negative_stock_warning", "=", true]],
+        });
+    }
+
+    openExpenses(domain, name) {
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name,
+            res_model: "pos.retail.expense",
+            views: [[false, "list"], [false, "form"]],
+            domain: domain || [],
         });
     }
 

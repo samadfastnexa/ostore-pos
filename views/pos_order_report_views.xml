@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Small addition to the native search view: a "Customer" groupby,
+         mirroring exactly how pos_hr itself adds an "Employee" groupby to
+         this same view (odoo/addons/pos_hr/views/pos_order_report_view.xml). -->
+    <record id="view_report_pos_order_search_pos_retail" model="ir.ui.view">
+        <field name="name">report.pos.order.search.pos.retail</field>
+        <field name="model">report.pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_report_pos_order_search"/>
+        <field name="arch" type="xml">
+            <filter name="User" position="after">
+                <filter string="Customer" name="pos_retail_group_partner_id" context="{'group_by': 'partner_id'}"/>
+            </filter>
+        </field>
+    </record>
+
+    <!-- Sales by Category -->
+    <record id="view_pos_order_report_pivot_by_category" model="ir.ui.view">
+        <field name="name">report.pos.order.pivot.by.category</field>
+        <field name="model">report.pos.order</field>
+        <field name="arch" type="xml">
+            <pivot string="Sales by Category" sample="1">
+                <field name="pos_categ_id" type="row"/>
+                <field name="price_total" type="measure"/>
+                <field name="product_qty" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="action_pos_retail_sales_by_category" model="ir.actions.act_window">
+        <field name="name">Sales by Category</field>
+        <field name="res_model">report.pos.order</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="point_of_sale.view_report_pos_order_search"/>
+        <field name="context">{'search_default_orders': 1}</field>
+    </record>
+
+    <!-- Sales by Payment Method -->
+    <record id="view_pos_order_report_pivot_by_payment_method" model="ir.ui.view">
+        <field name="name">report.pos.order.pivot.by.payment.method</field>
+        <field name="model">report.pos.order</field>
+        <field name="arch" type="xml">
+            <pivot string="Sales by Payment Method" sample="1">
+                <field name="payment_method_id" type="row"/>
+                <field name="price_total" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="action_pos_retail_sales_by_payment_method" model="ir.actions.act_window">
+        <field name="name">Sales by Payment Method</field>
+        <field name="res_model">report.pos.order</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="point_of_sale.view_report_pos_order_search"/>
+        <field name="context">{'search_default_orders': 1}</field>
+    </record>
+
+    <!-- Top Customers -->
+    <record id="view_pos_order_report_pivot_top_customers" model="ir.ui.view">
+        <field name="name">report.pos.order.pivot.top.customers</field>
+        <field name="model">report.pos.order</field>
+        <field name="arch" type="xml">
+            <pivot string="Top Customers" sample="1">
+                <field name="partner_id" type="row"/>
+                <field name="price_total" type="measure"/>
+                <field name="product_qty" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="action_pos_retail_top_customers" model="ir.actions.act_window">
+        <field name="name">Top Customers</field>
+        <field name="res_model">report.pos.order</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="point_of_sale.view_report_pos_order_search"/>
+        <field name="domain">[('partner_id', '!=', False)]</field>
+        <field name="context">{'search_default_orders': 1, 'search_default_pos_retail_group_partner_id': 1}</field>
+    </record>
+
+    <!-- Sales by Cashier (report.pos.order.employee_id provided by pos_hr) -->
+    <record id="view_pos_order_report_pivot_by_cashier" model="ir.ui.view">
+        <field name="name">report.pos.order.pivot.by.cashier</field>
+        <field name="model">report.pos.order</field>
+        <field name="arch" type="xml">
+            <pivot string="Sales by Cashier" sample="1">
+                <field name="employee_id" type="row"/>
+                <field name="price_total" type="measure"/>
+                <field name="product_qty" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="action_pos_retail_sales_by_cashier" model="ir.actions.act_window">
+        <field name="name">Sales by Cashier</field>
+        <field name="res_model">report.pos.order</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="point_of_sale.view_report_pos_order_search"/>
+        <field name="context">{'search_default_orders': 1}</field>
+    </record>
+
+    <!-- Product Discounts (per-line discount%, native report.pos.order.total_discount;
+         distinct from the order-level discounts tracked in pos.retail.discount.log) -->
+    <record id="view_pos_order_report_pivot_product_discounts" model="ir.ui.view">
+        <field name="name">report.pos.order.pivot.product.discounts</field>
+        <field name="model">report.pos.order</field>
+        <field name="arch" type="xml">
+            <pivot string="Product Discounts" sample="1">
+                <field name="product_id" type="row"/>
+                <field name="total_discount" type="measure"/>
+                <field name="product_qty" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="action_pos_retail_product_discounts" model="ir.actions.act_window">
+        <field name="name">Product Discounts</field>
+        <field name="res_model">report.pos.order</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="point_of_sale.view_report_pos_order_search"/>
+        <field name="domain">[('total_discount', '>', 0)]</field>
+        <field name="context">{'search_default_orders': 1}</field>
+    </record>
+
+</odoo>

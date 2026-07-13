@@ -7,10 +7,10 @@
     </record>
 
     <menuitem id="menu_pos_retail_dashboard"
-        name="Dashboard"
+        name="Analytics"
         parent="point_of_sale.menu_point_root"
         action="action_pos_retail_dashboard"
-        sequence="1"
+        sequence="2"
         groups="point_of_sale.group_pos_manager"/>
 
     <!--

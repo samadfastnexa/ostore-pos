@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_retail_inventory_movement_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.inventory.movement.list</field>
+        <field name="model">pos.retail.inventory.movement</field>
+        <field name="arch" type="xml">
+            <list string="Inventory Movements" create="false" decoration-danger="has_negative_stock_warning">
+                <field name="date"/>
+                <field name="product_id"/>
+                <field name="sku"/>
+                <field name="barcode" optional="hide"/>
+                <field name="qty_sold"/>
+                <field name="previous_stock"/>
+                <field name="current_stock"/>
+                <field name="cost_price" optional="hide"/>
+                <field name="selling_price" optional="hide"/>
+                <field name="discount_applied" optional="hide"/>
+                <field name="final_selling_price"/>
+                <field name="total_cost"/>
+                <field name="total_revenue"/>
+                <field name="profit"/>
+                <field name="cashier_name" string="Cashier"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="config_id" string="Branch"/>
+                <field name="invoice_number" optional="hide"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_inventory_movement_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.inventory.movement.form</field>
+        <field name="model">pos.retail.inventory.movement</field>
+        <field name="arch" type="xml">
+            <form string="Inventory Movement" create="false" edit="false">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="product_id"/></h1>
+                    </div>
+                    <group>
+                        <group string="Stock">
+                            <field name="sku"/>
+                            <field name="barcode"/>
+                            <field name="qty_sold"/>
+                            <field name="previous_stock"/>
+                            <field name="current_stock"/>
+                            <field name="has_negative_stock_warning"/>
+                        </group>
+                        <group string="Pricing">
+                            <field name="currency_id" invisible="1"/>
+                            <field name="cost_price"/>
+                            <field name="selling_price"/>
+                            <field name="discount_applied"/>
+                            <field name="final_selling_price"/>
+                            <field name="total_cost"/>
+                            <field name="total_revenue"/>
+                            <field name="profit"/>
+                        </group>
+                        <group string="Sale">
+                            <field name="order_id"/>
+                            <field name="pos_order_ref"/>
+                            <field name="invoice_number"/>
+                            <field name="date"/>
+                        </group>
+                        <group string="Who / Where">
+                            <field name="cashier_id"/>
+                            <field name="partner_id"/>
+                            <field name="config_id"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_inventory_movement_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.inventory.movement.search</field>
+        <field name="model">pos.retail.inventory.movement</field>
+        <field name="arch" type="xml">
+            <search string="Inventory Movements">
+                <field name="product_id"/>
+                <field name="cashier_id"/>
+                <field name="partner_id"/>
+                <field name="config_id"/>
+                <filter name="filter_date" date="date"/>
+                <separator/>
+                <filter string="Negative Stock Warnings" name="negative_stock_warnings"
+                        domain="[('has_negative_stock_warning', '=', True)]"/>
+                <group>
+                    <filter string="Product" name="group_product" context="{'group_by': 'product_id'}"/>
+                    <filter string="Cashier" name="group_cashier" context="{'group_by': 'cashier_id'}"/>
+                    <filter string="Branch" name="group_branch" context="{'group_by': 'config_id'}"/>
+                    <filter string="Date" name="group_date_month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_inventory_movement_action" model="ir.actions.act_window">
+        <field name="name">Inventory Movements</field>
+        <field name="res_model">pos.retail.inventory.movement</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No inventory movements yet</p>
+            <p>A movement row is created automatically for every product line
+               sold once a POS sale completes — this list is a read-only audit
+               trail, not a manual data-entry screen.</p>
+        </field>
+    </record>
+
+</odoo>

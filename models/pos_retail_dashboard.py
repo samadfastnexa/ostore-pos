@@ -29,51 +29,84 @@ class PosRetailDashboard(models.AbstractModel):
             return today_local - timedelta(days=today_local.weekday())
         return today_local.replace(day=1)  # month (default)
 
+    def _resolve_period_bounds(self, period, date_from, date_to, today_local):
+        if period == 'custom':
+            d_from = fields.Date.from_string(date_from) if date_from else today_local
+            d_to = fields.Date.from_string(date_to) if date_to else today_local
+            if d_from > d_to:
+                d_from, d_to = d_to, d_from
+            return self._local_midnight_utc(d_from), self._local_midnight_utc(d_to + timedelta(days=1))
+        return self._local_midnight_utc(self._period_start_date(period, today_local)), None
+
+    def _date_domain(self, field, start, end):
+        domain = [(field, '>=', start)]
+        if end:
+            domain.append((field, '<', end))
+        return domain
+
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
     @api.model
-    def get_dashboard_data(self, period='month'):
-        if period not in ('today', 'week', 'month'):
+    def get_dashboard_data(self, period='month', date_from=None, date_to=None):
+        if period not in ('today', 'week', 'month', 'custom'):
             period = 'month'
         today_local = fields.Date.context_today(self)
-        start = self._local_midnight_utc(self._period_start_date(period, today_local))
+        start, end = self._resolve_period_bounds(period, date_from, date_to, today_local)
         trend_start = self._local_midnight_utc(today_local - timedelta(days=29))
+
+        kpis = self._get_kpis(start, end)
+        kpis.update(self._get_inventory_kpis())
+        kpis.update(self._get_expense_kpis())
 
         return {
             'period': period,
             'currency_id': self.env.company.currency_id.id,
             'company_name': self.env.company.name,
-            'kpis': self._get_kpis(start),
+            'kpis': kpis,
             'sales_trend': self._get_sales_trend(trend_start),
-            'payment_breakdown': self._get_payment_breakdown(start),
-            'top_products': self._get_top_products(start),
+            'payment_breakdown': self._get_payment_breakdown(start, end),
+            'top_products': self._get_top_products(start, end),
+            'sales_by_cashier': self._get_sales_by_cashier(start, end),
+            'top_customers': self._get_top_customers(start, end),
             'low_stock': self._get_low_stock(),
             'expiring_soon': self._get_expiring_soon(),
-            'refunds': self._get_refund_stats(start),
+            'refunds': self._get_refund_stats(start, end),
         }
 
     # ------------------------------------------------------------------
     # KPIs
     # ------------------------------------------------------------------
-    def _get_kpis(self, start):
+    def _get_kpis(self, start, end=None):
         PosOrder = self.env['pos.order']
-        base = [('date_order', '>=', start), ('state', 'in', SALE_STATES)]
+        base = self._date_domain('date_order', start, end) + [('state', 'in', SALE_STATES)]
 
-        sales_group = PosOrder._read_group(base, aggregates=['amount_total:sum', '__count'])
-        sales, txns = sales_group[0]
+        sales_group = PosOrder._read_group(
+            base, aggregates=['amount_total:sum', 'amount_tax:sum', '__count']
+        )
+        sales, tax, txns = sales_group[0]
         sales = sales or 0.0
+        taxes_collected = tax or 0.0
         txns = txns or 0
         avg_basket = (sales / txns) if txns else 0.0
 
         # gross profit = revenue (excl. tax) - cost of goods sold
         line_group = self.env['pos.order.line']._read_group(
-            [('order_id.date_order', '>=', start), ('order_id.state', 'in', SALE_STATES)],
+            self._date_domain('order_id.date_order', start, end) + [('order_id.state', 'in', SALE_STATES)],
             aggregates=['price_subtotal:sum', 'total_cost:sum'],
         )
         subtotal, cost = line_group[0]
-        gross_profit = (subtotal or 0.0) - (cost or 0.0)
-        margin_pct = (gross_profit / subtotal * 100) if subtotal else 0.0
+        net_sales = subtotal or 0.0
+        cogs = cost or 0.0
+        gross_profit = net_sales - cogs
+        margin_pct = (gross_profit / net_sales * 100) if net_sales else 0.0
+
+        # discounts given, sourced from the native report (currency-rate-aware)
+        discount_group = self.env['report.pos.order']._read_group(
+            self._date_domain('date', start, end) + [('state', 'in', SALE_STATES)],
+            aggregates=['total_discount:sum'],
+        )
+        discounts_given = discount_group[0][0] or 0.0
 
         # distinct customers served
         cust_group = PosOrder._read_group(base + [('partner_id', '!=', False)], groupby=['partner_id'])
@@ -88,10 +121,88 @@ class PosRetailDashboard(models.AbstractModel):
             'avg_basket': avg_basket,
             'gross_profit': gross_profit,
             'margin_pct': margin_pct,
+            'cogs': cogs,
+            'net_sales': net_sales,
+            'taxes_collected': taxes_collected,
+            'discounts_given': discounts_given,
             'customers': customers,
             'cash_in_drawer': cash_in_drawer,
             'open_sessions': len(open_sessions),
         }
+
+    # ------------------------------------------------------------------
+    # Inventory KPIs (point-in-time snapshot, not period-scoped)
+    # ------------------------------------------------------------------
+    def _get_inventory_kpis(self):
+        Product = self.env['product.product']
+        storable = Product.search([('is_storable', '=', True), ('available_in_pos', '=', True)])
+        quant_groups = self.env['stock.quant']._read_group(
+            [('product_id', 'in', storable.ids), ('location_id.usage', '=', 'internal')],
+            groupby=['product_id'],
+            aggregates=['quantity:sum'],
+        )
+        qty_by_product = {product: qty or 0.0 for product, qty in quant_groups}
+        return {
+            'total_products': len(storable),
+            'total_stock_qty': sum(qty_by_product.values()),
+            'inventory_value_cost': sum(qty * p.standard_price for p, qty in qty_by_product.items()),
+            'inventory_value_selling': sum(qty * p.list_price for p, qty in qty_by_product.items()),
+            'out_of_stock_count': sum(1 for p in storable if qty_by_product.get(p, 0.0) <= 0),
+            'negative_stock_count': sum(1 for p in storable if qty_by_product.get(p, 0.0) < 0),
+        }
+
+    # ------------------------------------------------------------------
+    # Expense KPIs (fixed Today / This Month, independent of the period filter)
+    # ------------------------------------------------------------------
+    def _get_expense_kpis(self):
+        Expense = self.env['pos.retail.expense']
+        today_local = fields.Date.context_today(self)
+        month_start = today_local.replace(day=1)
+        today_amt = Expense._read_group(
+            [('date', '=', today_local)], aggregates=['amount:sum']
+        )[0][0] or 0.0
+        month_amt = Expense._read_group(
+            [('date', '>=', month_start), ('date', '<=', today_local)], aggregates=['amount:sum']
+        )[0][0] or 0.0
+        return {'expenses_today': today_amt, 'expenses_month': month_amt}
+
+    # ------------------------------------------------------------------
+    # Sales by cashier (this period)
+    # ------------------------------------------------------------------
+    def _get_sales_by_cashier(self, start, end=None, limit=8):
+        base = self._date_domain('date_order', start, end) + [('state', 'in', SALE_STATES)]
+        groups = self.env['pos.order']._read_group(
+            base + [('employee_id', '!=', False)],
+            groupby=['employee_id'],
+            aggregates=['amount_total:sum', '__count'],
+            order='amount_total:sum desc',
+            limit=limit,
+        )
+        return [{
+            'employee_id': employee.id,
+            'name': employee.name,
+            'sales': sales or 0.0,
+            'transactions': count or 0,
+        } for employee, sales, count in groups]
+
+    # ------------------------------------------------------------------
+    # Top customers (this period)
+    # ------------------------------------------------------------------
+    def _get_top_customers(self, start, end=None, limit=8):
+        base = self._date_domain('date_order', start, end) + [('state', 'in', SALE_STATES)]
+        groups = self.env['pos.order']._read_group(
+            base + [('partner_id', '!=', False)],
+            groupby=['partner_id'],
+            aggregates=['amount_total:sum', '__count'],
+            order='amount_total:sum desc',
+            limit=limit,
+        )
+        return [{
+            'partner_id': partner.id,
+            'name': partner.display_name,
+            'sales': sales or 0.0,
+            'transactions': count or 0,
+        } for partner, sales, count in groups]
 
     # ------------------------------------------------------------------
     # Sales trend (30 days, gap-filled)
@@ -114,12 +225,10 @@ class PosRetailDashboard(models.AbstractModel):
     # ------------------------------------------------------------------
     # Payment method breakdown (categorical)
     # ------------------------------------------------------------------
-    def _get_payment_breakdown(self, start):
+    def _get_payment_breakdown(self, start, end=None):
         groups = self.env['pos.payment']._read_group(
-            domain=[
-                ('pos_order_id.date_order', '>=', start),
-                ('pos_order_id.state', 'in', SALE_STATES),
-            ],
+            domain=self._date_domain('pos_order_id.date_order', start, end)
+            + [('pos_order_id.state', 'in', SALE_STATES)],
             groupby=['payment_method_id'],
             aggregates=['amount:sum'],
         )
@@ -130,10 +239,9 @@ class PosRetailDashboard(models.AbstractModel):
     # ------------------------------------------------------------------
     # Top products (by qty, this period)
     # ------------------------------------------------------------------
-    def _get_top_products(self, start, limit=8):
+    def _get_top_products(self, start, end=None, limit=8):
         groups = self.env['pos.order.line']._read_group(
-            domain=[
-                ('order_id.date_order', '>=', start),
+            domain=self._date_domain('order_id.date_order', start, end) + [
                 ('order_id.state', 'in', SALE_STATES),
                 ('qty', '>', 0),
             ],
@@ -191,10 +299,9 @@ class PosRetailDashboard(models.AbstractModel):
     # ------------------------------------------------------------------
     # Refund stats
     # ------------------------------------------------------------------
-    def _get_refund_stats(self, start):
+    def _get_refund_stats(self, start, end=None):
         groups = self.env['pos.order']._read_group(
-            domain=[
-                ('date_order', '>=', start),
+            domain=self._date_domain('date_order', start, end) + [
                 ('state', 'in', SALE_STATES),
                 ('amount_total', '<', 0),
             ],

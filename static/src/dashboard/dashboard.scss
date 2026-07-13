@@ -1,7 +1,20 @@
 .o_pos_retail_dashboard {
+    // The framework forces `.o_action { height:100%; overflow:hidden; display:flex;
+    // flex-flow:column; }` on this root (see web/webclient_layout.scss) with higher
+    // selector specificity than anything scoped here, so THIS element must not try
+    // to scroll itself — it only sizes to fill the action area. The nested
+    // `.o_pos_retail_dashboard_scroll` below is the real scrolling region, mirroring
+    // how core's own `.o_content` works inside `.o_action`.
     background-color: var(--gray-100, #f8f9fa);
-    min-height: 100%;
-    overflow: auto;
+    height: 100%;
+    display: flex;
+    flex-flow: column nowrap;
+
+    .o_pos_retail_dashboard_scroll {
+        flex: 1 1 auto;
+        min-height: 0; // without this a flex child won't shrink below content size, so overflow-y would never engage
+        overflow-y: auto;
+    }
 
     // ---- KPI tiles -------------------------------------------------------
     .o_kpi_card {
@@ -30,9 +43,9 @@
             margin-top: .1rem;
         }
     }
-    // Sales & refunds are clickable
-    .o_kpi_sales, .o_kpi_refund { cursor: pointer; }
-    .o_kpi_sales:hover, .o_kpi_refund:hover { transform: translateY(-2px); }
+    // Sales, refunds & expenses are clickable
+    .o_kpi_sales, .o_kpi_refund, .o_kpi_expense { cursor: pointer; }
+    .o_kpi_sales:hover, .o_kpi_refund:hover, .o_kpi_expense:hover { transform: translateY(-2px); }
 
     .o_kpi_sales   { background: linear-gradient(135deg, #4f46e5, #6366f1); }
     .o_kpi_txn     { background: linear-gradient(135deg, #0ea5e9, #38bdf8); }
@@ -42,6 +55,11 @@
     .o_kpi_shifts  { background: linear-gradient(135deg, #d97706, #f59e0b); }
     .o_kpi_cust    { background: linear-gradient(135deg, #7c3aed, #8b5cf6); }
     .o_kpi_refund  { background: linear-gradient(135deg, #e11d48, #f43f5e); }
+    .o_kpi_netsales { background: linear-gradient(135deg, #0891b2, #22d3ee); }
+    .o_kpi_cogs     { background: linear-gradient(135deg, #475569, #64748b); }
+    .o_kpi_tax      { background: linear-gradient(135deg, #92400e, #b45309); }
+    .o_kpi_discount { background: linear-gradient(135deg, #c2410c, #fb923c); }
+    .o_kpi_expense  { background: linear-gradient(135deg, #be123c, #e11d48); }
 
     // ---- Panels ----------------------------------------------------------
     .o_dash_panel {
@@ -94,6 +112,33 @@
     .o_status_warning  { color: #d97706; }
     .o_status_serious  { color: #ea580c; }
     .o_status_critical { color: #dc2626; }
+
+    // ---- Inventory snapshot grid ------------------------------------------
+    .o_inv_grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: .75rem 1.5rem;
+
+        @media (min-width: 768px) {
+            grid-template-columns: repeat(6, 1fr);
+        }
+    }
+    .o_inv_stat {
+        text-align: center;
+        padding: .5rem .25rem;
+        border-radius: .5rem;
+
+        .o_inv_stat_value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .o_inv_stat_label {
+            font-size: .72rem;
+            color: var(--text-muted, #6c757d);
+            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+    }
 
     // ---- Clickable rows --------------------------------------------------
     .o_click_row { cursor: pointer; }

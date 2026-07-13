@@ -2,7 +2,8 @@
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.Dashboard">
-        <div class="o_pos_retail_dashboard o_action p-3">
+        <div class="o_pos_retail_dashboard">
+        <div class="o_pos_retail_dashboard_scroll p-3">
 
             <!-- Header -->
             <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
@@ -21,6 +22,15 @@
                         <button class="btn btn-sm"
                                 t-att-class="state.period === 'month' ? 'btn-primary' : 'btn-outline-secondary'"
                                 t-on-click="() => this.setPeriod('month')">Month</button>
+                        <button class="btn btn-sm"
+                                t-att-class="state.period === 'custom' ? 'btn-primary' : 'btn-outline-secondary'"
+                                t-on-click="() => this.toggleCustom()">Custom</button>
+                    </div>
+                    <div class="d-flex align-items-center gap-1" t-if="state.showCustom">
+                        <input type="date" class="form-control form-control-sm" t-model="state.dateFrom"/>
+                        <span class="text-muted">to</span>
+                        <input type="date" class="form-control form-control-sm" t-model="state.dateTo"/>
+                        <button class="btn btn-sm btn-primary" t-on-click="() => this.applyCustom()">Apply</button>
                     </div>
                     <button class="btn btn-sm btn-outline-primary" t-on-click="() => this.refresh()">
                         <i class="fa fa-refresh"/>
@@ -36,6 +46,18 @@
             </t>
 
             <t t-else="">
+                <!-- Negative stock alert banner -->
+                <div class="alert alert-danger d-flex align-items-center justify-content-between py-2 px-3 mb-3"
+                     t-if="state.data.kpis.negative_stock_count &gt; 0">
+                    <span>
+                        <i class="fa fa-exclamation-circle me-2"/>
+                        <t t-esc="state.data.kpis.negative_stock_count"/>
+                        product(s) sold below zero stock — inventory needs reconciliation.
+                    </span>
+                    <button class="btn btn-sm btn-outline-light border-danger text-danger" t-on-click="() => this.openNegativeStock()">
+                        View details
+                    </button>
+                </div>
                 <!-- KPI tiles -->
                 <div class="row g-3 mb-1">
                     <div class="col-6 col-md-3">
@@ -86,6 +108,87 @@
                             <div class="o_kpi_label">Refunds</div>
                             <div class="o_kpi_value" t-esc="money(state.data.refunds.amount)"/>
                             <div class="o_kpi_sub" t-esc="state.data.refunds.count + ' order(s)'"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial detail tiles -->
+                <div class="row g-3 mt-0 mb-1">
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_netsales">
+                            <div class="o_kpi_label">Net Sales</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.net_sales)"/>
+                            <div class="o_kpi_sub">excl. tax</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_cogs">
+                            <div class="o_kpi_label">Cost of Goods Sold</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.cogs)"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_tax">
+                            <div class="o_kpi_label">Taxes Collected</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.taxes_collected)"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_discount">
+                            <div class="o_kpi_label">Discounts Given</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.discounts_given)"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_expense"
+                             t-on-click="() => this.openExpenses([['date','=', this.today]], 'Expenses Today')">
+                            <div class="o_kpi_label">Expenses Today</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.expenses_today)"/>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="o_kpi_card o_kpi_expense"
+                             t-on-click="() => this.openExpenses([['date','&gt;=', this.today.slice(0, 8) + '01']], 'Expenses This Month')">
+                            <div class="o_kpi_label">Expenses This Month</div>
+                            <div class="o_kpi_value" t-esc="money(state.data.kpis.expenses_month)"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory snapshot -->
+                <div class="row g-3 mt-0 mb-1">
+                    <div class="col-12">
+                        <div class="o_dash_panel">
+                            <div class="o_dash_panel_title">Inventory snapshot</div>
+                            <div class="o_inv_grid">
+                                <div class="o_inv_stat">
+                                    <div class="o_inv_stat_value" t-esc="state.data.kpis.total_products"/>
+                                    <div class="o_inv_stat_label">Products in POS</div>
+                                </div>
+                                <div class="o_inv_stat">
+                                    <div class="o_inv_stat_value" t-esc="state.data.kpis.total_stock_qty"/>
+                                    <div class="o_inv_stat_label">Total stock qty</div>
+                                </div>
+                                <div class="o_inv_stat">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.inventory_value_cost)"/>
+                                    <div class="o_inv_stat_label">Value @ cost</div>
+                                </div>
+                                <div class="o_inv_stat">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.inventory_value_selling)"/>
+                                    <div class="o_inv_stat_label">Value @ selling price</div>
+                                </div>
+                                <div class="o_inv_stat"
+                                     t-att-class="state.data.kpis.out_of_stock_count > 0 ? 'o_status_serious' : ''">
+                                    <div class="o_inv_stat_value" t-esc="state.data.kpis.out_of_stock_count"/>
+                                    <div class="o_inv_stat_label">Out of stock</div>
+                                </div>
+                                <div class="o_inv_stat o_click_row"
+                                     t-att-class="state.data.kpis.negative_stock_count > 0 ? 'o_status_critical' : ''"
+                                     t-on-click="() => this.openNegativeStock()">
+                                    <div class="o_inv_stat_value" t-esc="state.data.kpis.negative_stock_count"/>
+                                    <div class="o_inv_stat_label">Negative stock</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -196,8 +299,51 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- Sales by cashier -->
+                    <div class="col-12 col-lg-6">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">Sales by cashier — <t t-esc="periodLabel"/></div>
+                            <t t-if="!state.data.sales_by_cashier.length">
+                                <div class="o_empty">No cashier sales yet in this period.</div>
+                            </t>
+                            <table t-else="" class="table table-sm align-middle mb-0">
+                                <thead><tr><th>Cashier</th><th class="text-end">Transactions</th><th class="text-end">Sales</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="state.data.sales_by_cashier" t-as="c" t-key="c.employee_id"
+                                        class="o_click_row" t-on-click="() => this.openCashier(c.employee_id, c.name)">
+                                        <td t-esc="c.name"/>
+                                        <td class="text-end" t-esc="c.transactions"/>
+                                        <td class="text-end" t-esc="money(c.sales)"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Top customers -->
+                    <div class="col-12 col-lg-6">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">Top customers — <t t-esc="periodLabel"/></div>
+                            <t t-if="!state.data.top_customers.length">
+                                <div class="o_empty">No customer-linked sales yet in this period.</div>
+                            </t>
+                            <table t-else="" class="table table-sm align-middle mb-0">
+                                <thead><tr><th>Customer</th><th class="text-end">Transactions</th><th class="text-end">Sales</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="state.data.top_customers" t-as="c" t-key="c.partner_id"
+                                        class="o_click_row" t-on-click="() => this.openCustomer(c.partner_id, c.name)">
+                                        <td t-esc="c.name"/>
+                                        <td class="text-end" t-esc="c.transactions"/>
+                                        <td class="text-end" t-esc="money(c.sales)"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </t>
+        </div>
         </div>
     </t>
 
