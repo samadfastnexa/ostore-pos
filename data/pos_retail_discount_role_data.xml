@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="discount_role_cashier" model="pos.retail.discount.role">
+        <field name="name">Cashier</field>
+        <field name="sequence">10</field>
+        <field name="max_fixed_discount">100.0</field>
+        <field name="max_percentage_discount">5.0</field>
+        <field name="is_unlimited">False</field>
+        <field name="can_approve">False</field>
+    </record>
+
+    <record id="discount_role_senior_cashier" model="pos.retail.discount.role">
+        <field name="name">Senior Cashier</field>
+        <field name="sequence">20</field>
+        <field name="max_fixed_discount">300.0</field>
+        <field name="max_percentage_discount">10.0</field>
+        <field name="is_unlimited">False</field>
+        <field name="can_approve">False</field>
+    </record>
+
+    <record id="discount_role_manager" model="pos.retail.discount.role">
+        <field name="name">Manager</field>
+        <field name="sequence">30</field>
+        <field name="max_fixed_discount">0.0</field>
+        <field name="max_percentage_discount">0.0</field>
+        <field name="is_unlimited">True</field>
+        <field name="can_approve">True</field>
+    </record>
+
+    <record id="discount_role_administrator" model="pos.retail.discount.role">
+        <field name="name">Administrator</field>
+        <field name="sequence">40</field>
+        <field name="max_fixed_discount">0.0</field>
+        <field name="max_percentage_discount">0.0</field>
+        <field name="is_unlimited">True</field>
+        <field name="can_approve">True</field>
+    </record>
+
+</odoo>

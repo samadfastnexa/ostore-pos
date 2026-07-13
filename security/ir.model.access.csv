@@ -3,3 +3,13 @@ access_product_brand_user,product.brand.user,model_product_brand,base.group_user
 access_product_brand_manager,product.brand.manager,model_product_brand,point_of_sale.group_pos_manager,1,1,1,1
 access_pos_membership_level_user,pos.membership.level.user,model_pos_membership_level,base.group_user,1,0,0,0
 access_pos_membership_level_manager,pos.membership.level.manager,model_pos_membership_level,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_inventory_movement_user,pos.retail.inventory.movement.user,model_pos_retail_inventory_movement,base.group_user,1,0,0,0
+access_pos_retail_inventory_movement_manager,pos.retail.inventory.movement.manager,model_pos_retail_inventory_movement,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_expense_user,pos.retail.expense.user,model_pos_retail_expense,base.group_user,1,0,0,0
+access_pos_retail_expense_manager,pos.retail.expense.manager,model_pos_retail_expense,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_discount_role_user,pos.retail.discount.role.user,model_pos_retail_discount_role,base.group_user,1,0,0,0
+access_pos_retail_discount_role_manager,pos.retail.discount.role.manager,model_pos_retail_discount_role,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_discount_reason_user,pos.retail.discount.reason.user,model_pos_retail_discount_reason,base.group_user,1,0,0,0
+access_pos_retail_discount_reason_manager,pos.retail.discount.reason.manager,model_pos_retail_discount_reason,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_discount_log_user,pos.retail.discount.log.user,model_pos_retail_discount_log,base.group_user,1,0,0,0
+access_pos_retail_discount_log_manager,pos.retail.discount.log.manager,model_pos_retail_discount_log,point_of_sale.group_pos_manager,1,1,1,1

@@ -5,6 +5,18 @@
         <!-- The core template exposes an explicit `before-footer` anchor. -->
         <xpath expr="//div[hasclass('before-footer')]" position="before">
 
+            <!-- Order discount details (manager approval + reason) -->
+            <t t-if="order.config.pos_retail_receipt_show_discount_details">
+                <div t-if="order.discount_reason_id" class="pos-retail-discount-reason text-start pt-1">
+                    <span class="label-discount-reason">Discount Reason</span>
+                    <span class="pos-receipt-right-align" t-esc="order.discount_reason_id.name"/>
+                </div>
+                <div t-if="order.discount_manager_id" class="pos-retail-discount-manager text-start">
+                    <span class="label-discount-manager">Approved By</span>
+                    <span class="pos-receipt-right-align" t-esc="order.discount_manager_id.name"/>
+                </div>
+            </t>
+
             <!-- Return policy block -->
             <div t-if="order.config.return_policy"
                  class="pos-retail-return-policy pt-3 mt-2 text-center"

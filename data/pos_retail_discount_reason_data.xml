@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="discount_reason_customer_negotiation" model="pos.retail.discount.reason">
+        <field name="name">Customer Negotiation</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <record id="discount_reason_round_off" model="pos.retail.discount.reason">
+        <field name="name">Round Off</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <record id="discount_reason_damaged_product" model="pos.retail.discount.reason">
+        <field name="name">Damaged Product</field>
+        <field name="sequence">30</field>
+    </record>
+
+    <record id="discount_reason_loyalty_discount" model="pos.retail.discount.reason">
+        <field name="name">Loyalty Discount</field>
+        <field name="sequence">40</field>
+    </record>
+
+    <record id="discount_reason_employee_discount" model="pos.retail.discount.reason">
+        <field name="name">Employee Discount</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <record id="discount_reason_promotional_offer" model="pos.retail.discount.reason">
+        <field name="name">Promotional Offer</field>
+        <field name="sequence">60</field>
+    </record>
+
+    <record id="discount_reason_price_match" model="pos.retail.discount.reason">
+        <field name="name">Price Match</field>
+        <field name="sequence">70</field>
+    </record>
+
+    <record id="discount_reason_manager_approved" model="pos.retail.discount.reason">
+        <field name="name">Manager Approved Discount</field>
+        <field name="sequence">80</field>
+    </record>
+
+    <record id="discount_reason_other" model="pos.retail.discount.reason">
+        <field name="name">Other</field>
+        <field name="sequence">90</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_retail_discount_role_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.discount.role.list</field>
+        <field name="model">pos.retail.discount.role</field>
+        <field name="arch" type="xml">
+            <list string="Discount Roles">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="max_fixed_discount"/>
+                <field name="max_percentage_discount"/>
+                <field name="is_unlimited"/>
+                <field name="can_approve"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_discount_role_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.discount.role.form</field>
+        <field name="model">pos.retail.discount.role</field>
+        <field name="arch" type="xml">
+            <form string="Discount Role">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Senior Cashier"/></h1>
+                    </div>
+                    <group>
+                        <group string="Limits">
+                            <field name="currency_id" invisible="1"/>
+                            <field name="is_unlimited"/>
+                            <field name="max_fixed_discount" invisible="is_unlimited"/>
+                            <field name="max_percentage_discount" invisible="is_unlimited"/>
+                        </group>
+                        <group string="Approval">
+                            <field name="can_approve"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_discount_role_action" model="ir.actions.act_window">
+        <field name="name">Discount Roles</field>
+        <field name="res_model">pos.retail.discount.role</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first discount role</p>
+            <p>Assign a role to each employee to control how much order-level
+               discount they can apply without manager approval.</p>
+        </field>
+    </record>
+
+</odoo>

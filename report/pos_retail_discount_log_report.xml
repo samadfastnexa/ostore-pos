@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="report_discount_log">
+        <t t-call="web.html_container">
+            <div class="oe_structure"/>
+            <t t-call="web.internal_layout">
+                <div class="page">
+                    <h2>Discount Audit Log Summary</h2>
+                    <table class="table table-sm table-borderless o_main_table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Date</th>
+                                <th>Cashier</th>
+                                <th>Manager</th>
+                                <th class="text-end">Original</th>
+                                <th class="text-end">Discount</th>
+                                <th class="text-end">Round-Off</th>
+                                <th class="text-end">Final</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="docs" t-as="doc">
+                                <td><span t-field="doc.pos_order_ref"/></td>
+                                <td><span t-field="doc.date"/></td>
+                                <td><span t-field="doc.cashier_name"/></td>
+                                <td><span t-field="doc.manager_name"/></td>
+                                <td class="text-end">
+                                    <span t-field="doc.original_amount"
+                                          t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                </td>
+                                <td class="text-end">
+                                    <span t-field="doc.discount_amount"
+                                          t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                </td>
+                                <td class="text-end">
+                                    <span t-field="doc.round_off_amount"
+                                          t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                </td>
+                                <td class="text-end">
+                                    <span t-field="doc.final_amount"
+                                          t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                </td>
+                                <td><span t-field="doc.reason_id"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_discount_log" model="ir.actions.report">
+        <field name="name">Discount Audit Log Summary</field>
+        <field name="model">pos.retail.discount.log</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_discount_log</field>
+        <field name="report_file">pos_retail.report_discount_log</field>
+        <field name="print_report_name">'Discount Audit Log Summary'</field>
+        <field name="binding_model_id" ref="model_pos_retail_discount_log"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

@@ -16,6 +16,101 @@
         sequence="60"
         groups="point_of_sale.group_pos_manager"/>
 
+    <!-- Configuration > Discount Roles -->
+    <menuitem id="menu_pos_retail_discount_role"
+        name="Discount Roles"
+        parent="point_of_sale.menu_point_config_product"
+        action="pos_retail_discount_role_action"
+        sequence="70"
+        groups="point_of_sale.group_pos_manager"/>
+
+    <!-- Configuration > Discount Reasons -->
+    <menuitem id="menu_pos_retail_discount_reason"
+        name="Discount Reasons"
+        parent="point_of_sale.menu_point_config_product"
+        action="pos_retail_discount_reason_action"
+        sequence="80"
+        groups="point_of_sale.group_pos_manager"/>
+
+    <!-- Purchase > Reporting > Vendor Reports -->
+    <menuitem id="pos_retail_menu_vendor_reports" name="Vendor Reports"
+        parent="purchase.purchase_report_main" sequence="10"
+        groups="purchase.group_purchase_manager"/>
+
+    <menuitem id="pos_retail_menu_vendor_purchase_summary" name="Vendor Purchase Summary"
+        parent="pos_retail_menu_vendor_reports" action="action_vendor_purchase_summary" sequence="10"/>
+    <menuitem id="pos_retail_menu_top_vendors" name="Top Vendors by Purchase Value"
+        parent="pos_retail_menu_vendor_reports" action="action_top_vendors_by_purchase_value" sequence="20"/>
+    <menuitem id="pos_retail_menu_purchase_price_history" name="Purchase Price History"
+        parent="pos_retail_menu_vendor_reports" action="action_purchase_price_history" sequence="30"/>
+    <menuitem id="pos_retail_menu_products_by_vendor" name="Products by Vendor"
+        parent="pos_retail_menu_vendor_reports" action="action_products_by_vendor" sequence="40"/>
+    <menuitem id="pos_retail_menu_vendor_payment_summary" name="Vendor Payment Summary"
+        parent="pos_retail_menu_vendor_reports" action="action_vendor_payment_summary" sequence="50"
+        groups="purchase.group_purchase_manager,account.group_account_invoice"/>
+    <menuitem id="pos_retail_menu_vendor_performance" name="Vendor Performance"
+        parent="pos_retail_menu_vendor_reports" action="action_vendor_performance" sequence="60"/>
+    <menuitem id="pos_retail_menu_products_no_vendor" name="Products with No Assigned Vendor"
+        parent="pos_retail_menu_vendor_reports" action="action_products_no_vendor" sequence="70"/>
+
+    <!-- Point of Sale > Reporting > Inventory Movements -->
+    <menuitem id="pos_retail_menu_inventory_movement" name="Inventory Movements"
+        parent="point_of_sale.menu_point_rep" action="pos_retail_inventory_movement_action"
+        sequence="5" groups="point_of_sale.group_pos_manager"/>
+
+    <!-- Point of Sale > Expenses -->
+    <menuitem id="pos_retail_menu_expense" name="Expenses"
+        parent="point_of_sale.menu_point_root" action="pos_retail_expense_action"
+        sequence="15" groups="point_of_sale.group_pos_manager"/>
+
+    <!-- Point of Sale > Reporting > Expenses by Category -->
+    <menuitem id="pos_retail_menu_expense_pivot" name="Expenses by Category"
+        parent="point_of_sale.menu_point_rep" action="pos_retail_expense_action_pivot"
+        sequence="15" groups="point_of_sale.group_pos_manager"/>
+
+    <!-- Point of Sale > Reporting > POS Sales Reports -->
+    <menuitem id="pos_retail_menu_pos_reports" name="POS Sales Reports"
+        parent="point_of_sale.menu_point_rep" sequence="10"
+        groups="point_of_sale.group_pos_manager"/>
+
+    <menuitem id="pos_retail_menu_sales_by_category" name="Sales by Category"
+        parent="pos_retail_menu_pos_reports" action="action_pos_retail_sales_by_category" sequence="10"/>
+    <menuitem id="pos_retail_menu_sales_by_payment_method" name="Sales by Payment Method"
+        parent="pos_retail_menu_pos_reports" action="action_pos_retail_sales_by_payment_method" sequence="20"/>
+    <menuitem id="pos_retail_menu_top_customers" name="Top Customers"
+        parent="pos_retail_menu_pos_reports" action="action_pos_retail_top_customers" sequence="30"/>
+    <menuitem id="pos_retail_menu_sales_by_cashier" name="Sales by Cashier"
+        parent="pos_retail_menu_pos_reports" action="action_pos_retail_sales_by_cashier" sequence="40"/>
+    <menuitem id="pos_retail_menu_product_discounts" name="Product Discounts"
+        parent="pos_retail_menu_pos_reports" action="action_pos_retail_product_discounts" sequence="50"/>
+
+    <!-- Point of Sale > Discount Audit Log -->
+    <menuitem id="pos_retail_menu_discount_log" name="Discount Audit Log"
+        parent="point_of_sale.menu_point_rep" action="pos_retail_discount_log_action"
+        sequence="6" groups="point_of_sale.group_pos_manager"/>
+
+    <!-- Point of Sale > Reporting > Discount Reports -->
+    <menuitem id="pos_retail_menu_discount_reports" name="Discount Reports"
+        parent="point_of_sale.menu_point_rep" sequence="12"
+        groups="point_of_sale.group_pos_manager"/>
+
+    <menuitem id="pos_retail_menu_discount_totals" name="Total Order Discounts"
+        parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_totals" sequence="10"/>
+    <menuitem id="pos_retail_menu_discount_roundoff" name="Round-Off Adjustments"
+        parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_roundoff" sequence="20"/>
+    <menuitem id="pos_retail_menu_discount_by_cashier" name="Discounts by Cashier"
+        parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_by_cashier" sequence="30"/>
+    <menuitem id="pos_retail_menu_discount_by_manager" name="Discounts by Manager"
+        parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_by_manager" sequence="40"/>
+    <menuitem id="pos_retail_menu_discount_by_branch" name="Discounts by Branch"
+        parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_by_branch" sequence="50"/>
+    <menuitem id="pos_retail_menu_discount_by_date" name="Discounts by Date"
+        parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_by_date" sequence="60"/>
+    <menuitem id="pos_retail_menu_discount_by_reason" name="Discount Reasons"
+        parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_by_reason" sequence="70"/>
+    <menuitem id="pos_retail_menu_discount_high_value" name="High Discount Transactions"
+        parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_high_value" sequence="80"/>
+
     <!--
         Hide the Discuss app tile from the apps switcher for this store.
         The `mail` module itself stays installed and fully functional (it's a
