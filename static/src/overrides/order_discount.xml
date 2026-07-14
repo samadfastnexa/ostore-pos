@@ -33,10 +33,10 @@
                 <div class="d-flex gap-1 mt-2">
                     <button class="btn btn-sm flex-fill"
                             t-att-class="orderDiscountState.kind === 'fixed' ? 'btn-primary' : 'btn-outline-secondary'"
-                            t-on-click="() => orderDiscountState.kind = 'fixed'">Fixed Amount</button>
+                            t-on-click="() => orderDiscountState.kind = 'fixed'"><i class="fa fa-money me-1"/>Fixed Amount</button>
                     <button class="btn btn-sm flex-fill"
                             t-att-class="orderDiscountState.kind === 'percent' ? 'btn-primary' : 'btn-outline-secondary'"
-                            t-on-click="() => orderDiscountState.kind = 'percent'">Percentage</button>
+                            t-on-click="() => orderDiscountState.kind = 'percent'"><i class="fa fa-percent me-1"/>Percentage</button>
                 </div>
                 <input type="number" class="form-control form-control-sm mt-1"
                        placeholder="Discount amount" t-model="orderDiscountState.amount"/>
@@ -51,8 +51,8 @@
                           placeholder="Additional notes (optional)"
                           t-model="orderDiscountState.notes"/>
                 <button class="btn btn-sm btn-primary w-100 mt-2"
-                        t-on-click="() => posRetailApplyOrderDiscount()">
-                    Apply Order Discount
+                        t-on-click="() => this.posRetailApplyOrderDiscount()">
+                    <i class="fa fa-check-circle me-1"/>Apply Order Discount
                 </button>
             </div>
         </xpath>
