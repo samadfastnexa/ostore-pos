@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Only the Super Admin (Administration/Settings access, base.group_system)
+         may change any password, including their own from My Profile. Everyone
+         else must ask the Super Admin — enforced server-side in
+         models/res_users.py::_change_password; this just hides the button so
+         non-admins don't hit that error in the first place. -->
+    <record id="view_users_form_simple_modif_pos_retail" model="ir.ui.view">
+        <field name="name">res.users.form.simple.modif.pos.retail</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form_simple_modif"/>
+        <field name="arch" type="xml">
+            <div name="auth" position="attributes">
+                <attribute name="groups">base.group_system</attribute>
+            </div>
+        </field>
+    </record>
+
+</odoo>
