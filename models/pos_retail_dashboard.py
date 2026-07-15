@@ -44,6 +44,29 @@ class PosRetailDashboard(models.AbstractModel):
             domain.append((field, '<', end))
         return domain
 
+    def _previous_comparable_bounds(self, period, start, end, today_local):
+        """An honest baseline for the trend indicator: the same elapsed
+        duration, one period back — not the full previous period (which would
+        make an in-progress "Today"/"This Month" look artificially down)."""
+        if end:
+            length = end - start
+            return start - length, start
+        now_utc = fields.Datetime.now()
+        elapsed = max(now_utc - start, timedelta(seconds=1))
+        if period == 'today':
+            prev_start = start - timedelta(days=1)
+        elif period == 'week':
+            prev_start = start - timedelta(days=7)
+        else:  # month
+            prev_month_date = (today_local.replace(day=1) - timedelta(days=1)).replace(day=1)
+            prev_start = self._local_midnight_utc(prev_month_date)
+        return prev_start, prev_start + elapsed
+
+    def _pct_change(self, current, previous):
+        if not previous:
+            return None  # no baseline to compare against -- don't show a misleading 0%/inf swing
+        return (current - previous) / abs(previous) * 100
+
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
@@ -64,6 +87,7 @@ class PosRetailDashboard(models.AbstractModel):
             'currency_id': self.env.company.currency_id.id,
             'company_name': self.env.company.name,
             'kpis': kpis,
+            'trend': self._get_trend(period, start, end, today_local, kpis),
             'sales_trend': self._get_sales_trend(trend_start),
             'payment_breakdown': self._get_payment_breakdown(start, end),
             'top_products': self._get_top_products(start, end),
@@ -128,6 +152,19 @@ class PosRetailDashboard(models.AbstractModel):
             'customers': customers,
             'cash_in_drawer': cash_in_drawer,
             'open_sessions': len(open_sessions),
+        }
+
+    # ------------------------------------------------------------------
+    # Trend (small up/down indicator on the headline KPI tiles)
+    # ------------------------------------------------------------------
+    def _get_trend(self, period, start, end, today_local, kpis):
+        prev_start, prev_end = self._previous_comparable_bounds(period, start, end, today_local)
+        prev_kpis = self._get_kpis(prev_start, prev_end)
+        return {
+            'sales_pct': self._pct_change(kpis['sales'], prev_kpis['sales']),
+            'transactions_pct': self._pct_change(kpis['transactions'], prev_kpis['transactions']),
+            'gross_profit_pct': self._pct_change(kpis['gross_profit'], prev_kpis['gross_profit']),
+            'net_sales_pct': self._pct_change(kpis['net_sales'], prev_kpis['net_sales']),
         }
 
     # ------------------------------------------------------------------

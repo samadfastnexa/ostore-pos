@@ -5,7 +5,7 @@
         <field name="name">pos.retail.discount.role.list</field>
         <field name="model">pos.retail.discount.role</field>
         <field name="arch" type="xml">
-            <list string="Discount Roles">
+            <list string="Discount Roles" decoration-success="is_unlimited">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
                 <field name="max_fixed_discount"/>
@@ -23,6 +23,15 @@
         <field name="arch" type="xml">
             <form string="Discount Role">
                 <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> caps how much order-level discount an employee can give without manager approval.<br/>
+                            <strong>How to use:</strong> set Fixed/Percentage limits (or tick Unlimited for managers),
+                            tick "Can Approve" if this role should be offered as a PIN-approver, then assign the role
+                            to each employee in Employees &gt; HR Settings.
+                        </div>
+                    </div>
                     <div class="oe_title">
                         <label for="name"/>
                         <h1><field name="name" placeholder="e.g. Senior Cashier"/></h1>

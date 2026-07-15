@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.2.0.1',
+    'version': '19.0.2.1.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -59,6 +59,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/pos_config_views.xml',
         'views/pos_retail_dashboard_views.xml',
         'views/pos_retail_menus.xml',
+        'views/res_users_views.xml',
     ],
     'demo': [
         'demo/pos_retail_demo.xml',
@@ -66,6 +67,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     'assets': {
         'web.assets_backend': [
             'pos_retail/static/src/dashboard/**/*',
+            'pos_retail/static/src/backend/backend_theme.scss',
         ],
         'point_of_sale._assets_pos': [
             'pos_retail/static/src/receipt/receipt.js',
@@ -73,6 +75,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/negative_stock_warning.js',
             'pos_retail/static/src/overrides/order_discount.js',
             'pos_retail/static/src/overrides/order_discount.xml',
+            'pos_retail/static/src/overrides/pos_theme.scss',
+            'pos_retail/static/src/overrides/backend_login.js',
         ],
     },
     'installable': True,

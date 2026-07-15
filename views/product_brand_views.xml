@@ -18,6 +18,13 @@
         <field name="arch" type="xml">
             <form string="Brand">
                 <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> group products under a brand (e.g. Nestle, Coca-Cola) for filtering and reporting.<br/>
+                            <strong>How to use:</strong> name the brand here, then select it on the product's General Information tab.
+                        </div>
+                    </div>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_products" type="object"
                                 class="oe_stat_button" icon="fa-cubes">

@@ -1,0 +1,84 @@
+// Light accent theming for the POS checkout screen.
+//
+// Odoo's own checkout layout (product grid, cart, payment screen) already
+// implements the modern-POS structure this addon's spec asked for — always
+// visible cart, +/- qty, large search/barcode entry, large Pay button, large
+// total. This file only maps the requested color language onto the highest-
+// traffic actions via CSS, on top of that existing structure. It does not
+// replace any template or JS behavior, so it survives Odoo upgrades.
+//
+// Color language (kept consistent, never reused across action types):
+//   green  = confirm / pay / complete sale
+//   orange = discounts / offers / warnings
+//   red    = delete / cancel / refund
+//   blue   = customer / search / info
+//   purple = reports & analytics (see dashboard.scss)
+
+$o_retail_green: #16a34a;
+$o_retail_green_dark: #15803d;
+$o_retail_orange: #f59e0b;
+$o_retail_orange_dark: #d97706;
+$o_retail_red: #dc2626;
+$o_retail_red_dark: #b91c1c;
+$o_retail_blue: #2563eb;
+
+// ---- Pay / Validate (green) ------------------------------------------------
+.pos .validation-button.highlight {
+    background-color: $o_retail_green;
+    border-color: $o_retail_green;
+
+    &:hover, &:focus {
+        background-color: $o_retail_green_dark;
+        border-color: $o_retail_green_dark;
+    }
+}
+
+// ---- Discounts (orange) — both the native pos_discount button and ours ----
+.pos .js_discount,
+.pos .pos-retail-order-discount .btn-primary {
+    background-color: $o_retail_orange;
+    border-color: $o_retail_orange;
+    color: #fff;
+
+    &:hover, &:focus {
+        background-color: $o_retail_orange_dark;
+        border-color: $o_retail_orange_dark;
+    }
+}
+.pos .pos-retail-order-discount {
+    border-color: $o_retail_orange !important;
+}
+
+// ---- Refund / Cancel / Delete (red) ---------------------------------------
+// Targeted by icon rather than a template-specific class, since core doesn't
+// give these a unique class of their own — stable across Odoo point releases
+// as long as the icon choice itself doesn't change.
+.pos button:has(> .fa-trash),
+.pos button:has(> .fa-undo) {
+    &:hover, &:focus {
+        background-color: rgba($o_retail_red, 0.12);
+        border-color: $o_retail_red;
+        color: $o_retail_red_dark;
+    }
+}
+
+// ---- Customer / search (blue accent on focus) -----------------------------
+.pos input:focus,
+.pos .partner-button.highlight {
+    border-color: $o_retail_blue;
+}
+.pos .partner-button.highlight {
+    color: $o_retail_blue;
+}
+
+// ---- Touch-friendly sizing & consistent interaction feedback --------------
+.pos {
+    .btn-lg, .button.btn-lg {
+        min-height: 44px;
+        transition: transform 0.05s ease-in-out, background-color 0.1s ease-in-out;
+
+        &:active {
+            transform: scale(0.97);
+        }
+    }
+}

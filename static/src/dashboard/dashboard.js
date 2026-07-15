@@ -24,6 +24,7 @@ export class PosRetailDashboard extends Component {
             dateFrom: today,
             dateTo: today,
             data: null,
+            trend: {},
         });
         onWillStart(() => this.load());
     }
@@ -36,6 +37,7 @@ export class PosRetailDashboard extends Component {
         this.state.data = await this.orm.call(
             "pos.retail.dashboard", "get_dashboard_data", [this.state.period], kwargs
         );
+        this.state.trend = this.state.data.trend || {};
         this.state.loading = false;
     }
 
@@ -116,6 +118,28 @@ export class PosRetailDashboard extends Component {
             pct: (r.amount / total) * 100,
             color: this.color(i),
         }));
+    }
+
+    // --- trend indicator (up/down vs the same elapsed time, one period back)
+    trendClass(pct) {
+        if (pct === null || pct === undefined) {
+            return "o_trend_flat";
+        }
+        return pct >= 0 ? "o_trend_up" : "o_trend_down";
+    }
+
+    trendIcon(pct) {
+        if (pct === null || pct === undefined) {
+            return "fa-minus";
+        }
+        return pct >= 0 ? "fa-arrow-up" : "fa-arrow-down";
+    }
+
+    trendLabel(pct) {
+        if (pct === null || pct === undefined) {
+            return "no prior data";
+        }
+        return `${Math.abs(pct).toFixed(1)}%`;
     }
 
     expiryClass(daysLeft) {

@@ -23,6 +23,15 @@
         <field name="arch" type="xml">
             <form string="Expense">
                 <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> track business overhead (rent, electricity, salaries, marketing...)
+                            alongside POS sales, so the Dashboard's profit figures reflect real costs.<br/>
+                            <strong>How to use:</strong> pick a category and amount, save. It shows up immediately in
+                            "Expenses Today/This Month" on the Dashboard and in the Expenses by Category report.
+                        </div>
+                    </div>
                     <div class="oe_title">
                         <label for="name"/>
                         <h1><field name="name" placeholder="e.g. July electricity bill"/></h1>

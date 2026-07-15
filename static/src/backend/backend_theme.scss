@@ -1,0 +1,38 @@
+// Global backend touch: make the Save button impossible to miss, everywhere.
+//
+// `.o_form_button_save` is a single component (web/FormStatusIndicator) reused
+// identically on every form view across the entire backend — this is a narrow,
+// well-defined target, not a broad theme override of lists/forms/colors.
+// Matches the color language established for the POS checkout screen: green =
+// confirm / save.
+
+.o_form_button_save {
+    background-color: #16a34a !important;
+    border-color: #16a34a !important;
+    padding: .4rem .6rem !important;
+    min-width: 2.4rem;
+    min-height: 2.4rem;
+    border-radius: .4rem !important;
+    box-shadow: 0 1px 4px rgba(22, 163, 74, .5);
+
+    i {
+        color: #fff !important;
+        font-size: 1.15rem;
+    }
+
+    &:hover, &:focus {
+        background-color: #15803d !important;
+        border-color: #15803d !important;
+        box-shadow: 0 2px 6px rgba(21, 128, 61, .6);
+    }
+}
+
+// Hide Enterprise-only upsell settings across every Settings screen
+// (Accounting > Vendor Payments/Digitization, Expenses > OCR/Stripe, etc).
+// Every such field renders the same ".o_enterprise_label" "Enterprise" badge
+// core-side (web/FormLabelHighlightText) regardless of which app/module owns
+// it, so this one selector hides the whole block everywhere at once instead
+// of enumerating each `<setting id="...">` individually.
+.o_setting_box:has(.o_enterprise_label) {
+    display: none !important;
+}
