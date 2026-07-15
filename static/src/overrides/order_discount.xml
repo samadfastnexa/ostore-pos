@@ -41,7 +41,7 @@
                 <input type="number" class="form-control form-control-sm mt-1"
                        placeholder="Discount amount" t-model="orderDiscountState.amount"/>
                 <select class="form-select form-select-sm mt-1"
-                        t-on-change="(ev) => orderDiscountState.reasonId = ev.target.value ? parseInt(ev.target.value) : false">
+                        t-on-change="(ev) => this.posRetailSetReasonId(ev.target.value)">
                     <option value="">Select a reason...</option>
                     <t t-foreach="pos.models['pos.retail.discount.reason'].getAll()" t-as="reason" t-key="reason.id">
                         <option t-att-value="reason.id" t-esc="reason.name"/>

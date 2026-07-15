@@ -27,6 +27,15 @@ patch(PaymentScreen.prototype, {
         });
     },
 
+    // parseInt is a bare global, and OWL template expressions only resolve
+    // identifiers on its RESERVED_WORDS whitelist (which excludes parseInt) or
+    // the component context -- an inline parseInt() in the template compiles to
+    // ctx['parseInt'](), i.e. undefined(), and throws "... is not a function"
+    // when the reason dropdown changes. Do the parsing here in JS instead.
+    posRetailSetReasonId(value) {
+        this.orderDiscountState.reasonId = value ? parseInt(value) : false;
+    },
+
     // --- breakdown (Subtotal / Product Discounts / Order Discount / Round-Off / Tax / Grand Total)
     posRetailComputeSubtotal(order) {
         return (order.lines || [])
