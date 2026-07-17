@@ -68,4 +68,78 @@
         </field>
     </record>
 
+    <!-- Quick "add customer" form used by the POS Customer button. Just name +
+         phone (+ email), neither individually required: enter a name, a phone,
+         or both. Phone-only is allowed (the create override names the partner
+         after the phone). Replaces the heavy full backend partner form that the
+         POS edit action used by default. -->
+    <record id="view_partner_pos_quick_form" model="ir.ui.view">
+        <field name="name">res.partner.pos.quick.form</field>
+        <field name="model">res.partner</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <form string="Customer">
+                <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-user-plus mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>Enter a <strong>name</strong> or a <strong>phone number</strong> (or both). Both appear on the receipt.</div>
+                    </div>
+                    <group>
+                        <field name="name" required="0" placeholder="Customer name"/>
+                        <field name="phone" placeholder="Phone number"/>
+                        <field name="email" placeholder="Email (optional)"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Point the POS "Edit Partner" action at the quick form, and tag its
+         context so the create override knows to allow phone-only customers. -->
+    <record id="point_of_sale.res_partner_action_edit_pos" model="ir.actions.act_window">
+        <field name="view_id" ref="view_partner_pos_quick_form"/>
+        <field name="context">{'pos_quick_customer': 1}</field>
+    </record>
+
+    <record id="view_partner_form_pos_history" model="ir.ui.view">
+        <field name="name">res.partner.form.pos.history</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <page name="internal_notes" position="after">
+                <page string="POS History" name="pos_retail_history">
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-shopping-bag mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> this customer's Point of Sale purchase history and totals, for a quick look before or during a sale.<br/>
+                            <strong>How to use:</strong> read-only summary computed from completed POS orders; click a row below to open the underlying order.
+                        </div>
+                    </div>
+                    <field name="pos_history_currency_id" invisible="1"/>
+                    <group>
+                        <group string="Purchase Summary">
+                            <field name="pos_sales_order_count"/>
+                            <field name="pos_total_spent"/>
+                            <field name="pos_avg_order_value"/>
+                            <field name="pos_last_purchase_date"/>
+                        </group>
+                        <group string="Balances">
+                            <field name="pos_refund_total"/>
+                            <field name="credit" string="Outstanding Balance" widget="monetary"/>
+                        </group>
+                    </group>
+                    <separator string="Orders"/>
+                    <field name="pos_order_ids" nolabel="1" readonly="1">
+                        <list decoration-danger="amount_total &lt; 0">
+                            <field name="date_order"/>
+                            <field name="name"/>
+                            <field name="amount_total"/>
+                            <field name="state"/>
+                        </list>
+                    </field>
+                </page>
+            </page>
+        </field>
+    </record>
+
 </odoo>
