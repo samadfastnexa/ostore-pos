@@ -82,3 +82,12 @@ $o_retail_blue: #2563eb;
         }
     }
 }
+
+// Order-discount panel (payment screen): keep it from clipping the numpad /
+// Back-Validate buttons. It lives in a flex-shrink-0, overflow-hidden column,
+// so cap the expanded body's height and let it scroll internally on short
+// screens instead of pushing the essential buttons off-screen.
+.pos-retail-order-discount-body {
+    max-height: 40vh;
+    overflow-y: auto;
+}

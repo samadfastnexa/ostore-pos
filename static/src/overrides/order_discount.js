@@ -20,6 +20,7 @@ patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
         this.orderDiscountState = useState({
+            open: false,
             kind: "fixed",
             amount: "",
             reasonId: false,
@@ -36,26 +37,13 @@ patch(PaymentScreen.prototype, {
         this.orderDiscountState.reasonId = value ? parseInt(value) : false;
     },
 
-    // --- breakdown (Subtotal / Product Discounts / Order Discount / Round-Off / Tax / Grand Total)
+    // Cart subtotal (excluding discount lines), used to convert a fixed
+    // discount into an equivalent percentage for the native rescale-on-cart-
+    // change watcher in posRetailApplyDiscountLines.
     posRetailComputeSubtotal(order) {
         return (order.lines || [])
             .filter((line) => !line.isDiscountLine)
             .reduce((sum, line) => sum + (line.price_subtotal_incl || 0), 0);
-    },
-    get posRetailSubtotal() {
-        return this.posRetailComputeSubtotal(this.currentOrder);
-    },
-    get posRetailProductDiscounts() {
-        return this.currentOrder.getTotalDiscount();
-    },
-    get posRetailOrderDiscountAmount() {
-        return (this.currentOrder.discountLines || []).reduce(
-            (sum, line) => sum + (line.price_subtotal_incl || 0),
-            0
-        );
-    },
-    get posRetailRoundOff() {
-        return this.currentOrder.appliedRounding || 0;
     },
 
     // --- role / limit -------------------------------------------------------
