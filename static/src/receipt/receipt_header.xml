@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Customer info on the receipt (#13). The core header already prints the
+         customer name / address / VAT when a customer is selected; this adds
+         the phone and a Customer ID (partner ref), and prints "Walk-in
+         Customer" when no customer is set. -->
+    <t t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('pos-receipt-customer')]" position="inside">
+            <div t-if="order.partner_id.phone">
+                <span>Tel: </span><span t-esc="order.partner_id.phone"/>
+            </div>
+            <div t-if="order.partner_id.ref">
+                <span>Customer ID: </span><span t-esc="order.partner_id.ref"/>
+            </div>
+        </xpath>
+        <xpath expr="//div[hasclass('pos-receipt-customer')]" position="after">
+            <div t-if="!order.partner_id" class="pos-receipt-customer pos-retail-walkin mt-2 text-center">
+                <span class="fw-bold">Walk-in Customer</span>
+            </div>
+        </xpath>
+    </t>
+
+</templates>

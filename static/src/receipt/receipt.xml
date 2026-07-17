@@ -17,6 +17,12 @@
                 </div>
             </t>
 
+            <!-- Return reason (refund orders) -->
+            <div t-if="order.return_reason_id" class="pos-retail-return-reason-line text-start pt-1">
+                <span class="label-return-reason">Return Reason</span>
+                <span class="pos-receipt-right-align" t-esc="order.return_reason_id.name"/>
+            </div>
+
             <!-- Return policy block -->
             <div t-if="order.config.return_policy"
                  class="pos-retail-return-policy pt-3 mt-2 text-center"
@@ -32,6 +38,18 @@
                 <div style="font-size:70%;">Scan for receipt reference</div>
             </div>
 
+        </xpath>
+
+        <!-- Remove "Powered by Odoo" and brand the receipt footer with the
+             store's own company name instead. The custom footer message
+             (order.config.receipt_footer), the logo, and the custom header
+             message (order.config.receipt_header) all remain native and stay
+             configurable in POS Settings, Bills and Receipts. -->
+        <xpath expr="//div[hasclass('footer-powered-by')]" position="replace">
+            <div class="pos-retail-receipt-branding pos-receipt-center-align text-center pt-3"
+                 style="border-top:1px dashed currentColor; padding-top:6px;">
+                <div class="fw-bolder" t-esc="order.company.name"/>
+            </div>
         </xpath>
     </t>
 
