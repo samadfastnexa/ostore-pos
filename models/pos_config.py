@@ -60,6 +60,20 @@ class PosConfig(models.Model):
         help="Print the manager name (if approval was required) and the "
              "discount reason on the receipt.",
     )
+    # --- Returns & Refunds (#12) ---
+    pos_retail_require_return_reason = fields.Boolean(
+        string="Require Return Reason", default=True,
+        help="Cashiers must pick a return reason whenever a refund is processed.",
+    )
+    pos_retail_allow_no_receipt_return = fields.Boolean(
+        string="Allow Returns Without Receipt", default=True,
+        help="Show a 'Return (No Receipt)' action in the POS so a product can be "
+             "refunded without looking up the original order.",
+    )
+    pos_retail_return_requires_manager = fields.Boolean(
+        string="Return Needs Manager Approval", default=True,
+        help="Require a manager PIN for a return without a receipt.",
+    )
 
     @api.constrains('cash_rounding', 'rounding_method', 'pos_retail_max_roundoff_amount')
     def _check_max_roundoff_amount(self):
@@ -111,6 +125,21 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.pos_retail_require_manager_approval',
         readonly=False,
         string="Require Manager Approval",
+    )
+    pos_retail_require_return_reason = fields.Boolean(
+        related='pos_config_id.pos_retail_require_return_reason',
+        readonly=False,
+        string="Require Return Reason",
+    )
+    pos_retail_allow_no_receipt_return = fields.Boolean(
+        related='pos_config_id.pos_retail_allow_no_receipt_return',
+        readonly=False,
+        string="Allow Returns Without Receipt",
+    )
+    pos_retail_return_requires_manager = fields.Boolean(
+        related='pos_config_id.pos_retail_return_requires_manager',
+        readonly=False,
+        string="Return Needs Manager Approval",
     )
     pos_retail_allow_manager_override = fields.Boolean(
         related='pos_config_id.pos_retail_allow_manager_override',

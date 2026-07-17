@@ -32,6 +32,14 @@
         sequence="80"
         groups="point_of_sale.group_pos_manager"/>
 
+    <!-- Configuration > Return Reasons -->
+    <menuitem id="menu_pos_retail_return_reason"
+        name="Return Reasons"
+        parent="point_of_sale.menu_point_config_product"
+        action="pos_retail_return_reason_action"
+        sequence="85"
+        groups="point_of_sale.group_pos_manager"/>
+
     <!-- Purchase > Reporting > Vendor Reports -->
     <menuitem id="pos_retail_menu_vendor_reports" name="Vendor Reports"
         parent="purchase.purchase_report_main" sequence="10"
@@ -57,6 +65,11 @@
     <menuitem id="pos_retail_menu_inventory_movement" name="Inventory Movements"
         parent="point_of_sale.menu_point_rep" action="pos_retail_inventory_movement_action"
         sequence="5" groups="point_of_sale.group_pos_manager"/>
+
+    <!-- Point of Sale > Reporting > Returns and Refunds -->
+    <menuitem id="pos_retail_menu_returns" name="Returns and Refunds"
+        parent="point_of_sale.menu_point_rep" action="action_pos_retail_returns"
+        sequence="7" groups="point_of_sale.group_pos_manager"/>
 
     <!-- Point of Sale > Expenses -->
     <menuitem id="pos_retail_menu_expense" name="Expenses"

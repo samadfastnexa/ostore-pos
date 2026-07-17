@@ -15,6 +15,8 @@ class PosOrder(models.Model):
         [('fixed', 'Fixed Amount'), ('percent', 'Percentage')],
         string="Discount Entry Type",
     )
+    return_reason_id = fields.Many2one('pos.retail.return.reason', string="Return Reason")
+    return_reason_notes = fields.Text(string="Return Reason Notes")
 
     @api.model
     def _load_pos_data_fields(self, config):
@@ -25,7 +27,8 @@ class PosOrder(models.Model):
         # totals). Only append when a base module has set an explicit list.
         if not result:
             return result
-        for field in ('discount_manager_id', 'discount_reason_id', 'discount_reason_notes', 'discount_input_type'):
+        for field in ('discount_manager_id', 'discount_reason_id', 'discount_reason_notes', 'discount_input_type',
+                      'return_reason_id', 'return_reason_notes'):
             if field not in result:
                 result.append(field)
         return result

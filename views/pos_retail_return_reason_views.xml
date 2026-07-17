@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_retail_return_reason_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.return.reason.list</field>
+        <field name="model">pos.retail.return.reason</field>
+        <field name="arch" type="xml">
+            <list string="Return Reasons">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_return_reason_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.return.reason.form</field>
+        <field name="model">pos.retail.return.reason</field>
+        <field name="arch" type="xml">
+            <form string="Return Reason">
+                <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> the list of reasons cashiers pick from when processing a return or refund.<br/>
+                            <strong>How to use:</strong> just type a name and save; it appears automatically in the
+                            POS refund flow (and on the "Return without receipt" flow), no other setup needed.
+                        </div>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Damaged"/></h1>
+                    </div>
+                    <field name="active" invisible="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_return_reason_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.return.reason.search</field>
+        <field name="model">pos.retail.return.reason</field>
+        <field name="arch" type="xml">
+            <search string="Return Reasons">
+                <field name="name"/>
+                <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_return_reason_action" model="ir.actions.act_window">
+        <field name="name">Return Reasons</field>
+        <field name="res_model">pos.retail.return.reason</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first return reason</p>
+            <p>Cashiers pick one of these when processing a return or refund.</p>
+        </field>
+    </record>
+
+</odoo>

@@ -46,6 +46,23 @@
                     <label string="Max. Round-Off Amount" for="pos_retail_max_roundoff_amount" class="col-lg-4 o_light_label"/>
                     <field name="pos_retail_max_roundoff_amount"/>
                 </div>
+                <div class="mt-3">
+                    <span class="o_form_label fw-bold">Returns and Refunds</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Require Return Reason" for="pos_retail_require_return_reason" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_require_return_reason"/>
+                    </div>
+                    <div class="row mt8">
+                        <label string="Allow Returns Without Receipt" for="pos_retail_allow_no_receipt_return" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_allow_no_receipt_return"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_allow_no_receipt_return">
+                        <label string="Return Needs Manager Approval" for="pos_retail_return_requires_manager" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_return_requires_manager"/>
+                    </div>
+                </div>
             </xpath>
         </field>
     </record>

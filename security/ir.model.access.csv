@@ -11,5 +11,7 @@ access_pos_retail_discount_role_user,pos.retail.discount.role.user,model_pos_ret
 access_pos_retail_discount_role_manager,pos.retail.discount.role.manager,model_pos_retail_discount_role,point_of_sale.group_pos_manager,1,1,1,1
 access_pos_retail_discount_reason_user,pos.retail.discount.reason.user,model_pos_retail_discount_reason,base.group_user,1,0,0,0
 access_pos_retail_discount_reason_manager,pos.retail.discount.reason.manager,model_pos_retail_discount_reason,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_return_reason_user,pos.retail.return.reason.user,model_pos_retail_return_reason,base.group_user,1,0,0,0
+access_pos_retail_return_reason_manager,pos.retail.return.reason.manager,model_pos_retail_return_reason,point_of_sale.group_pos_manager,1,1,1,1
 access_pos_retail_discount_log_user,pos.retail.discount.log.user,model_pos_retail_discount_log,base.group_user,1,0,0,0
 access_pos_retail_discount_log_manager,pos.retail.discount.log.manager,model_pos_retail_discount_log,point_of_sale.group_pos_manager,1,1,1,1

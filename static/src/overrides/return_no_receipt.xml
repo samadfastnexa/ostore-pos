@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.ControlButtons" t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <button t-if="pos.config.pos_retail_allow_no_receipt_return"
+                    class="btn btn-secondary btn-lg py-5 pos-retail-return-btn"
+                    t-on-click="() => this.onClickReturnNoReceipt()">
+                <i class="fa fa-undo me-1"/>Return (No Receipt)
+            </button>
+        </xpath>
+    </t>
+
+</templates>
