@@ -91,4 +91,5 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     },
     'installable': True,
     'application': False,
+    'post_init_hook': '_pos_retail_post_init',
 }

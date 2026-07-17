@@ -76,4 +76,18 @@
         </field>
     </record>
 
+    <!-- A "Returns and Refunds" filter on the main POS Orders list, so refund
+         orders are one click away without opening the report. -->
+    <record id="view_pos_order_search_returns" model="ir.ui.view">
+        <field name="name">pos.order.search.returns.pos.retail</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_search"/>
+        <field name="arch" type="xml">
+            <field name="config_id" position="after">
+                <separator/>
+                <filter string="Returns and Refunds" name="pos_retail_returns" domain="[('is_refund', '=', True)]"/>
+            </field>
+        </field>
+    </record>
+
 </odoo>
