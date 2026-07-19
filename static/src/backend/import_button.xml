@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- The labelled Import button, right after New. Hidden on phones (the
+         import wizard is unusable there anyway, and the cog item it replaces
+         was desktop-only too). -->
+    <t t-name="pos_retail.ListImportButton" t-inherit="web.ListView" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('o_list_button_add')]" position="after">
+            <button t-if="!editedRecord and props.showButtons and posRetailCanImport()"
+                    type="button"
+                    class="btn btn-secondary o_pos_retail_import d-none d-md-inline-block"
+                    t-on-click="() => this.posRetailOnImport()">
+                <i class="fa fa-upload me-1"/>Import
+            </button>
+        </xpath>
+    </t>
+
+    <t t-name="pos_retail.KanbanImportButton" t-inherit="web.KanbanView" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('o-kanban-button-new')]" position="after">
+            <button t-if="props.showButtons and posRetailCanImport()"
+                    type="button"
+                    class="btn btn-secondary o_pos_retail_import d-none d-md-inline-block"
+                    t-on-click="() => this.posRetailOnImport()">
+                <i class="fa fa-upload me-1"/>Import
+            </button>
+        </xpath>
+    </t>
+
+</templates>

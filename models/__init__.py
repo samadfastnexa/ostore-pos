@@ -10,6 +10,7 @@ from . import pos_retail_discount_log
 from . import product_template
 from . import product_product
 from . import product_supplierinfo
+from . import res_country
 from . import res_partner
 from . import sale_order
 from . import purchase_order
