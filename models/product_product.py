@@ -9,10 +9,11 @@ class ProductProduct(models.Model):
     @api.model
     def _load_pos_data_fields(self, config):
         result = super()._load_pos_data_fields(config)
-        if 'brand_id' not in result:
-            result.append('brand_id')
-        if 'qty_available' not in result:
-            result.append('qty_available')
+        # Mirror of the template loader: the variant path needs the same selling
+        # range so a price entered against a specific variant is validated too.
+        for field in ('brand_id', 'qty_available', 'minimum_selling_price', 'mrp'):
+            if field not in result:
+                result.append(field)
         return result
 
     def _select_seller(self, partner_id=False, quantity=0.0, date=None, uom_id=False,

@@ -18,10 +18,15 @@
         <field name="inherit_id" ref="product.product_template_form_view"/>
         <field name="arch" type="xml">
             <group name="group_standard_price" position="after">
-                <group name="pos_retail_pricing" string="Additional Pricing">
-                    <field name="wholesale_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <group name="pos_retail_pricing" string="Selling Price Range">
+                    <div class="text-muted small mb-2" colspan="2">
+                        Cashiers may sell anywhere between the Minimum Selling Price and the MRP
+                        without approval. Outside that range a manager PIN is required.
+                        Leave a bound at 0 to leave that side unrestricted.
+                    </div>
                     <field name="minimum_selling_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                     <field name="mrp" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                    <field name="wholesale_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 </group>
             </group>
         </field>

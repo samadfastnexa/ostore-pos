@@ -17,6 +17,25 @@
                 </div>
             </t>
 
+            <!-- Approved price changes. The line prices themselves are already
+                 printed by the core receipt; this records who authorised any
+                 sale made outside the product's normal range, so the receipt
+                 is a complete record for the customer and for the audit. -->
+            <t t-if="order.config.pos_retail_receipt_show_discount_details">
+                <t t-foreach="order.lines" t-as="line" t-key="line.uuid">
+                    <div t-if="line.pos_retail_price_state == 'overridden'"
+                         class="pos-retail-price-override-line text-start pt-1">
+                        <span class="label-price-override">Price Approved</span>
+                        <span class="pos-receipt-right-align">
+                            <t t-esc="line.pos_retail_price_manager_id.name"/>
+                            <t t-if="line.pos_retail_price_reason_id">
+                                (<t t-esc="line.pos_retail_price_reason_id.name"/>)
+                            </t>
+                        </span>
+                    </div>
+                </t>
+            </t>
+
             <!-- Return reason (refund orders) -->
             <div t-if="order.return_reason_id" class="pos-retail-return-reason-line text-start pt-1">
                 <span class="label-return-reason">Return Reason</span>

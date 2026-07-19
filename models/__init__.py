@@ -5,6 +5,7 @@ from . import pos_retail_expense
 from . import pos_retail_discount_role
 from . import pos_retail_discount_reason
 from . import pos_retail_return_reason
+from . import pos_retail_price_reason
 from . import pos_retail_discount_log
 from . import product_template
 from . import product_product

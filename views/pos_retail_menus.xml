@@ -40,6 +40,32 @@
         sequence="85"
         groups="point_of_sale.group_pos_manager"/>
 
+    <!-- Configuration > Price Reasons -->
+    <menuitem id="menu_pos_retail_price_reason"
+        name="Price Reasons"
+        parent="point_of_sale.menu_point_config_product"
+        action="pos_retail_price_reason_action"
+        sequence="86"
+        groups="point_of_sale.group_pos_manager"/>
+
+    <!-- Reporting > Price Reports -->
+    <menuitem id="pos_retail_menu_price_reports" name="Price Reports"
+        parent="point_of_sale.menu_point_rep" sequence="14"
+        groups="point_of_sale.group_pos_manager"/>
+
+    <menuitem id="pos_retail_menu_price_analysis" name="Price Analysis"
+        parent="pos_retail_menu_price_reports" action="action_pos_retail_price_analysis" sequence="10"/>
+    <menuitem id="pos_retail_menu_price_overrides" name="Price Overrides"
+        parent="pos_retail_menu_price_reports" action="action_pos_retail_price_overrides" sequence="20"/>
+    <menuitem id="pos_retail_menu_price_below" name="Sold Below Default Price"
+        parent="pos_retail_menu_price_reports" action="action_pos_retail_price_below_default" sequence="30"/>
+    <menuitem id="pos_retail_menu_price_above" name="Sold Above Default Price"
+        parent="pos_retail_menu_price_reports" action="action_pos_retail_price_above_default" sequence="40"/>
+    <menuitem id="pos_retail_menu_price_by_manager" name="Manager Price Overrides"
+        parent="pos_retail_menu_price_reports" action="action_pos_retail_price_by_manager" sequence="50"/>
+    <menuitem id="pos_retail_menu_price_by_reason" name="Price Adjustment Reasons"
+        parent="pos_retail_menu_price_reports" action="action_pos_retail_price_by_reason" sequence="60"/>
+
     <!-- Purchase > Reporting > Vendor Reports -->
     <menuitem id="pos_retail_menu_vendor_reports" name="Vendor Reports"
         parent="purchase.purchase_report_main" sequence="10"
@@ -70,6 +96,11 @@
     <menuitem id="pos_retail_menu_returns" name="Returns and Refunds"
         parent="point_of_sale.menu_point_rep" action="action_pos_retail_returns"
         sequence="7" groups="point_of_sale.group_pos_manager"/>
+
+    <!-- Point of Sale > Orders > Quotations -->
+    <menuitem id="pos_retail_menu_quotations" name="Quotations"
+        parent="point_of_sale.menu_point_of_sale" action="action_pos_retail_quotations"
+        sequence="4" groups="sales_team.group_sale_salesman"/>
 
     <!-- Point of Sale > Expenses -->
     <menuitem id="pos_retail_menu_expense" name="Expenses"

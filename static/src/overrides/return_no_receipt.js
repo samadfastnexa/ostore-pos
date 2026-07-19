@@ -1,44 +1,23 @@
 /** @odoo-module **/
 
-/* global Sha1 */
-
 import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 import { ControlButtons } from "@point_of_sale/app/screens/product_screen/control_buttons/control_buttons";
-import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
 import { SelectionPopup } from "@point_of_sale/app/components/popups/selection_popup/selection_popup";
 import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { ReturnNoReceiptPopup } from "./return_no_receipt_popup";
+import { posRetailRequestManagerPin } from "../utils/manager_pin";
 
 // "Return (No Receipt)" flow: manager PIN -> return reason -> product/qty/price
 // popup -> add a negative-qty line to a fresh is_refund order. Checkout then
 // refunds it and restocks inventory natively. Reuses the same manager-PIN
 // challenge as the order-discount approval (employees whose discount role
-// can_approve; PIN hashed with the global Sha1).
+// can_approve), via the shared helper in utils/manager_pin.js.
 patch(ControlButtons.prototype, {
     async posRetailCheckReturnManagerPin() {
-        const candidates = this.pos.models["hr.employee"].filter(
-            (employee) => employee.pos_discount_role_id?.can_approve
-        );
-        if (!candidates.length) {
-            this.notification.add(_t("No manager is configured to approve returns."), {
-                type: "danger",
-            });
-            return false;
-        }
-        const inputPin = await makeAwaitable(this.dialog, NumberPopup, {
-            formatDisplayedValue: (x) => x.replace(/./g, "•"),
-            title: _t("Manager PIN"),
+        return posRetailRequestManagerPin(this.pos, this.dialog, this.notification, {
+            noManagerMessage: _t("No manager is configured to approve returns."),
         });
-        if (!inputPin) {
-            return false;
-        }
-        const manager = candidates.find((e) => e._pin && e._pin === Sha1.hash(inputPin));
-        if (!manager) {
-            this.notification.add(_t("Incorrect manager PIN."), { type: "warning" });
-            return false;
-        }
-        return manager;
     },
 
     async onClickReturnNoReceipt() {

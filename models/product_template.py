@@ -11,17 +11,19 @@ class ProductTemplate(models.Model):
     wholesale_price = fields.Float(
         string="Wholesale Price", min_display_digits='Product Price',
         help="Price offered to wholesale/bulk buyers. Informational only — "
-             "not enforced by any pricelist or sale/POS logic.",
+             "not enforced by any pricelist or sale/POS logic. To actually sell "
+             "at this price, set up a Wholesale pricelist.",
     )
     minimum_selling_price = fields.Float(
         string="Minimum Selling Price", min_display_digits='Product Price',
-        help="Floor price below which this product should not normally be sold. "
-             "Informational only — not enforced on POS/Sales Order lines.",
+        help="Floor of the allowed selling range. A cashier may sell anywhere "
+             "between this and the MRP without approval; below it a manager PIN "
+             "is required. Leave at 0 to allow any price down to zero.",
     )
     mrp = fields.Float(
         string="MRP", min_display_digits='Product Price',
-        help="Maximum Retail Price printed on the package, if applicable. "
-             "Informational only — not enforced by any pricelist or sale/POS logic.",
+        help="Maximum Retail Price: the ceiling of the allowed selling range. "
+             "Above it a manager PIN is required. Leave at 0 for no ceiling.",
     )
     vendor_count = fields.Integer(
         string="# Vendors", compute='_compute_vendor_count', store=True,
@@ -140,8 +142,57 @@ class ProductTemplate(models.Model):
             else:
                 tmpl.final_selling_price = tmpl.list_price * (1 - tmpl.discount_value / 100.0)
 
+    @api.model
+    def _load_pos_data_fields(self, config):
+        # The POS product grid renders product.template records
+        # (point_of_sale product_screen.xml), so the selling range has to travel
+        # on the template for the card and the price popup to read it.
+        # Deliberately NOT loading qty_available here: on the template it is a
+        # computed rollup over every variant, and pulling it for the whole
+        # catalogue slows session start. The variants already carry it (see
+        # product_product._load_pos_data_fields), so the card sums those.
+        result = super()._load_pos_data_fields(config)
+        for field in ('minimum_selling_price', 'mrp'):
+            if field not in result:
+                result.append(field)
+        return result
+
     @api.constrains('list_price')
     def _check_list_price_non_negative(self):
         for tmpl in self:
             if tmpl.list_price < 0:
                 raise ValidationError(_("Selling Price must be zero or greater."))
+
+    @api.constrains('minimum_selling_price', 'mrp', 'list_price')
+    def _check_selling_price_range(self):
+        """Keep the selling range coherent: minimum <= default <= MRP.
+
+        Each bound is optional -- 0 means "not set" -- so products that never had
+        a range configured (the majority, since these fields used to be purely
+        informational) stay valid and are simply unconstrained at the till.
+        """
+        for tmpl in self:
+            minimum = tmpl.minimum_selling_price
+            maximum = tmpl.mrp
+            if minimum < 0 or maximum < 0:
+                raise ValidationError(_(
+                    "Minimum Selling Price and MRP must be zero or greater."
+                ))
+            if minimum and maximum and minimum > maximum:
+                raise ValidationError(_(
+                    "Minimum Selling Price (%(minimum).2f) cannot be greater than "
+                    "the MRP (%(maximum).2f) for \"%(product)s\".",
+                    minimum=minimum, maximum=maximum, product=tmpl.display_name,
+                ))
+            if minimum and tmpl.list_price and tmpl.list_price < minimum:
+                raise ValidationError(_(
+                    "The Selling Price (%(price).2f) of \"%(product)s\" is below its "
+                    "Minimum Selling Price (%(minimum).2f).",
+                    price=tmpl.list_price, minimum=minimum, product=tmpl.display_name,
+                ))
+            if maximum and tmpl.list_price and tmpl.list_price > maximum:
+                raise ValidationError(_(
+                    "The Selling Price (%(price).2f) of \"%(product)s\" is above its "
+                    "MRP (%(maximum).2f).",
+                    price=tmpl.list_price, maximum=maximum, product=tmpl.display_name,
+                ))

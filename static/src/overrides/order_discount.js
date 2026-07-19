@@ -1,14 +1,11 @@
 /** @odoo-module **/
 
-/* global Sha1 */
-
 import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 import { useState } from "@odoo/owl";
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
-import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
-import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { accountTaxHelpers } from "@account/helpers/account_tax";
+import { posRetailRequestManagerPin } from "../utils/manager_pin";
 
 // Order-level discount, independent of pos_discount's own Product-Screen
 // percentage button (left untouched). Reuses the exact same mechanism
@@ -65,30 +62,9 @@ patch(PaymentScreen.prototype, {
 
     // --- manager PIN approval ------------------------------------------------
     async posRetailCheckManagerPin() {
-        const candidates = this.pos.models["hr.employee"].filter(
-            (employee) => employee.pos_discount_role_id?.can_approve
-        );
-        if (!candidates.length) {
-            this.notification.add(
-                _t("No manager is configured to approve discounts."),
-                { type: "danger" }
-            );
-            return false;
-        }
-        const inputPin = await makeAwaitable(this.dialog, NumberPopup, {
-            formatDisplayedValue: (x) => x.replace(/./g, "•"),
-            title: _t("Manager PIN"),
+        return posRetailRequestManagerPin(this.pos, this.dialog, this.notification, {
+            noManagerMessage: _t("No manager is configured to approve discounts."),
         });
-        if (!inputPin) {
-            return false;
-        }
-        const hashed = Sha1.hash(inputPin);
-        const manager = candidates.find((employee) => employee._pin && employee._pin === hashed);
-        if (!manager) {
-            this.notification.add(_t("Incorrect manager PIN."), { type: "warning" });
-            return false;
-        }
-        return manager;
     },
 
     // --- apply ----------------------------------------------------------------

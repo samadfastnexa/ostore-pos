@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="price_reason_wholesale" model="pos.retail.price.reason">
+        <field name="name">Wholesale Customer</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <record id="price_reason_vip" model="pos.retail.price.reason">
+        <field name="name">VIP Customer</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <record id="price_reason_bulk" model="pos.retail.price.reason">
+        <field name="name">Bulk Purchase</field>
+        <field name="sequence">30</field>
+    </record>
+
+    <record id="price_reason_price_match" model="pos.retail.price.reason">
+        <field name="name">Competitor Price Match</field>
+        <field name="sequence">40</field>
+    </record>
+
+    <record id="price_reason_damaged_stock" model="pos.retail.price.reason">
+        <field name="name">Damaged or Near Expiry Stock</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <record id="price_reason_negotiated" model="pos.retail.price.reason">
+        <field name="name">Negotiated Price</field>
+        <field name="sequence">60</field>
+    </record>
+
+    <record id="price_reason_other" model="pos.retail.price.reason">
+        <field name="name">Other</field>
+        <field name="sequence">99</field>
+    </record>
+
+</odoo>
