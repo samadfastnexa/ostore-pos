@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.2.2.0',
+    'version': '19.0.2.3.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -36,6 +36,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'pos_hr',           # cashier login, employee on session
         'product_expiry',   # expiry/lot tracking
         'purchase',         # purchase orders + vendor bills (pulls stock/account)
+        'pos_sale',         # quotations: create a sale.order from POS and settle
+                            # it back for payment (pulls sale + sale_management)
     ],
     'data': [
         'security/ir.model.access.csv',
@@ -72,6 +74,10 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/dashboard/**/*',
             'pos_retail/static/src/backend/backend_theme.scss',
         ],
+        # The sign-in page renders through web.frontend_layout, so its styling
+        # belongs to the frontend bundle rather than the backend one.
+        'web.assets_frontend': [
+        ],
         'point_of_sale._assets_pos': [
             'pos_retail/static/src/receipt/receipt.js',
             'pos_retail/static/src/receipt/receipt.xml',
@@ -80,6 +86,9 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/order_discount.js',
             'pos_retail/static/src/overrides/order_discount.xml',
             'pos_retail/static/src/overrides/pos_theme.scss',
+            'pos_retail/static/src/overrides/pos_theme.xml',
+            'pos_retail/static/src/overrides/orderline_qty.js',
+            'pos_retail/static/src/overrides/orderline_qty.xml',
             'pos_retail/static/src/overrides/backend_login.js',
             'pos_retail/static/src/overrides/receipt_screen.xml',
             'pos_retail/static/src/overrides/return_refund.js',

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Wrap the existing quantity with minus/plus buttons. The buttons only
+         appear when the parent passed onQtyStep (cart only, never on a receipt
+         or the customer display) and only on positive lines, so refund lines
+         keep using the numpad which reports the refundable limits. -->
+    <t t-name="pos_retail.OrderlineQty" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
+        <xpath expr="//span[hasclass('qty')]" position="before">
+            <button t-if="props.onQtyStep and line.qty &gt; 0"
+                    class="pos-retail-qty-btn btn"
+                    title="Decrease quantity"
+                    t-on-pointerdown.stop="() => {}"
+                    t-on-pointerup.stop="() => {}"
+                    t-on-click.stop="() => props.onQtyStep(line, -1)">
+                <i class="fa fa-minus"/>
+            </button>
+        </xpath>
+        <xpath expr="//span[hasclass('qty')]" position="after">
+            <button t-if="props.onQtyStep and line.qty &gt; 0"
+                    class="pos-retail-qty-btn btn"
+                    title="Increase quantity"
+                    t-on-pointerdown.stop="() => {}"
+                    t-on-pointerup.stop="() => {}"
+                    t-on-click.stop="() => props.onQtyStep(line, 1)">
+                <i class="fa fa-plus"/>
+            </button>
+        </xpath>
+    </t>
+
+    <!-- Only the product-screen cart hands the callback to Orderline. -->
+    <t t-name="pos_retail.OrderSummaryQty" t-inherit="point_of_sale.OrderSummary" t-inherit-mode="extension">
+        <xpath expr="//Orderline" position="attributes">
+            <attribute name="onQtyStep">(line, delta) => this.posRetailQtyStep(line, delta)</attribute>
+        </xpath>
+    </t>
+
+</templates>

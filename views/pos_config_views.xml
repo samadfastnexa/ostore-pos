@@ -47,6 +47,28 @@
                     <field name="pos_retail_max_roundoff_amount"/>
                 </div>
                 <div class="mt-3">
+                    <span class="o_form_label fw-bold">Flexible Pricing</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Allow Price Within Range" for="pos_retail_price_range_enabled" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_price_range_enabled"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_price_range_enabled">
+                        <label string="Require Reason for Price Override" for="pos_retail_price_override_requires_reason" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_price_override_requires_reason"/>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <span class="o_form_label fw-bold">Appearance</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Shop Colour" for="pos_retail_theme_color" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_theme_color"/>
+                    </div>
+                </div>
+                <div class="mt-3">
                     <span class="o_form_label fw-bold">Returns and Refunds</span>
                 </div>
                 <div class="content-group">

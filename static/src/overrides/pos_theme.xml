@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Publish the store's chosen shop colour onto the POS root element. The
+         value is a plain keyword (purple, blue, ...); pos_theme.scss maps it to
+         the actual hex, so the palette has a single source of truth and no JS
+         patch is needed to theme the screen. -->
+    <t t-name="pos_retail.ChromeTheme" t-inherit="point_of_sale.Chrome" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('pos')]" position="attributes">
+            <attribute name="t-att-data-pos-retail-color">this.pos.config.pos_retail_theme_color</attribute>
+        </xpath>
+    </t>
+
+</templates>
