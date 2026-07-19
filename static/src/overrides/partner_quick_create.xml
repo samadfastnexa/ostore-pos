@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- One tap creates the customer from whatever was typed in the search box,
+         and attaches it to the order straight away. Sits above the results so
+         it is the first thing in reach when nothing matches. -->
+    <t t-name="pos_retail.PartnerListQuickCreate" t-inherit="point_of_sale.PartnerList" t-inherit-mode="extension">
+        <xpath expr="//table[hasclass('table')]" position="before">
+            <div t-if="posRetailCanQuickCreate" class="pos-retail-quick-partner">
+                <button class="pos-retail-quick-partner__btn"
+                        t-att-disabled="state.posRetailCreating"
+                        t-on-click="() => this.posRetailQuickCreate()">
+                    <i class="fa fa-user-plus"/>
+                    <span class="pos-retail-quick-partner__main">
+                        Add "<t t-esc="posRetailTypedName"/>" as a new customer
+                    </span>
+                    <span class="pos-retail-quick-partner__hint">
+                        <t t-if="posRetailTypedIsPhone">saved as phone number</t>
+                        <t t-else="">saved as name</t>
+                    </span>
+                </button>
+            </div>
+        </xpath>
+    </t>
+
+</templates>

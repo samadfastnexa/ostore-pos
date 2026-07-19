@@ -137,6 +137,18 @@
                             <field name="state"/>
                         </list>
                     </field>
+                    <separator string="Quotations"/>
+                    <field name="sale_order_ids" nolabel="1" readonly="1"
+                           domain="[('state', 'in', ['draft', 'sent'])]">
+                        <list decoration-success="pos_customer_approved">
+                            <field name="date_order"/>
+                            <field name="name"/>
+                            <field name="amount_total"/>
+                            <field name="validity_date"/>
+                            <field name="pos_customer_approved" string="Approved"/>
+                            <field name="state"/>
+                        </list>
+                    </field>
                 </page>
             </page>
         </field>

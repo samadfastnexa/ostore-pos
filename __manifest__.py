@@ -87,6 +87,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/order_discount.xml',
             'pos_retail/static/src/overrides/pos_theme.scss',
             'pos_retail/static/src/overrides/pos_theme.xml',
+            'pos_retail/static/src/overrides/partner_quick_create.js',
+            'pos_retail/static/src/overrides/partner_quick_create.xml',
             'pos_retail/static/src/overrides/orderline_qty.js',
             'pos_retail/static/src/overrides/orderline_qty.xml',
             'pos_retail/static/src/overrides/backend_login.js',
