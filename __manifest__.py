@@ -69,6 +69,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/pos_retail_dashboard_views.xml',
         'views/pos_retail_menus.xml',
         'views/res_users_views.xml',
+        'views/login_templates.xml',
+        'views/layout_templates.xml',
     ],
     'demo': [
         'demo/pos_retail_demo.xml',
@@ -77,6 +79,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'web.assets_backend': [
             'pos_retail/static/src/dashboard/**/*',
             'pos_retail/static/src/backend/backend_theme.scss',
+            'pos_retail/static/src/backend/about.xml',
+            'pos_retail/static/src/backend/hide_odoo_links.js',
             'pos_retail/static/src/backend/sidebar.js',
             'pos_retail/static/src/backend/sidebar.xml',
             'pos_retail/static/src/backend/sidebar.scss',
@@ -84,6 +88,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         # The sign-in page renders through web.frontend_layout, so its styling
         # belongs to the frontend bundle rather than the backend one.
         'web.assets_frontend': [
+            'pos_retail/static/src/login/login.scss',
         ],
         'point_of_sale._assets_pos': [
             'pos_retail/static/src/receipt/receipt.js',

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- White-label the browser tab: OStore icon and title instead of Odoo's.
+         Both live in web.layout, which every backend and frontend page renders
+         through, so this covers the login page, the web client and the POS.
+         x_icon / title are still honoured where a page sets them, so this only
+         replaces the fallbacks. -->
+    <template id="layout_branding" inherit_id="web.layout" name="OStore Tab Branding">
+        <xpath expr="//link[@rel='shortcut icon']" position="attributes">
+            <attribute name="t-att-href">x_icon or '/pos_retail/static/img/favicon.png'</attribute>
+            <attribute name="type">image/png</attribute>
+        </xpath>
+        <xpath expr="//title" position="attributes">
+            <attribute name="t-esc">title or 'OStore'</attribute>
+        </xpath>
+    </template>
+
+</odoo>
