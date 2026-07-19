@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.QuotationButton" t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <button t-if="pos.config.pos_retail_allow_quotation"
+                    class="btn btn-secondary btn-lg py-5 pos-retail-quotation-btn"
+                    t-on-click="() => this.onClickSaveAsQuotation()">
+                <i class="fa fa-file-text-o me-1"/>Save as Quotation
+            </button>
+        </xpath>
+    </t>
+
+</templates>

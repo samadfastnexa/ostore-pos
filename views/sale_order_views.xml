@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- In-person / status-only customer approval of a POS quotation.
+         The cashier confirms the customer approved the quote face to face
+         (no portal / e-signature round-trip, per the chosen approach) by
+         clicking "Customer Approved" on the quotation form. -->
+    <record id="view_order_form_pos_retail_approval" model="ir.ui.view">
+        <field name="name">sale.order.form.pos.retail.approval</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_pos_customer_approved" type="object"
+                        string="Customer Approved" class="btn-secondary"
+                        invisible="pos_customer_approved or state not in ('draft', 'sent')"/>
+            </xpath>
+            <xpath expr="//field[@name='validity_date']" position="after">
+                <field name="pos_customer_approved" readonly="1"
+                       invisible="not pos_customer_approved"/>
+                <field name="pos_approved_by" readonly="1"
+                       invisible="not pos_customer_approved"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Quick access to quotations from within Point of Sale. Uses the native
+         sale.order views; gated to the sales group so only users who can read
+         sale.order see it (avoids access errors for pure POS managers). -->
+    <record id="action_pos_retail_quotations" model="ir.actions.act_window">
+        <field name="name">Quotations</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('state', 'in', ['draft', 'sent'])]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No quotations yet</p>
+            <p>Quotations (including those saved from the POS with "Save as Quotation")
+               appear here. Use the POS "Quotation" button to settle one back into the
+               till and convert it to a paid sale.</p>
+        </field>
+    </record>
+
+</odoo>
