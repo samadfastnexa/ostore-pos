@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.Sidebar">
+        <aside class="pos-retail-side" t-att-class="{ 'pos-retail-side--collapsed': state.collapsed }">
+
+            <div class="pos-retail-side__brand">
+                <span class="pos-retail-side__mark">O</span>
+                <span class="pos-retail-side__brandname">OStore</span>
+                <button class="pos-retail-side__toggle"
+                        t-att-title="state.collapsed ? 'Expand menu' : 'Collapse menu'"
+                        t-on-click="() => this.toggle()">
+                    <i class="fa" t-att-class="state.collapsed ? 'fa-angle-double-right' : 'fa-angle-double-left'"/>
+                </button>
+            </div>
+
+            <nav class="pos-retail-side__nav">
+                <t t-foreach="apps" t-as="app" t-key="app.id">
+
+                    <button class="pos-retail-side__app"
+                            t-att-class="{ 'is-active': isCurrentApp(app) }"
+                            t-att-title="app.name"
+                            t-on-click="() => this.onClickMenu(app)">
+                        <img t-if="app.webIconData" class="pos-retail-side__icon"
+                             t-att-src="app.webIconData" alt=""/>
+                        <span t-else="" class="pos-retail-side__icon pos-retail-side__icon--fallback">
+                            <i class="fa fa-th-large"/>
+                        </span>
+                        <span class="pos-retail-side__text" t-esc="app.name"/>
+                    </button>
+
+                    <!-- Sections of the app you are currently in. A section that
+                         only groups other menus is shown as a heading. -->
+                    <t t-if="isCurrentApp(app) and !state.collapsed">
+                        <t t-foreach="sections" t-as="section" t-key="section.id">
+                            <t t-if="hasChildren(section)">
+                                <div class="pos-retail-side__group" t-esc="section.name"/>
+                                <t t-foreach="section.childrenTree" t-as="child" t-key="child.id">
+                                    <button class="pos-retail-side__item"
+                                            t-att-title="child.name"
+                                            t-on-click="() => this.onClickMenu(child)"
+                                            t-esc="child.name"/>
+                                </t>
+                            </t>
+                            <button t-else="" class="pos-retail-side__item"
+                                    t-att-title="section.name"
+                                    t-on-click="() => this.onClickMenu(section)"
+                                    t-esc="section.name"/>
+                        </t>
+                    </t>
+
+                </t>
+            </nav>
+        </aside>
+    </t>
+
+</templates>

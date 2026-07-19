@@ -77,6 +77,9 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'web.assets_backend': [
             'pos_retail/static/src/dashboard/**/*',
             'pos_retail/static/src/backend/backend_theme.scss',
+            'pos_retail/static/src/backend/sidebar.js',
+            'pos_retail/static/src/backend/sidebar.xml',
+            'pos_retail/static/src/backend/sidebar.scss',
         ],
         # The sign-in page renders through web.frontend_layout, so its styling
         # belongs to the frontend bundle rather than the backend one.

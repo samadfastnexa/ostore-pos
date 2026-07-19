@@ -1,0 +1,206 @@
+// Brand-colour left navigation for the back office.
+//
+// Odoo has no sidebar, so the layout shift is done here rather than by
+// restructuring the web client: the sidebar is fixed to the left edge and
+// .o_web_client is padded by the same width. That keeps core's flex layout
+// (column: navbar + action manager) completely untouched.
+
+$pos-retail-side-width: 232px;
+$pos-retail-side-width-collapsed: 62px;
+
+// A visible three-stop gradient: bright violet at the top, deep indigo at the
+// bottom. The deeper lower half also buys back contrast for the menu items,
+// which sit further down the panel.
+$pos-retail-side-top: #8b5cf6;
+$pos-retail-side-mid: #6d28d9;
+$pos-retail-side-deep: #4c1d95;
+$pos-retail-side-accent: $pos-retail-side-mid;
+
+.pos-retail-side {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: $pos-retail-side-width;
+    z-index: 900;              // above the content, below Odoo's dialogs
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(
+        165deg,
+        $pos-retail-side-top 0%,
+        $pos-retail-side-mid 45%,
+        $pos-retail-side-deep 100%
+    );
+    color: #fff;
+    box-shadow: 2px 0 14px -6px rgba(40, 20, 90, .55);
+    transition: width .16s ease;
+
+    &--collapsed { width: $pos-retail-side-width-collapsed; }
+
+    // ---- brand ----
+    &__brand {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        height: 46px;
+        flex: none;
+        padding: 0 .55rem 0 .7rem;
+        border-bottom: 1px solid rgba(255, 255, 255, .14);
+    }
+
+    &__mark {
+        width: 30px;
+        height: 30px;
+        flex: none;
+        border-radius: .5rem;
+        background: rgba(255, 255, 255, .22);
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        font-size: .95rem;
+    }
+
+    &__brandname {
+        font-weight: 750;
+        font-size: 1rem;
+        letter-spacing: -.01em;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    &__toggle {
+        margin-left: auto;
+        width: 26px;
+        height: 26px;
+        flex: none;
+        border: 0;
+        border-radius: .4rem;
+        background: rgba(255, 255, 255, .14);
+        color: #fff;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        font-size: .78rem;
+
+        &:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+    }
+
+    // ---- scrolling menu ----
+    &__nav {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: .5rem .5rem 1rem;
+
+        // Keep the scrollbar from breaking the flat colour block.
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, .3) transparent;
+        &::-webkit-scrollbar { width: 6px; }
+        &::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .28);
+            border-radius: 3px;
+        }
+    }
+
+    &__app,
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        // Full white: at 84% over this violet the contrast ratio fell below the
+        // readable threshold. The soft shadow keeps it crisp over the gradient.
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(28, 10, 70, .35);
+        text-align: left;
+        border-radius: .5rem;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: background-color .12s ease, color .12s ease;
+
+        &:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+        &:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, .85);
+            outline-offset: -2px;
+        }
+    }
+
+    &__app {
+        padding: .5rem .6rem;
+        font-weight: 700;
+        font-size: .89rem;
+        margin-bottom: 1px;
+
+        &.is-active {
+            background: rgba(255, 255, 255, .26);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28);
+            color: #fff;
+        }
+    }
+
+    &__icon {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        object-fit: contain;
+        border-radius: .25rem;
+
+        &--fallback {
+            display: grid;
+            place-items: center;
+            font-size: .78rem;
+            opacity: .85;
+        }
+    }
+
+    &__text { overflow: hidden; text-overflow: ellipsis; }
+
+    &__group {
+        font-size: .66rem;
+        font-weight: 800;
+        letter-spacing: .11em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, .82);
+        text-shadow: 0 1px 2px rgba(28, 10, 70, .3);
+        padding: .75rem .65rem .3rem;
+    }
+
+    &__item {
+        padding: .42rem .6rem .42rem 2.05rem;   // aligned under the app label
+        font-size: .86rem;
+        font-weight: 600;
+    }
+
+    // ---- collapsed: icons only ----
+    &--collapsed {
+        .pos-retail-side__brandname,
+        .pos-retail-side__text,
+        .pos-retail-side__group,
+        .pos-retail-side__item { display: none; }
+
+        .pos-retail-side__brand { justify-content: center; padding: 0 .3rem; }
+        .pos-retail-side__toggle { margin-left: 0; }
+        .pos-retail-side__app { justify-content: center; padding: .55rem .3rem; }
+    }
+}
+
+// ---- make room for it -------------------------------------------------------
+.o_web_client { padding-left: $pos-retail-side-width; }
+body.pos-retail-side-collapsed .o_web_client { padding-left: $pos-retail-side-width-collapsed; }
+
+// The app's own sections now live in the sidebar, so drop them from the top bar
+// rather than showing the same menu twice. The apps launcher, breadcrumb and
+// systray are all left alone.
+.o_navbar .o_menu_sections { display: none !important; }
+
+// ---- small screens: fall back to stock Odoo navigation ---------------------
+@media (max-width: 991.98px) {
+    .pos-retail-side { display: none; }
+    .o_web_client,
+    body.pos-retail-side-collapsed .o_web_client { padding-left: 0; }
+    .o_navbar .o_menu_sections { display: flex !important; }
+}
