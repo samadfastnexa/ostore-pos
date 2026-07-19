@@ -27,12 +27,33 @@
     }
 }
 
-// Hide Enterprise-only upsell settings across every Settings screen
-// (Accounting > Vendor Payments/Digitization, Expenses > OCR/Stripe, etc).
-// Every such field renders the same ".o_enterprise_label" "Enterprise" badge
-// core-side (web/FormLabelHighlightText) regardless of which app/module owns
-// it, so this one selector hides the whole block everywhere at once instead
-// of enumerating each `<setting id="...">` individually.
+// Hide Enterprise-only upsells across every Settings screen (Accounting >
+// Vendor Payments/Digitization, Expenses > OCR, etc). Every such field renders
+// the same ".o_enterprise_label" badge core-side (FormLabelHighlightText)
+// regardless of which app owns it, so a handful of selectors cover all apps at
+// once instead of enumerating each <setting id="...">.
+//
+// A settings block renders as SIBLINGS -- <h2>, optional <h3 class=
+// "o_setting_tip">, then <div class="o_settings_container"> holding the
+// .o_setting_box items (web.SettingsBlock) -- so the heading of an
+// all-Enterprise section has to be matched separately via :has(+ ...).
+
+// 1. Any single Enterprise-badged setting.
 .o_setting_box:has(.o_enterprise_label) {
+    display: none !important;
+}
+
+// 2. A section whose EVERY setting is Enterprise: hide the whole container.
+//    Guarded by :has(.o_enterprise_label) so containers holding custom,
+//    box-free markup are never touched.
+.o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label)))) {
+    display: none !important;
+}
+
+// 3. ...and its now-orphaned heading + tip line, matched as the siblings
+//    directly before such a container.
+h2:has(+ .o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label))))),
+h2:has(+ h3.o_setting_tip + .o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label))))),
+h3.o_setting_tip:has(+ .o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label))))) {
     display: none !important;
 }

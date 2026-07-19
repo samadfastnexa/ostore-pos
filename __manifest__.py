@@ -64,6 +64,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/sale_order_views.xml',
         'views/account_move_views.xml',
         'views/pos_membership_level_views.xml',
+        'views/ir_module_views.xml',
         'views/res_partner_views.xml',
         'views/pos_config_views.xml',
         'views/pos_retail_dashboard_views.xml',
@@ -79,7 +80,9 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'web.assets_backend': [
             'pos_retail/static/src/dashboard/**/*',
             'pos_retail/static/src/backend/backend_theme.scss',
+            'pos_retail/static/src/backend/chatter.xml',
             'pos_retail/static/src/backend/about.xml',
+            'pos_retail/static/src/backend/hide_messaging.js',
             'pos_retail/static/src/backend/hide_odoo_links.js',
             'pos_retail/static/src/backend/sidebar.js',
             'pos_retail/static/src/backend/sidebar.xml',
