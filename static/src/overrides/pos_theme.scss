@@ -93,6 +93,178 @@ $o_retail_blue: #2563eb;
 }
 
 // ============================================================================
+// Till polish (product screen): search, category chips, receipt-style totals,
+// tile-language action buttons, softened numpad. Every selector verified
+// against the 19.0 templates.
+// ============================================================================
+.pos {
+    // ---- product search (top bar): rounded, blue focus ring (blue = search
+    // in the fixed colour language) --------------------------------------
+    .pos-topheader .input-container {
+        border-radius: .6rem;
+
+        &:focus-within {
+            border-color: $o_retail_blue;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+        }
+    }
+
+    // ---- category strip: softer chips. Selection contrast is native (the
+    // selected chip keeps full opacity + its colour border; the rest are
+    // dimmed), so only the shape and weight change. Radius stays moderate
+    // because chips can carry category images. -----------------------------
+    .category-button {
+        border-radius: .8rem;
+        font-weight: 600;
+
+        &:hover { border-color: var(--pos-retail-accent); }
+    }
+
+    // ---- cart totals: read like a receipt subtotal block ------------------
+    .order-summary {
+        background-color: color-mix(in srgb, var(--pos-retail-accent) 4%, #fff);
+
+        .tax-info { font-size: .85rem; }
+
+        // the Total row (the only fs-3 child): a dashed rule above it, like
+        // the receipt's own total separator
+        > .fs-3 {
+            border-top: 1px dashed rgba(0, 0, 0, .18);
+            padding-top: .4rem;
+            margin-top: .15rem;
+        }
+    }
+
+    // ---- action row under the cart ----------------------------------------
+    .control-buttons {
+        // Customer: blue tile, matching the payment screen's colour language
+        .set-partner {
+            --btn-bg: #fff;
+            --btn-border-color: #{rgba($o_retail_blue, .45)};
+            --btn-color: #{$o_retail_blue};
+            --btn-hover-bg: #{rgba($o_retail_blue, .08)};
+            --btn-hover-border-color: #{$o_retail_blue};
+            border-radius: .65rem;
+            border-width: 1.5px;
+            font-weight: 650;
+        }
+
+        .more-btn { border-radius: .65rem; }
+    }
+
+    // ---- numpad: rounded keys with a visible pressed state -----------------
+    .numpad { gap: .35rem; }
+
+    .numpad-button {
+        border-radius: .6rem !important;   // core pins rounded-0 on the key
+        transition: transform .05s ease, filter .1s ease;
+
+        &:active {
+            transform: scale(.96);
+            filter: brightness(.93);
+        }
+    }
+
+    // ---- desktop Pay button: green like every confirm action. The earlier
+    // rule only matched the mobile switchpane variant (.pay-button); the
+    // desktop action pad uses .pay-order-button. -----------------------------
+    .pay-order-button.btn-primary {
+        --btn-bg: #{$o_retail_green};
+        --btn-border-color: #{$o_retail_green};
+        --btn-hover-bg: #{$o_retail_green_dark};
+        --btn-hover-border-color: #{$o_retail_green_dark};
+        --btn-active-bg: #{$o_retail_green_dark};
+        box-shadow: 0 8px 20px -8px rgba($o_retail_green, .7);
+    }
+}
+
+// ============================================================================
+// Payment screen: roomy method tiles on the left, a structured summary on the
+// right instead of a bare number adrift in whitespace.
+// ============================================================================
+.pos .payment-screen {
+    // The methods list natively receives only the space left over after the
+    // numpad, buttons and our discount panel, collapsing into a two-row
+    // scroll strip. Reserve room so a typical five-method register (Cash,
+    // Card, Customer Account, JazzCash, EasyPaisa) shows every tender.
+    .left-content > .flex-grow-1.overflow-auto {
+        flex: 1 1 auto;
+        min-height: 16.5rem;
+    }
+
+    // ---- method tiles ------------------------------------------------------
+    .paymentmethod {
+        padding: .55rem .9rem;
+        border: 1.5px solid rgba(0, 0, 0, .1);
+        border-radius: .65rem;
+        background-color: #fff;
+        transition: border-color .12s ease, background-color .12s ease, transform .05s ease;
+
+        &:hover {
+            border-color: var(--pos-retail-accent);
+            background-color: color-mix(in srgb, var(--pos-retail-accent) 6%, #fff);
+        }
+        &:active { transform: scale(.985); }
+
+        // Native cap is 50px but the row style keeps them small; a fixed
+        // square keeps the JazzCash/EasyPaisa tiles and the stock cash/card
+        // glyphs the same visual weight.
+        .payment-method-icon {
+            width: 34px;
+            height: 34px;
+            max-width: 34px;
+            max-height: 34px;
+            object-fit: contain;
+            border-radius: .5rem;
+        }
+        .payment-name { font-weight: 650; }
+    }
+
+    // ---- the due amount ----------------------------------------------------
+    .pos-retail-due-label {
+        font-size: .78rem;
+        font-weight: 750;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        opacity: .55;
+        text-align: center;
+    }
+
+    // The desktop template hard-codes font-size:125px as an inline style; an
+    // author !important outranks inline declarations, so no template surgery.
+    .total {
+        font-size: clamp(44px, 6.5vw, 92px) !important;
+        line-height: 1.05;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .pos-retail-due-hint {
+        text-align: center;
+        font-size: .95rem;
+        opacity: .6;
+        margin-top: .75rem;
+    }
+
+    // ---- tendered lines ----------------------------------------------------
+    .paymentline {
+        border: 1px solid rgba(0, 0, 0, .08);
+
+        &.selected {
+            border-color: var(--pos-retail-accent);
+            box-shadow: inset 3px 0 0 var(--pos-retail-accent);
+        }
+        .delete-button:hover .oi { transform: scale(1.2); }
+    }
+
+    // Remaining / Change row: the native template floats the amount away from
+    // the right edge (me-5 pe-5); pull it flush so it aligns with the lines.
+    .payment-status-amount .amount {
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+    }
+}
+
+// ============================================================================
 // Shop look ("Signature"): a coloured header, softly raised product cards and
 // an accented selection, layered on top of Odoo's own checkout markup. The
 // accent is per store: pos.config.pos_retail_theme_color is published as a

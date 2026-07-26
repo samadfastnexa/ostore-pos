@@ -135,6 +135,39 @@ class ResPartner(models.Model):
             'context': {'default_partner_id': self.id},
         }
 
+    def action_view_customer_ledger(self):
+        """This customer's running receivable ledger: every posted journal
+        item that ever affected their balance (invoices/pay-later sales,
+        refunds, payments they've made), newest first, with a running balance
+        -- the detail behind the single "Outstanding Balance" (credit) figure
+        already shown on the POS History tab. Domain is scoped to a single
+        partner_id, which is what makes the running-balance column
+        (account.move.line's own cumulated_balance, auto-computed via that
+        model's search_fetch override) meaningful; mixing several customers'
+        lines into one running total would not be. The newest-first order
+        comes from the list view and is required for that column to read
+        correctly; see the note in pos_retail_customer_ledger_views.xml.
+        """
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Customer Ledger"),
+            'res_model': 'account.move.line',
+            'view_mode': 'list',
+            'views': [(self.env.ref('pos_retail.pos_retail_customer_ledger_view_list').id, 'list')],
+            'domain': [
+                ('partner_id', '=', self.id),
+                ('account_id.account_type', '=', 'asset_receivable'),
+                ('parent_state', '=', 'posted'),
+                # Same company scope as the `credit` figure on the smart button
+                # (see account/models/partner.py) -- without this, a user with
+                # several companies enabled would see other companies' lines
+                # mixed in, and cumulated_balance (computed with
+                # bypass_access=True) would disagree with the button's number.
+                ('company_id', 'child_of', self.env.company.root_id.id),
+            ],
+        }
+
     def action_view_outstanding_bills(self):
         self.ensure_one()
         return {

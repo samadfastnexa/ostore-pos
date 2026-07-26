@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- Drop the whole "Payment Terminals" block (Adyen, Stripe, Viva.com,
+         Razorpay, Mercado Pago, Pine Labs, QFPay). These are foreign terminal
+         integrations irrelevant to a Pakistani retail deployment; payments here
+         are Cash, Card, JazzCash and EasyPaisa, managed under Payment Methods.
+         Removing the block removes its heading with it; the title lives on
+         the block tag, so no empty section is left behind. -->
+    <record id="res_config_settings_view_form_no_terminals" model="ir.ui.view">
+        <field name="name">res.config.settings.pos.retail.no.terminals</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='pos_payment_terminals_section']" position="replace"/>
+        </field>
+    </record>
+
     <record id="res_config_settings_view_form_pos_retail" model="ir.ui.view">
         <field name="name">res.config.settings.pos.retail.return.policy</field>
         <field name="model">res.config.settings</field>
@@ -45,6 +60,15 @@
                 <div class="mt-3">
                     <label string="Max. Round-Off Amount" for="pos_retail_max_roundoff_amount" class="col-lg-4 o_light_label"/>
                     <field name="pos_retail_max_roundoff_amount"/>
+                </div>
+                <div class="mt-3">
+                    <span class="o_form_label fw-bold">Quotations</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Allow Quotations" for="pos_retail_allow_quotation" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_allow_quotation"/>
+                    </div>
                 </div>
                 <div class="mt-3">
                     <span class="o_form_label fw-bold">Flexible Pricing</span>

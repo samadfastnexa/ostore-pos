@@ -101,6 +101,26 @@
         <field name="context">{'pos_quick_customer': 1}</field>
     </record>
 
+    <!-- Customer-side counterpart to the vendor "Outstanding Balance" button
+         above: same shape, same groups (account.move.line access is
+         accounting-gated the same way for both sides), mirrored field
+         (credit, not debit; see res_partner.py action_view_customer_ledger
+         for the sign convention: positive credit = the customer owes us). -->
+    <record id="view_partner_form_pos_retail_customer_ledger" model="ir.ui.view">
+        <field name="name">res.partner.form.pos.retail.customer.ledger</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button name="action_view_customer_ledger" type="object" class="oe_stat_button"
+                        icon="fa-book" groups="account.group_account_invoice,account.group_account_readonly"
+                        invisible="not credit">
+                    <field name="credit" widget="statinfo" string="Amount Owed"/>
+                </button>
+            </div>
+        </field>
+    </record>
+
     <record id="view_partner_form_pos_history" model="ir.ui.view">
         <field name="name">res.partner.form.pos.history</field>
         <field name="model">res.partner</field>

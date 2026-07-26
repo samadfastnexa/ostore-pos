@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Structure around the big due amount. Core centres a bare 125px number
+         in the empty right pane; give it a label, and a hint when nothing has
+         been tendered yet. (Core's own "Please select a payment method" block
+         can never show: it lives inside the payment-summary wrapper, which
+         only renders once a payment line exists.) -->
+    <t t-name="pos_retail.PaymentScreenDue" t-inherit="point_of_sale.PaymentScreenDue" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('total')]" position="before">
+            <div class="pos-retail-due-label">Total Due</div>
+        </xpath>
+        <xpath expr="//div[hasclass('total')]" position="after">
+            <div t-if="!paymentLines.length" class="pos-retail-due-hint">
+                <i class="fa fa-hand-pointer-o me-1"/>Choose a payment method on the left to take the payment
+            </div>
+        </xpath>
+    </t>
+
+</templates>

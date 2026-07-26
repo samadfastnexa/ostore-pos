@@ -4,21 +4,27 @@
     <!-- Price, allowed selling range and stock on the product card. Core shows
          no price here at all, so this is purely additive. Skipped inside the
          combo configurator popup, where the card is a compact chooser and the
-         extra lines would only add noise. -->
+         extra lines would only add noise.
+         The getter is materialised ONCE via t-set: OWL does not memoize
+         getters, and referencing it per-expression re-ran the whole
+         computation (formatCurrency x3 + a variant reduce) up to 8 times per
+         card, per render, across a grid of up to 100 cards on every search
+         keystroke and screen transition. -->
     <t t-name="pos_retail.ProductCard" t-inherit="point_of_sale.ProductCard" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('product-content')]" position="inside">
-            <t t-if="!props.isComboPopup and posRetailPriceInfo">
-                <div class="pos-retail-card-price" t-esc="posRetailPriceInfo.price"/>
-                <div t-if="posRetailPriceInfo.hasRange"
+            <t t-if="!props.isComboPopup" t-set="posRetailInfo" t-value="posRetailPriceInfo"/>
+            <t t-if="!props.isComboPopup and posRetailInfo">
+                <div class="pos-retail-card-price" t-esc="posRetailInfo.price"/>
+                <div t-if="posRetailInfo.hasRange"
                      class="pos-retail-card-range"
                      title="Allowed selling range">
-                    <i class="fa fa-arrows-h me-1"/><t t-esc="posRetailPriceInfo.range"/>
+                    <i class="fa fa-arrows-h me-1"/><t t-esc="posRetailInfo.range"/>
                 </div>
-                <div t-if="posRetailPriceInfo.isStorable"
+                <div t-if="posRetailInfo.isStorable"
                      class="pos-retail-card-stock"
-                     t-att-class="{ 'pos-retail-card-stock--out': posRetailPriceInfo.qty &lt;= 0 }">
-                    <t t-if="posRetailPriceInfo.qty &gt; 0">
-                        <t t-esc="posRetailPriceInfo.qty"/> in stock
+                     t-att-class="{ 'pos-retail-card-stock--out': posRetailInfo.qty &lt;= 0 }">
+                    <t t-if="posRetailInfo.qty &gt; 0">
+                        <t t-esc="posRetailInfo.qty"/> in stock
                     </t>
                     <t t-else="">Out of stock</t>
                 </div>

@@ -29,8 +29,10 @@ export class PosRetailSidebar extends Component {
         });
 
         // The menu service announces app changes on the bus; re-render so the
-        // active app and its sections stay in step with the action.
-        useBus(this.env.bus, "MENUS:APP-CHANGED", () => this.render(true));
+        // active app and its sections stay in step with the action. A plain
+        // render suffices -- deep-forcing (render(true)) re-rendered every
+        // child on each app switch for no benefit.
+        useBus(this.env.bus, "MENUS:APP-CHANGED", () => this.render());
 
         onMounted(() => this.syncBodyClass());
         onWillUnmount(() => document.body.classList.remove(BODY_CLASS));

@@ -48,6 +48,16 @@
         sequence="86"
         groups="point_of_sale.group_pos_manager"/>
 
+    <!-- Reporting > Customer Ledger. Gated on POS Manager, the persona this
+         was built for: point_of_sale's own ACL already grants POS users READ
+         on account.move.line, so a manager can genuinely open this list. The
+         customer-form smart button stays accounting-gated separately, because
+         the res.partner.credit field it displays is itself field-level
+         restricted to those groups in core. -->
+    <menuitem id="pos_retail_menu_customer_ledger" name="Customer Ledger"
+        parent="point_of_sale.menu_point_rep" action="action_pos_retail_customer_ledger"
+        sequence="13" groups="point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly"/>
+
     <!-- Reporting > Price Reports -->
     <menuitem id="pos_retail_menu_price_reports" name="Price Reports"
         parent="point_of_sale.menu_point_rep" sequence="14"
@@ -154,6 +164,16 @@
         parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_by_reason" sequence="70"/>
     <menuitem id="pos_retail_menu_discount_high_value" name="High Discount Transactions"
         parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_high_value" sequence="80"/>
+
+    <!-- Configuration > Roles & Permissions. Super-Admin-only (base.group_system,
+         not point_of_sale.group_pos_manager): this screen configures real
+         security, so managing it is kept out of reach of a plain manager. -->
+    <menuitem id="menu_pos_retail_access_role"
+        name="Roles &amp; Permissions"
+        parent="point_of_sale.menu_point_config_product"
+        action="pos_retail_access_role_action"
+        sequence="90"
+        groups="base.group_system"/>
 
     <!--
         Hide the Discuss app tile from the apps switcher for this store.

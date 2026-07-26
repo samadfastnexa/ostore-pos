@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_retail_access_role_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.access.role.list</field>
+        <field name="model">pos.retail.access.role</field>
+        <field name="arch" type="xml">
+            <list string="Roles &amp; Permissions">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="user_ids" widget="many2many_tags"/>
+                <field name="can_edit_product_price" widget="boolean_toggle"/>
+                <field name="can_edit_product_cost" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_access_role_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.access.role.form</field>
+        <field name="model">pos.retail.access.role</field>
+        <field name="arch" type="xml">
+            <form string="Role">
+                <header>
+                    <button name="action_archive" type="object" string="Archive"
+                            invisible="not active"
+                            confirm="Archiving this role immediately removes it from every assigned user. Continue?"/>
+                    <button name="action_unarchive" type="object" string="Restore"
+                            invisible="active"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> a named set of permissions the Super Admin can hand to a
+                            user — e.g. "can add products, cannot delete them, cannot change prices on ones
+                            that already exist."<br/>
+                            <strong>How it works:</strong> the Access tab controls whole actions (Create/Write/
+                            Delete) per model — this is real Odoo security, the same engine behind Settings ▸
+                            Groups. A role only ever <em>adds</em> permission on top of whatever else a user
+                            already has (e.g. via POS Manager) — it can never take one away.<br/>
+                            <strong>Sales Price / Cost</strong> are the one exception: those two toggles below
+                            are enforced directly by this app, so they always apply regardless of a user's
+                            other groups.
+                        </div>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Product Adder"/></h1>
+                    </div>
+                    <group>
+                        <field name="user_ids" widget="many2many_tags" string="Assigned Users"/>
+                    </group>
+                    <notebook>
+                        <page string="Access" name="access">
+                            <p class="text-muted">
+                                Pick any model and toggle what this role may do to it. Read access is always on
+                                (a role cannot hide records, only restrict changing them).
+                            </p>
+                            <field name="model_access"
+                                   context="{'default_name': name, 'default_perm_read': True,
+                                             'default_perm_write': False, 'default_perm_create': False,
+                                             'default_perm_unlink': False}">
+                                <list editable="bottom">
+                                    <field name="model_id" string="Model"/>
+                                    <field name="perm_read" string="Read" column_invisible="1"/>
+                                    <field name="perm_create" string="Create"/>
+                                    <field name="perm_write" string="Edit"/>
+                                    <field name="perm_unlink" string="Delete"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Product Price Protection" name="price_protection">
+                            <group>
+                                <field name="can_edit_product_price"/>
+                                <field name="can_edit_product_cost"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_access_role_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.access.role.search</field>
+        <field name="model">pos.retail.access.role</field>
+        <field name="arch" type="xml">
+            <search string="Roles &amp; Permissions">
+                <field name="name"/>
+                <field name="user_ids"/>
+                <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_access_role_action" model="ir.actions.act_window">
+        <field name="name">Roles &amp; Permissions</field>
+        <field name="res_model">pos.retail.access.role</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first role</p>
+            <p>Give a user exactly the permissions they need — e.g. can add products,
+               cannot delete them, cannot change prices on ones that already exist.</p>
+        </field>
+    </record>
+
+</odoo>

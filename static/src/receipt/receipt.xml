@@ -50,9 +50,12 @@
                 <div style="font-size:80%;"><t t-esc="order.config.return_policy"/></div>
             </div>
 
-            <!-- Receipt reference QR code -->
-            <div t-if="posRetailReceiptQR" class="pos-retail-receipt-qr text-center pt-3">
-                <img t-att-src="posRetailReceiptQR"
+            <!-- Receipt reference QR code. Materialised once with t-set:
+                 the getter runs a full canvas QR encode, and referencing it
+                 twice (t-if + src) encoded the same QR twice per render. -->
+            <t t-set="posRetailQR" t-value="posRetailReceiptQR"/>
+            <div t-if="posRetailQR" class="pos-retail-receipt-qr text-center pt-3">
+                <img t-att-src="posRetailQR"
                      style="width:104px; height:104px;" alt="Receipt reference QR"/>
                 <div style="font-size:70%;">Scan for receipt reference</div>
             </div>

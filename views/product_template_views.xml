@@ -94,6 +94,64 @@
         </field>
     </record>
 
+    <!-- Roles & Permissions: grey out Sales Price / Cost for a user whose
+         assigned role doesn't grant editing them on an already-saved product.
+         View-level only; the real enforcement is the write() guard in
+         models/product_template.py / product_product.py, this just avoids
+         letting the user find out about the block only after clicking Save. -->
+    <record id="product_template_form_view_price_lock" model="ir.ui.view">
+        <field name="name">product.template.form.pos.retail.price.lock</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <field name="list_price" position="before">
+                <field name="pos_retail_price_locked" invisible="1"/>
+                <field name="pos_retail_cost_locked" invisible="1"/>
+            </field>
+            <field name="list_price" position="attributes">
+                <attribute name="readonly">pos_retail_price_locked</attribute>
+            </field>
+            <field name="standard_price" position="attributes">
+                <attribute name="readonly">pos_retail_cost_locked</attribute>
+            </field>
+        </field>
+    </record>
+
+    <!-- Same hint on the two VARIANT forms. The normal variant form inherits
+         the template form (so the patch above reaches its standard_price),
+         but core hides list_price there and shows an unpatched lst_price
+         instead; the easy-edit form is a standalone primary view the template
+         patch never reaches at all. Both delegated lock fields are available
+         on product.product through _inherits. -->
+    <record id="product_normal_form_view_price_lock" model="ir.ui.view">
+        <field name="name">product.product.form.pos.retail.price.lock</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_normal_form_view"/>
+        <field name="arch" type="xml">
+            <field name="lst_price" position="attributes">
+                <attribute name="readonly">product_variant_count &gt; 1 or pos_retail_price_locked</attribute>
+            </field>
+        </field>
+    </record>
+
+    <record id="product_variant_easy_edit_view_price_lock" model="ir.ui.view">
+        <field name="name">product.product.easy.edit.pos.retail.price.lock</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_variant_easy_edit_view"/>
+        <field name="arch" type="xml">
+            <field name="lst_price" position="before">
+                <field name="pos_retail_price_locked" invisible="1"/>
+                <field name="pos_retail_cost_locked" invisible="1"/>
+            </field>
+            <field name="lst_price" position="attributes">
+                <attribute name="readonly">product_variant_count &gt; 1 or pos_retail_price_locked</attribute>
+            </field>
+            <field name="standard_price" position="attributes">
+                <attribute name="readonly">pos_retail_cost_locked</attribute>
+            </field>
+        </field>
+    </record>
+
     <record id="product_template_search_view_brand" model="ir.ui.view">
         <field name="name">product.template.search.brand</field>
         <field name="model">product.template</field>

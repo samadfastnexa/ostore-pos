@@ -1,5 +1,5 @@
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 
 class ProductTemplate(models.Model):
@@ -48,6 +48,19 @@ class ProductTemplate(models.Model):
     has_selling_below_cost = fields.Boolean(compute='_compute_profit')
     has_low_margin = fields.Boolean(compute='_compute_profit')
     has_min_selling_price_warning = fields.Boolean(compute='_compute_min_selling_price_warning')
+    pos_retail_price_locked = fields.Boolean(
+        compute='_compute_pos_retail_price_locked',
+        help="Technical field: whether the current user is blocked from "
+             "editing Sales Price on this already-saved product. A pure "
+             "view-level hint -- the actual enforcement is the write() guard "
+             "below; this only makes the field visibly read-only instead of "
+             "letting the user discover the block after clicking Save.",
+    )
+    pos_retail_cost_locked = fields.Boolean(
+        compute='_compute_pos_retail_price_locked',
+        help="Same as pos_retail_price_locked, for the Cost field. Separate "
+             "on purpose: a role can grant one of the two without the other.",
+    )
 
     linked_vendor_ids = fields.Many2many(
         'res.partner', compute='_compute_linked_vendor_ids', string="Linked Vendors",
@@ -141,6 +154,35 @@ class ProductTemplate(models.Model):
                 tmpl.final_selling_price = tmpl.list_price - tmpl.discount_value
             else:
                 tmpl.final_selling_price = tmpl.list_price * (1 - tmpl.discount_value / 100.0)
+
+    @api.depends_context('uid')
+    def _compute_pos_retail_price_locked(self):
+        # One permission check per recordset render, not per record: whether
+        # editing is locked doesn't vary record-to-record, only "is this
+        # record new or already saved" does (a brand-new record in the form
+        # is never locked -- create() is intentionally unrestricted).
+        can_edit_price = self.env.user._pos_retail_can_edit_price_field('list_price')
+        can_edit_cost = self.env.user._pos_retail_can_edit_price_field('standard_price')
+        for tmpl in self:
+            tmpl.pos_retail_price_locked = bool(tmpl.id) and not can_edit_price
+            tmpl.pos_retail_cost_locked = bool(tmpl.id) and not can_edit_cost
+
+    def write(self, vals):
+        if ('list_price' in vals
+                and not self.env.su
+                and not self.env.user._is_system()
+                and not self.env.user._pos_retail_can_edit_price_field('list_price')
+                # No-op tolerance: only raise when the value actually changes.
+                # The web client and load()/imports re-send unchanged fields;
+                # blocking those would break e.g. re-importing a product CSV
+                # whose Sales Price column is untouched.
+                and any(t.list_price != vals['list_price'] for t in self)):
+            raise AccessError(_(
+                "You are not allowed to change the Sales Price on a product "
+                "that already exists. Ask your administrator for the "
+                "\"Can Edit Sales Price\" permission."
+            ))
+        return super().write(vals)
 
     @api.model
     def _load_pos_data_fields(self, config):
