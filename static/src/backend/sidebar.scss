@@ -129,10 +129,25 @@ $pos-retail-side-accent: $pos-retail-side-mid;
         }
     }
 
+    // One block per app; the block of the app you are IN becomes an inset
+    // panel, so its sections and items visibly belong to it and the other
+    // app rows (the "main headings") stand apart.
+    &__block {
+        border-radius: .6rem;
+
+        &.is-open {
+            background: rgba(18, 7, 55, .28);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .09);
+            padding: .2rem .3rem .5rem;
+            margin: .3rem 0 .55rem;
+        }
+    }
+
     &__app {
-        padding: .5rem .6rem;
-        font-weight: 700;
-        font-size: .89rem;
+        padding: .55rem .6rem;
+        font-weight: 750;
+        font-size: .92rem;
+        letter-spacing: .01em;
         margin-bottom: 1px;
 
         &.is-active {
@@ -159,20 +174,106 @@ $pos-retail-side-accent: $pos-retail-side-mid;
 
     &__text { overflow: hidden; text-overflow: ellipsis; }
 
+    // Collapsible section header. Deliberately styled as a REAL nav row
+    // (title case, bold, same size as a standalone page like Dashboard), not
+    // a mini small-caps label: the small-caps look made headers read as less
+    // important than their own child items. Small caps are reserved for the
+    // deeper sub-group labels, giving three visibly distinct levels.
     &__group {
-        font-size: .66rem;
-        font-weight: 800;
-        letter-spacing: .11em;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        width: 100%;
+        border: 0;
+        // Openable groups carry their own background pill at ALL times, so
+        // they are visually distinct from plain page links (Dashboard,
+        // Expenses), which stay flat until hovered: "has a background" means
+        // "this one expands".
+        background: rgba(255, 255, 255, .09);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
+        text-align: left;
+        cursor: pointer;
+        font-size: .87rem;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(28, 10, 70, .35);
+        padding: .45rem .6rem;
+        margin-top: .28rem;
+        border-radius: .5rem;
+        white-space: nowrap;
+        overflow: hidden;
+
+        &:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+
+        // Currently expanded: clearly stronger fill than a closed group.
+        &.is-open {
+            background: rgba(255, 255, 255, .2);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+        }
+
+        &:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, .85);
+            outline-offset: -2px;
+        }
+    }
+
+    &__chev {
+        width: 12px;
+        flex: none;
+        font-size: .58rem;
+        opacity: .8;
+        text-align: center;
+    }
+
+    // The open section's contents: one indented block with a vertical guide
+    // rail, so items are visibly INSIDE their section instead of free-floating
+    // rows that compete with the headers.
+    &__items {
+        margin: .05rem 0 .4rem 1.18rem;   // rail starts under the header text
+        padding-left: .5rem;
+        border-left: 1px solid rgba(255, 255, 255, .3);
+    }
+
+    // Grouping menu inside a section (third menu level exists below it):
+    // a quieter small-caps label between the section header and its items.
+    &__subgroup {
+        font-size: .62rem;
+        font-weight: 750;
+        letter-spacing: .09em;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, .82);
+        color: rgba(255, 255, 255, .62);
         text-shadow: 0 1px 2px rgba(28, 10, 70, .3);
-        padding: .75rem .65rem .3rem;
+        padding: .5rem .55rem .15rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     &__item {
-        padding: .42rem .6rem .42rem 2.05rem;   // aligned under the app label
-        font-size: .86rem;
-        font-weight: 600;
+        padding: .34rem .55rem;
+        font-size: .82rem;
+        font-weight: 400;   // clearly lighter than the 700 headers
+
+        // The menu currently open (as clicked in this sidebar): a filled row
+        // with a left accent bar, clearly heavier than the hover wash.
+        &.is-active {
+            background: rgba(255, 255, 255, .2);
+            box-shadow: inset 3px 0 0 0 rgba(255, 255, 255, .9);
+            font-weight: 700;
+        }
+    }
+
+    // Item under a sub-group label: one step deeper again.
+    &__item--sub { padding-left: 1.5rem; }
+
+    // A section that is a single page (Dashboard, Expenses): dressed exactly
+    // like a section header (same size/weight, text aligned with header
+    // text), so all top-level entries of the app read as siblings.
+    &__item--top {
+        font-size: .87rem;
+        font-weight: 700;
+        padding: .45rem .6rem .45rem 1.85rem;
+        margin-top: .15rem;
     }
 
     // ---- collapsed: icons only ----
@@ -180,6 +281,8 @@ $pos-retail-side-accent: $pos-retail-side-mid;
         .pos-retail-side__brandname,
         .pos-retail-side__text,
         .pos-retail-side__group,
+        .pos-retail-side__subgroup,
+        .pos-retail-side__items,
         .pos-retail-side__item { display: none; }
 
         .pos-retail-side__brand { justify-content: center; padding: 0 .3rem; }

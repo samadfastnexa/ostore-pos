@@ -6,6 +6,7 @@ import { browser } from "@web/core/browser/browser";
 import { useBus, useService } from "@web/core/utils/hooks";
 
 const STORAGE_KEY = "pos_retail_sidebar_collapsed";
+const SECTIONS_KEY = "pos_retail_sidebar_closed_sections";
 const BODY_CLASS = "pos-retail-side-collapsed";
 
 // Left navigation for the back office.
@@ -24,8 +25,20 @@ export class PosRetailSidebar extends Component {
 
     setup() {
         this.menuService = useService("menu");
+        let closedSections = {};
+        try {
+            closedSections = JSON.parse(browser.localStorage.getItem(SECTIONS_KEY) || "{}") || {};
+        } catch {
+            closedSections = {};
+        }
         this.state = useState({
             collapsed: browser.localStorage.getItem(STORAGE_KEY) === "1",
+            // Sections are open unless the user closed them; only closed ids
+            // are stored, so new sections (new menus, other apps) start open.
+            closedSections,
+            // Highlighted leaf. Tracked from sidebar clicks; the menu service
+            // has no public "current leaf menu", only the current app.
+            activeMenuId: null,
         });
 
         // The menu service announces app changes on the bus; re-render so the
@@ -63,17 +76,35 @@ export class PosRetailSidebar extends Component {
         return Boolean(menu.childrenTree && menu.childrenTree.length);
     }
 
+    isSectionOpen(section) {
+        return !this.state.closedSections[section.id];
+    }
+
+    toggleSection(section) {
+        if (this.state.closedSections[section.id]) {
+            delete this.state.closedSections[section.id];
+        } else {
+            this.state.closedSections[section.id] = true;
+        }
+        browser.localStorage.setItem(SECTIONS_KEY, JSON.stringify(this.state.closedSections));
+    }
+
+    isActive(menu) {
+        return this.state.activeMenuId === menu.id;
+    }
+
     onClickMenu(menu) {
         // selectMenu is a no-op for a menu with no action (a pure grouping
         // node), so fall through to its first actionable child instead.
+        let target = menu;
         if (!menu.actionID && this.hasChildren(menu)) {
-            const target = menu.childrenTree.find((child) => child.actionID);
-            if (target) {
-                this.menuService.selectMenu(target);
+            target = menu.childrenTree.find((child) => child.actionID);
+            if (!target) {
+                return;
             }
-            return;
         }
-        this.menuService.selectMenu(menu);
+        this.state.activeMenuId = target.id;
+        this.menuService.selectMenu(target);
     }
 
     syncBodyClass() {
