@@ -118,6 +118,19 @@
                     <field name="credit" widget="statinfo" string="Amount Owed"/>
                 </button>
             </div>
+            <!-- Khata actions: the ledger's history is never edited in place;
+                 the balance changes through these. Gated on Invoicing access
+                 because both post real accounting documents. -->
+            <sheet position="before">
+                <header>
+                    <button name="action_receive_customer_payment" type="object"
+                            string="Receive Payment" class="btn-primary"
+                            groups="account.group_account_invoice"/>
+                    <button name="action_open_ledger_adjustment" type="object"
+                            string="Khata Adjustment"
+                            groups="account.group_account_invoice"/>
+                </header>
+            </sheet>
         </field>
     </record>
 

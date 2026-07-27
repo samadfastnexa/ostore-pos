@@ -39,19 +39,83 @@
         <field name="name">pos.retail.customer.ledger.list</field>
         <field name="model">account.move.line</field>
         <field name="arch" type="xml">
-            <list string="Customer Ledger" create="false" edit="false" default_order="date desc, id desc">
+            <!-- Every column optional: the gear icon at the right of the
+                 header row lets the user show/hide any of them. History rows
+                 themselves stay read-only on purpose (core protects posted
+                 entries); the balance is changed through the Receive Payment
+                 and Khata Adjustment buttons on the customer form. -->
+            <list string="Customer Ledger" create="false" edit="false" delete="false"
+                  default_order="date desc, id desc">
                 <!-- company_currency_id: debit/credit/cumulated_balance are
                      Monetary fields whose currency_field points at it; without
                      it in the arch the web client renders bare numbers with no
                      symbol and default digits. -->
                 <field name="company_currency_id" column_invisible="1"/>
-                <field name="date" string="Date"/>
-                <field name="move_id" string="Reference"/>
-                <field name="name" string="Description" optional="hide"/>
-                <field name="debit" string="Charged" sum="Total Charged"/>
-                <field name="credit" string="Paid" sum="Total Paid"/>
-                <field name="cumulated_balance" string="Balance"/>
+                <field name="date" string="Date" optional="show"/>
+                <field name="move_id" string="Reference" optional="show"/>
+                <field name="name" string="Description" optional="show"/>
+                <field name="journal_id" string="Journal" optional="hide"/>
+                <field name="date_maturity" string="Due Date" optional="hide"/>
+                <field name="debit" string="Charged" sum="Total Charged" optional="show"/>
+                <field name="credit" string="Paid" sum="Total Paid" optional="show"/>
+                <field name="amount_residual" string="Left Unpaid" optional="hide"/>
+                <field name="cumulated_balance" string="Balance" optional="show"/>
             </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_customer_ledger_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.customer.ledger.search</field>
+        <field name="model">account.move.line</field>
+        <field name="arch" type="xml">
+            <search string="Customer Ledger">
+                <field name="move_id" string="Reference"/>
+                <field name="name" string="Description"/>
+                <filter name="charges" string="Charges (owes more)" domain="[('debit', '&gt;', 0)]"/>
+                <filter name="payments" string="Payments (paid back)" domain="[('credit', '&gt;', 0)]"/>
+                <separator/>
+                <filter name="unreconciled" string="Still Unpaid" domain="[('amount_residual', '!=', 0)]"/>
+                <separator/>
+                <filter name="filter_date" date="date" string="Date"/>
+                <group>
+                    <filter name="group_month" string="Month" context="{'group_by': 'date:month'}"/>
+                    <filter name="group_journal" string="Journal" context="{'group_by': 'journal_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Khata Adjustment dialog (see models/pos_retail_ledger_adjustment.py). -->
+    <record id="pos_retail_ledger_adjustment_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.ledger.adjustment.form</field>
+        <field name="model">pos.retail.ledger.adjustment</field>
+        <field name="arch" type="xml">
+            <form string="Khata Adjustment">
+                <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                    <i class="fa fa-balance-scale mt-1" role="img" aria-label="Info" title="Info"/>
+                    <div>Changes what this customer owes by posting a new, visible ledger entry
+                         with your reason on it. Use it for old khata balances brought forward,
+                         waived amounts or corrections. Past entries are never rewritten.</div>
+                </div>
+                <group>
+                    <group>
+                        <field name="partner_id" readonly="context.get('default_partner_id')"/>
+                        <field name="direction" widget="radio"/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="amount"/>
+                    </group>
+                    <group>
+                        <field name="date"/>
+                        <field name="reason" placeholder="e.g. Old khata balance brought forward"/>
+                        <field name="counterpart_account_id"/>
+                        <field name="journal_id"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Post Adjustment" class="btn-primary"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
         </field>
     </record>
 
@@ -59,13 +123,18 @@
         <field name="name">pos.retail.customer.ledger.report.list</field>
         <field name="model">account.move.line</field>
         <field name="arch" type="xml">
-            <list string="Customer Ledgers" create="false" edit="false" default_order="partner_id, date desc, id desc">
+            <list string="Customer Ledgers" create="false" edit="false" delete="false"
+                  default_order="partner_id, date desc, id desc">
                 <field name="company_currency_id" column_invisible="1"/>
-                <field name="partner_id" string="Customer"/>
-                <field name="date" string="Date"/>
-                <field name="move_id" string="Reference"/>
-                <field name="debit" string="Charged" sum="Total Charged"/>
-                <field name="credit" string="Paid" sum="Total Paid"/>
+                <field name="partner_id" string="Customer" optional="show"/>
+                <field name="date" string="Date" optional="show"/>
+                <field name="move_id" string="Reference" optional="show"/>
+                <field name="name" string="Description" optional="hide"/>
+                <field name="journal_id" string="Journal" optional="hide"/>
+                <field name="date_maturity" string="Due Date" optional="hide"/>
+                <field name="debit" string="Charged" sum="Total Charged" optional="show"/>
+                <field name="credit" string="Paid" sum="Total Paid" optional="show"/>
+                <field name="amount_residual" string="Left Unpaid" optional="hide"/>
             </list>
         </field>
     </record>
@@ -77,8 +146,15 @@
             <search string="Customer Ledgers">
                 <field name="partner_id"/>
                 <field name="move_id"/>
+                <filter name="charges" string="Charges (owes more)" domain="[('debit', '&gt;', 0)]"/>
+                <filter name="payments" string="Payments (paid back)" domain="[('credit', '&gt;', 0)]"/>
+                <separator/>
+                <filter name="unreconciled" string="Still Unpaid" domain="[('amount_residual', '!=', 0)]"/>
+                <separator/>
+                <filter name="filter_date" date="date" string="Date"/>
                 <group>
                     <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Month" name="group_month" context="{'group_by': 'date:month'}"/>
                 </group>
             </search>
         </field>

@@ -155,6 +155,7 @@ class ResPartner(models.Model):
             'res_model': 'account.move.line',
             'view_mode': 'list',
             'views': [(self.env.ref('pos_retail.pos_retail_customer_ledger_view_list').id, 'list')],
+            'search_view_id': (self.env.ref('pos_retail.pos_retail_customer_ledger_view_search').id, 'search'),
             'domain': [
                 ('partner_id', '=', self.id),
                 ('account_id.account_type', '=', 'asset_receivable'),
@@ -166,6 +167,40 @@ class ResPartner(models.Model):
                 # bypass_access=True) would disagree with the button's number.
                 ('company_id', 'child_of', self.env.company.root_id.id),
             ],
+        }
+
+    def action_receive_customer_payment(self):
+        """Record money received from this customer: a pre-filled inbound
+        payment. Once confirmed it posts to the receivable and the ledger and
+        the Amount Owed figure drop accordingly.
+        """
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Receive Payment"),
+            'res_model': 'account.payment',
+            'view_mode': 'form',
+            'context': {
+                'default_payment_type': 'inbound',
+                'default_partner_type': 'customer',
+                'default_partner_id': self.id,
+            },
+        }
+
+    def action_open_ledger_adjustment(self):
+        """Khata adjustment dialog: bring in an old paper-khata balance,
+        waive an amount, or correct the balance -- via a real, posted journal
+        entry (see pos.retail.ledger.adjustment for why history itself is
+        never edited in place).
+        """
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Khata Adjustment"),
+            'res_model': 'pos.retail.ledger.adjustment',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_partner_id': self.id},
         }
 
     def action_view_outstanding_bills(self):

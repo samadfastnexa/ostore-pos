@@ -6,6 +6,7 @@ from . import pos_retail_discount_role
 from . import pos_retail_discount_reason
 from . import pos_retail_return_reason
 from . import pos_retail_price_reason
+from . import pos_retail_access_permission
 from . import pos_retail_access_role
 from . import pos_retail_discount_log
 from . import product_template
@@ -17,7 +18,9 @@ from . import sale_order
 from . import purchase_order
 from . import hr_employee
 from . import pos_order
+from . import stock_picking
 from . import pos_config
 from . import pos_session
 from . import pos_retail_dashboard
+from . import pos_retail_ledger_adjustment
 from . import res_users
