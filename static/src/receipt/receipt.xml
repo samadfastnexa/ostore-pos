@@ -2,8 +2,40 @@
 <templates xml:space="preserve">
 
     <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <!-- Receipt Studio modifier classes on the receipt root. The raster
+             print path adds `pos-receipt-print` to this same element and the
+             browser print path clones it, so width/style/font classes reach
+             every output (screen, thermal raster, browser print, email JPEG).
+             See receipt.scss for the matching rules. -->
+        <xpath expr="//div[hasclass('pos-receipt')]" position="attributes">
+            <attribute name="t-attf-class">pos-retail-style-{{order.config.pos_retail_receipt_style || 'standard'}} pos-retail-w{{order.config.pos_retail_receipt_width || '80'}} pos-retail-font-{{order.config.pos_retail_receipt_font || 'normal'}}</attribute>
+        </xpath>
+
+        <!-- SKU under each product line (inside Orderline's info list). -->
+        <xpath expr="//Orderline" position="inside">
+            <li t-if="order.config.pos_retail_receipt_show_sku and line.product_id.default_code"
+                class="pos-retail-line-sku">
+                SKU: <t t-esc="line.product_id.default_code"/>
+            </li>
+        </xpath>
+
         <!-- The core template exposes an explicit `before-footer` anchor. -->
         <xpath expr="//div[hasclass('before-footer')]" position="before">
+
+            <!-- Payment transaction references (card / wallet / bank). The
+                 amounts themselves are printed by the core paymentlines
+                 block; this adds the reference trail under it. -->
+            <t t-foreach="paymentLines" t-as="pline" t-key="pline.uuid">
+                <div t-if="pline.transaction_id or pline.payment_ref_no or pline.card_no"
+                     class="pos-retail-payment-ref text-start" style="font-size:75%;">
+                    <span t-esc="pline.payment_method_id.name"/>
+                    <t t-if="pline.card_type"> <t t-esc="pline.card_type"/></t>
+                    <t t-if="pline.card_no"> ****<t t-esc="pline.card_no"/></t>
+                    <t t-if="pline.transaction_id or pline.payment_ref_no">
+                        Ref: <t t-esc="pline.transaction_id or pline.payment_ref_no"/>
+                    </t>
+                </div>
+            </t>
 
             <!-- Order discount details (manager approval + reason) -->
             <t t-if="order.config.pos_retail_receipt_show_discount_details">
@@ -50,14 +82,32 @@
                 <div style="font-size:80%;"><t t-esc="order.config.return_policy"/></div>
             </div>
 
-            <!-- Receipt reference QR code. Materialised once with t-set:
-                 the getter runs a full canvas QR encode, and referencing it
-                 twice (t-if + src) encoded the same QR twice per render. -->
-            <t t-set="posRetailQR" t-value="posRetailReceiptQR"/>
-            <div t-if="posRetailQR" class="pos-retail-receipt-qr text-center pt-3">
-                <img t-att-src="posRetailQR"
-                     style="width:104px; height:104px;" alt="Receipt reference QR"/>
-                <div style="font-size:70%;">Scan for receipt reference</div>
+            <!-- Thank-you message (Receipt Studio). -->
+            <div t-if="order.config.pos_retail_receipt_thankyou"
+                 class="pos-retail-thankyou text-center fw-bolder pt-2">
+                <t t-esc="order.config.pos_retail_receipt_thankyou"/>
+            </div>
+
+            <!-- Receipt reference QR code, gated by Receipt Studio.
+                 Materialised once with t-set: the getter runs a full canvas
+                 QR encode, and referencing it twice (t-if + src) encoded the
+                 same QR twice per render. -->
+            <t t-if="order.config.pos_retail_receipt_show_qr">
+                <t t-set="posRetailQR" t-value="posRetailReceiptQR"/>
+                <div t-if="posRetailQR" class="pos-retail-receipt-qr text-center pt-3">
+                    <img t-att-src="posRetailQR"
+                         style="width:104px; height:104px;" alt="Receipt reference QR"/>
+                    <div style="font-size:70%;">Scan for receipt reference</div>
+                </div>
+            </t>
+
+            <!-- Scannable reference barcode (optional; fetched from the
+                 server, so it needs connectivity at render time). -->
+            <div t-if="order.config.pos_retail_receipt_show_ref_barcode and order.pos_reference"
+                 class="pos-retail-ref-barcode text-center pt-2">
+                <img t-att-src="'/report/barcode/Code128/' + encodeURIComponent(order.pos_reference) + '?width=300&amp;height=60'"
+                     style="width:80%; max-height:44px;" alt="Receipt reference barcode"/>
+                <div style="font-size:70%;" t-esc="order.pos_reference"/>
             </div>
 
         </xpath>
@@ -71,6 +121,9 @@
             <div class="pos-retail-receipt-branding pos-receipt-center-align text-center pt-3"
                  style="border-top:1px dashed currentColor; padding-top:6px;">
                 <div class="fw-bolder" t-esc="order.company.name"/>
+                <div t-if="order.config.pos_retail_receipt_social"
+                     class="pos-retail-receipt-social" style="font-size:80%;"
+                     t-esc="order.config.pos_retail_receipt_social"/>
             </div>
         </xpath>
     </t>

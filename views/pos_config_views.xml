@@ -16,6 +16,64 @@
         </field>
     </record>
 
+    <!-- Receipt Studio: its own setting block appended to the Bills and
+         Receipts section. Deliberately NOT anchored inside the receipt
+         header/footer content-group (that group is hidden whenever the
+         "Custom Header and Footer" toggle is off, which would make these
+         settings vanish with it). -->
+    <record id="res_config_settings_view_form_pos_retail_receipt" model="ir.ui.view">
+        <field name="name">res.config.settings.pos.retail.receipt.studio</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='pos_bills_and_receipts_section']" position="inside">
+                <setting string="Receipt Studio"
+                         help="Layout, paper width and content of the printed receipt">
+                    <div class="content-group">
+                        <div class="row mt8">
+                            <label string="Template Style" for="pos_retail_receipt_style" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_style"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Paper Width" for="pos_retail_receipt_width" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_width"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Font Size" for="pos_retail_receipt_font" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_font"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Show SKU on Lines" for="pos_retail_receipt_show_sku" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_show_sku"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Show QR Code" for="pos_retail_receipt_show_qr" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_show_qr"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Show Reference Barcode" for="pos_retail_receipt_show_ref_barcode" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_show_ref_barcode"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Thank-You Message" for="pos_retail_receipt_thankyou" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_thankyou"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Website &amp; Social Line" for="pos_retail_receipt_social" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_social"
+                                   placeholder="www.mystore.pk | fb.com/mystore"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Terms &amp; Conditions (PDF)" for="pos_retail_receipt_terms" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_terms"
+                                   placeholder="Printed on A4/PDF receipts only"/>
+                        </div>
+                    </div>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+
     <record id="res_config_settings_view_form_pos_retail" model="ir.ui.view">
         <field name="name">res.config.settings.pos.retail.return.policy</field>
         <field name="model">res.config.settings</field>

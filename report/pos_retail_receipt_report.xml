@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- 80mm thermal roll. wkhtmltopdf needs format=custom before it will
+         honour page_width/page_height, and dpi must stay at 96: Odoo forces
+         any dpi below 96 up to 96 on Windows and derives a zoom factor from
+         it, so a lower value silently rescales the page and the receipt comes
+         out the wrong width. disable_shrinking stops smart-shrinking from
+         rescaling narrow content. page_height is finite, so a very long order
+         paginates; the A4 report is the format for those. -->
+    <record id="paperformat_pos_receipt_80" model="report.paperformat">
+        <field name="name">POS Thermal Receipt 80mm</field>
+        <field name="default" eval="False"/>
+        <field name="format">custom</field>
+        <field name="page_width">80</field>
+        <field name="page_height">297</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">3</field>
+        <field name="margin_bottom">3</field>
+        <field name="margin_left">2</field>
+        <field name="margin_right">2</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="disable_shrinking" eval="True"/>
+        <field name="dpi">96</field>
+    </record>
+
+    <!-- ============================ THERMAL ============================ -->
+    <!-- web.basic_layout on purpose: it emits no .header/.footer divs, which
+         is exactly what wkhtmltopdf extracts to build page chrome, so the PDF
+         comes out clean with no company letterhead over a 80mm ticket. -->
+    <template id="report_pos_receipt_thermal_document">
+        <t t-set="d" t-value="o._pos_retail_receipt_data()"/>
+        <t t-set="cfg" t-value="o.config_id"/>
+        <div class="pos-retail-pdf-thermal">
+
+            <div class="text-center">
+                <img t-if="o.company_id.logo" class="pos-retail-pdf-logo"
+                     t-att-src="image_data_uri(o.company_id.logo)" alt="Logo"/>
+                <div class="pos-retail-pdf-company" t-esc="o.company_id.name"/>
+                <div t-if="cfg.receipt_header" style="white-space:pre-line;"
+                     t-esc="cfg.receipt_header"/>
+                <div t-if="o.company_id.partner_id.contact_address"
+                     style="white-space:pre-line;"
+                     t-esc="o.company_id.partner_id.contact_address.strip()"/>
+                <div t-if="o.company_id.phone">Tel: <t t-esc="o.company_id.phone"/></div>
+                <div t-if="o.company_id.email"><t t-esc="o.company_id.email"/></div>
+                <div t-if="o.company_id.website"><t t-esc="o.company_id.website"/></div>
+                <div t-if="o.company_id.vat">Tax No: <t t-esc="o.company_id.vat"/></div>
+            </div>
+
+            <div class="pos-retail-pdf-rule"/>
+            <div>
+                <div>Receipt: <span t-esc="o.pos_reference or o.name"/></div>
+                <div t-if="o.account_move">Invoice: <span t-esc="o.account_move.name"/></div>
+                <div>Terminal: <span t-esc="cfg.name"/></div>
+                <div>Cashier: <span t-esc="o.employee_id.name or o.user_id.name"/></div>
+                <div>Date: <span t-field="o.date_order" t-options='{"widget": "datetime"}'/></div>
+            </div>
+
+            <div class="pos-retail-pdf-rule"/>
+            <div t-if="o.partner_id">
+                <div class="fw-bold" t-esc="o.partner_id.name"/>
+                <div t-if="o.partner_id.phone">Tel: <t t-esc="o.partner_id.phone"/></div>
+                <div t-if="o.partner_id.ref">Customer ID: <t t-esc="o.partner_id.ref"/></div>
+                <div t-if="o.partner_id.membership_level_id">Membership: <t t-esc="o.partner_id.membership_level_id.name"/></div>
+            </div>
+            <div t-else="" class="fw-bold text-center">Walk-in Customer</div>
+
+            <div class="pos-retail-pdf-rule"/>
+            <table class="pos-retail-pdf-lines">
+                <t t-foreach="d['product_lines']" t-as="line">
+                    <tr>
+                        <td colspan="2" class="fw-bold" t-esc="line.full_product_name or line.product_id.display_name"/>
+                    </tr>
+                    <tr t-if="cfg.pos_retail_receipt_show_sku and line.product_id.default_code">
+                        <td colspan="2" class="pos-retail-pdf-sku">SKU: <t t-esc="line.product_id.default_code"/></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <t t-esc="line.qty"/> x
+                            <span t-esc="line.price_unit"
+                                  t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                            <t t-if="line.discount"> (-<t t-esc="line.discount"/>%)</t>
+                        </td>
+                        <td class="text-end">
+                            <span t-esc="line.price_subtotal_incl"
+                                  t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                        </td>
+                    </tr>
+                </t>
+            </table>
+
+            <div class="pos-retail-pdf-rule"/>
+            <table class="pos-retail-pdf-totals">
+                <tr>
+                    <td>Subtotal</td>
+                    <td class="text-end"><span t-esc="d['subtotal']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                </tr>
+                <tr t-if="d['product_discount']">
+                    <td>Product Discounts</td>
+                    <td class="text-end">-<span t-esc="d['product_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                </tr>
+                <tr t-if="d['order_discount']">
+                    <td>Order Discount</td>
+                    <td class="text-end">-<span t-esc="d['order_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                </tr>
+                <tr t-if="d['round_off']">
+                    <td>Round-Off</td>
+                    <td class="text-end"><span t-esc="d['round_off']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                </tr>
+                <tr t-foreach="d['tax_groups']" t-as="tax_name">
+                    <td t-esc="tax_name"/>
+                    <td class="text-end"><span t-esc="d['tax_groups'][tax_name]" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                </tr>
+                <tr class="pos-retail-pdf-grand">
+                    <td>TOTAL</td>
+                    <td class="text-end"><span t-esc="d['grand_total']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                </tr>
+                <tr>
+                    <td>Paid</td>
+                    <td class="text-end"><span t-esc="d['paid']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                </tr>
+                <tr t-if="d['change']">
+                    <td>Change</td>
+                    <td class="text-end"><span t-esc="d['change']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                </tr>
+            </table>
+
+            <div t-if="d['payments']" class="pos-retail-pdf-rule"/>
+            <table t-if="d['payments']" class="pos-retail-pdf-totals">
+                <t t-foreach="d['payments']" t-as="pay">
+                    <tr>
+                        <td t-esc="pay['name']"/>
+                        <td class="text-end"><span t-esc="pay['amount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                    </tr>
+                    <tr t-if="pay['ref']">
+                        <td colspan="2" class="pos-retail-pdf-sku">Ref: <t t-esc="pay['ref']"/></td>
+                    </tr>
+                </t>
+            </table>
+
+            <div t-if="o.discount_reason_id or o.return_reason_id" class="pos-retail-pdf-rule"/>
+            <div t-if="o.discount_reason_id">Discount Reason: <t t-esc="o.discount_reason_id.name"/></div>
+            <div t-if="o.discount_manager_id">Approved By: <t t-esc="o.discount_manager_id.name"/></div>
+            <div t-if="o.return_reason_id">Return Reason: <t t-esc="o.return_reason_id.name"/></div>
+
+            <div class="pos-retail-pdf-rule"/>
+            <div t-if="cfg.pos_retail_receipt_thankyou" class="text-center fw-bold"
+                 t-esc="cfg.pos_retail_receipt_thankyou"/>
+
+            <div t-if="cfg.return_policy" class="text-center pos-retail-pdf-sku"
+                 style="white-space:pre-line;">
+                <div class="fw-bold">Return Policy</div>
+                <t t-esc="cfg.return_policy"/>
+            </div>
+
+            <div t-if="cfg.pos_retail_receipt_show_qr" class="text-center">
+                <span t-field="o.pos_reference"
+                      t-options='{"widget": "barcode", "symbology": "QR", "width": 120, "height": 120, "quiet": 0, "img_style": "width:28mm;height:28mm;"}'/>
+            </div>
+            <div t-if="cfg.pos_retail_receipt_show_ref_barcode" class="text-center">
+                <span t-field="o.pos_reference"
+                      t-options='{"widget": "barcode", "symbology": "Code128", "width": 600, "height": 100, "quiet": 0, "img_style": "width:60mm;height:12mm;"}'/>
+            </div>
+
+            <div t-if="cfg.receipt_footer" class="text-center" style="white-space:pre-line;"
+                 t-esc="cfg.receipt_footer"/>
+            <div class="text-center fw-bold" t-esc="o.company_id.name"/>
+            <div t-if="cfg.pos_retail_receipt_social" class="text-center pos-retail-pdf-sku"
+                 t-esc="cfg.pos_retail_receipt_social"/>
+        </div>
+    </template>
+
+    <template id="report_pos_receipt_thermal">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.basic_layout">
+                    <t t-call="pos_retail.report_pos_receipt_thermal_document"/>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!-- ============================== A4 =============================== -->
+    <template id="report_pos_receipt_a4_document">
+        <t t-set="d" t-value="o._pos_retail_receipt_data()"/>
+        <t t-set="cfg" t-value="o.config_id"/>
+        <t t-call="web.external_layout">
+            <div class="page">
+                <h2>Sales Receipt <span t-esc="o.pos_reference or o.name"/></h2>
+
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <table class="table table-sm table-borderless">
+                            <tr><td class="fw-bold">Receipt No</td><td t-esc="o.pos_reference or o.name"/></tr>
+                            <tr t-if="o.account_move"><td class="fw-bold">Invoice No</td><td t-esc="o.account_move.name"/></tr>
+                            <tr><td class="fw-bold">Date</td><td><span t-field="o.date_order" t-options='{"widget": "datetime"}'/></td></tr>
+                        </table>
+                    </div>
+                    <div class="col-6">
+                        <table class="table table-sm table-borderless">
+                            <tr><td class="fw-bold">Store / Terminal</td><td t-esc="cfg.name"/></tr>
+                            <tr><td class="fw-bold">Cashier</td><td t-esc="o.employee_id.name or o.user_id.name"/></tr>
+                            <tr t-if="o.company_id.vat"><td class="fw-bold">Tax No</td><td t-esc="o.company_id.vat"/></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-2">
+                    <strong>Customer</strong>
+                    <div t-if="o.partner_id">
+                        <div t-esc="o.partner_id.name"/>
+                        <div t-if="o.partner_id.phone">Tel: <t t-esc="o.partner_id.phone"/></div>
+                        <div t-if="o.partner_id.ref">Customer ID: <t t-esc="o.partner_id.ref"/></div>
+                        <div t-if="o.partner_id.membership_level_id">Membership: <t t-esc="o.partner_id.membership_level_id.name"/></div>
+                        <div t-if="o.partner_id.vat">Tax No: <t t-esc="o.partner_id.vat"/></div>
+                    </div>
+                    <div t-else="" class="fw-bold">Walk-in Customer</div>
+                </div>
+
+                <table class="table table-sm o_main_table mt-3">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>SKU</th>
+                            <th>Barcode</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Unit Price</th>
+                            <th class="text-end">Disc %</th>
+                            <th class="text-end">Tax</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="d['product_lines']" t-as="line">
+                            <td t-esc="line.full_product_name or line.product_id.display_name"/>
+                            <td t-esc="line.product_id.default_code or ''"/>
+                            <td t-esc="line.product_id.barcode or ''"/>
+                            <td class="text-end" t-esc="line.qty"/>
+                            <td class="text-end"><span t-esc="line.price_unit" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                            <td class="text-end" t-esc="line.discount or 0"/>
+                            <td class="text-end" t-esc="', '.join(line.tax_ids.mapped('name'))"/>
+                            <td class="text-end"><span t-esc="line.price_subtotal_incl" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="row justify-content-end">
+                    <div class="col-5">
+                        <table class="table table-sm">
+                            <tr><td>Subtotal</td><td class="text-end"><span t-esc="d['subtotal']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
+                            <tr t-if="d['product_discount']"><td>Product Discounts</td><td class="text-end">-<span t-esc="d['product_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
+                            <tr t-if="d['order_discount']"><td>Order Discount</td><td class="text-end">-<span t-esc="d['order_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
+                            <tr t-if="d['round_off']"><td>Round-Off</td><td class="text-end"><span t-esc="d['round_off']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
+                            <tr t-foreach="d['tax_groups']" t-as="tax_name">
+                                <td t-esc="tax_name"/>
+                                <td class="text-end"><span t-esc="d['tax_groups'][tax_name]" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                            </tr>
+                            <tr class="border-top fw-bold"><td>Grand Total</td><td class="text-end"><span t-esc="d['grand_total']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
+                            <tr><td>Amount Paid</td><td class="text-end"><span t-esc="d['paid']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
+                            <tr t-if="d['change']"><td>Change Returned</td><td class="text-end"><span t-esc="d['change']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div t-if="d['payments']" class="mt-2">
+                    <strong>Payments</strong>
+                    <table class="table table-sm o_main_table">
+                        <thead>
+                            <tr><th>Method</th><th>Date</th><th>Reference</th><th class="text-end">Amount</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="d['payments']" t-as="pay">
+                                <td t-esc="pay['name']"/>
+                                <td><span t-esc="pay['date']" t-options='{"widget": "datetime"}'/></td>
+                                <td t-esc="pay['ref'] or ''"/>
+                                <td class="text-end"><span t-esc="pay['amount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-8">
+                        <div t-if="cfg.pos_retail_receipt_thankyou" class="fw-bold"
+                             t-esc="cfg.pos_retail_receipt_thankyou"/>
+                        <div t-if="cfg.return_policy" style="white-space:pre-line;" class="mt-2">
+                            <strong>Return Policy</strong>
+                            <div t-esc="cfg.return_policy"/>
+                        </div>
+                        <div t-if="cfg.pos_retail_receipt_terms" style="white-space:pre-line;" class="mt-2">
+                            <strong>Terms &amp; Conditions</strong>
+                            <div t-esc="cfg.pos_retail_receipt_terms"/>
+                        </div>
+                        <div t-if="cfg.pos_retail_receipt_social" class="mt-2"
+                             t-esc="cfg.pos_retail_receipt_social"/>
+                    </div>
+                    <div class="col-4 text-end">
+                        <span t-if="cfg.pos_retail_receipt_show_qr" t-field="o.pos_reference"
+                              t-options='{"widget": "barcode", "symbology": "QR", "width": 150, "height": 150, "quiet": 0, "img_style": "width:30mm;height:30mm;"}'/>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_pos_receipt_a4">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="pos_retail.report_pos_receipt_a4_document"/>
+            </t>
+        </t>
+    </template>
+
+    <!-- ========================= REPORT ACTIONS ========================= -->
+    <record id="action_report_pos_receipt_thermal" model="ir.actions.report">
+        <field name="name">Receipt (Thermal 80mm)</field>
+        <field name="model">pos.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_pos_receipt_thermal</field>
+        <field name="report_file">pos_retail.report_pos_receipt_thermal</field>
+        <field name="paperformat_id" ref="paperformat_pos_receipt_80"/>
+        <field name="print_report_name">'Receipt - %s' % ((object.pos_reference or object.name or '').replace('/', '-'))</field>
+        <field name="binding_model_id" ref="point_of_sale.model_pos_order"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <record id="action_report_pos_receipt_a4" model="ir.actions.report">
+        <field name="name">Receipt (A4)</field>
+        <field name="model">pos.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_pos_receipt_a4</field>
+        <field name="report_file">pos_retail.report_pos_receipt_a4</field>
+        <field name="print_report_name">'Receipt A4 - %s' % ((object.pos_reference or object.name or '').replace('/', '-'))</field>
+        <field name="binding_model_id" ref="point_of_sale.model_pos_order"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

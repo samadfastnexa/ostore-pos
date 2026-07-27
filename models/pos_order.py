@@ -20,6 +20,95 @@ class PosOrder(models.Model):
     return_reason_id = fields.Many2one('pos.retail.return.reason', string="Return Reason")
     return_reason_notes = fields.Text(string="Return Reason Notes")
 
+    # --- Receipt management -------------------------------------------------
+
+    def _pos_retail_receipt_data(self):
+        """Everything the PDF receipt templates need, computed once here so the
+        QWeb stays declarative.
+
+        Order-level discounts are ordinary order lines carrying the config's
+        discount product (that is how pos_discount records them), so they are
+        separated out of the product lines rather than being a field on the
+        order. Round-off comes from this addon's own discount log, which
+        already snapshots it at sale time.
+        """
+        self.ensure_one()
+        discount_product = self.config_id.discount_product_id
+        order_discount_lines = self.lines.filtered(
+            lambda l: discount_product and l.product_id == discount_product)
+        product_lines = self.lines - order_discount_lines
+
+        product_discount = sum(
+            (l.qty * l.price_unit) * (l.discount or 0.0) / 100.0 for l in product_lines)
+        order_discount = abs(sum(order_discount_lines.mapped('price_subtotal_incl')))
+
+        log = self.env['pos.retail.discount.log'].sudo().search(
+            [('order_id', '=', self.id)], limit=1)
+
+        # Tax lines grouped by the tax names applied, so a receipt can show
+        # "GST 17%: 340.00" rather than one opaque total.
+        tax_groups = {}
+        for line in product_lines:
+            if not line.tax_ids:
+                continue
+            key = ", ".join(line.tax_ids.mapped('name'))
+            tax_groups.setdefault(key, 0.0)
+            tax_groups[key] += line.price_subtotal_incl - line.price_subtotal
+        if not tax_groups and self.amount_tax:
+            tax_groups[_("Tax")] = self.amount_tax
+
+        payments = []
+        for payment in self.payment_ids.filtered(lambda p: not p.is_change):
+            payments.append({
+                'name': payment.payment_method_id.name,
+                'amount': payment.amount,
+                'date': payment.payment_date,
+                'ref': payment.transaction_id or payment.payment_ref_no or (
+                    "****%s" % payment.card_no if payment.card_no else ''),
+            })
+
+        return {
+            'product_lines': product_lines,
+            'subtotal': sum(product_lines.mapped('price_subtotal_incl')) + product_discount,
+            'product_discount': product_discount,
+            'order_discount': order_discount,
+            'round_off': log.round_off_amount if log else 0.0,
+            'tax_groups': tax_groups,
+            'payments': payments,
+            'grand_total': self.amount_total,
+            'paid': self.amount_paid,
+            'change': self.amount_return,
+        }
+
+    def action_print_receipt_thermal(self):
+        return self.env.ref(
+            'pos_retail.action_report_pos_receipt_thermal').report_action(self, config=False)
+
+    def action_print_receipt_a4(self):
+        return self.env.ref(
+            'pos_retail.action_report_pos_receipt_a4').report_action(self, config=False)
+
+    def action_email_receipt_pdf(self):
+        """Open the mail composer pre-loaded with the receipt template; the A4
+        PDF rides along as an attachment (mail.template.report_template_ids).
+        """
+        self.ensure_one()
+        template = self.env.ref('pos_retail.mail_template_pos_receipt_pdf', raise_if_not_found=False)
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Email Receipt"),
+            'res_model': 'mail.compose.message',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_model': 'pos.order',
+                'default_res_ids': self.ids,
+                'default_template_id': template.id if template else False,
+                'default_composition_mode': 'comment',
+                'default_partner_ids': self.partner_id.ids,
+            },
+        }
+
     @api.model
     def _load_pos_data_fields(self, config):
         result = super()._load_pos_data_fields(config)

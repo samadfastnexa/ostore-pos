@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- De-brand the customer-facing display: remove both "Powered by Odoo"
+         badges (sidebar and the order-done splash). The store's own logo is
+         already shown by the display itself. Loaded via the
+         point_of_sale.customer_display_assets bundle, which is what the
+         customer display page actually serves. -->
+    <t t-inherit="point_of_sale.CustomerDisplay" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('text-bg-dark')]" position="replace"/>
+        <xpath expr="//OdooLogo/parent::div" position="replace"/>
+    </t>
+
+</templates>

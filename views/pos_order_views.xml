@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- One-click receipt actions on the order form. Cashiers reprint from the
+         POS Orders screen (native); these are the back-office counterparts,
+         including the PDF and email paths the till does not offer. -->
+    <record id="view_pos_pos_form_pos_retail_receipt" model="ir.ui.view">
+        <field name="name">pos.order.form.pos.retail.receipt</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_print_receipt_thermal" type="object"
+                        string="Print Receipt" icon="fa-print"
+                        invisible="state == 'draft'"/>
+                <button name="action_print_receipt_a4" type="object"
+                        string="Download A4 PDF" icon="fa-file-pdf-o"
+                        invisible="state == 'draft'"/>
+                <button name="action_email_receipt_pdf" type="object"
+                        string="Email Receipt" icon="fa-envelope-o"
+                        invisible="state == 'draft'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_pos_order_list_receipt_history" model="ir.ui.view">
+        <field name="name">pos.order.list.receipt.history</field>
+        <field name="model">pos.order</field>
+        <field name="arch" type="xml">
+            <list string="Receipt History" create="false" default_order="date_order desc">
+                <field name="date_order" string="Date"/>
+                <field name="pos_reference" string="Receipt No"/>
+                <field name="name" string="Order Ref"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="employee_id" string="Cashier" optional="show"/>
+                <field name="config_id" string="Terminal" optional="show"/>
+                <field name="account_move" string="Invoice" optional="hide"/>
+                <field name="nb_print" string="Prints" optional="hide"/>
+                <field name="amount_total" string="Total" sum="Total"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_pos_order_search_receipt_history" model="ir.ui.view">
+        <field name="name">pos.order.search.receipt.history</field>
+        <field name="model">pos.order</field>
+        <field name="arch" type="xml">
+            <search string="Receipt History">
+                <field name="pos_reference" string="Receipt Number"/>
+                <field name="name" string="Order Reference"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="employee_id" string="Cashier"/>
+                <field name="account_move" string="Invoice"/>
+                <field name="config_id" string="Terminal"/>
+                <filter name="filter_date" date="date_order" string="Date"/>
+                <separator/>
+                <filter name="invoiced" string="Invoiced" domain="[('account_move', '!=', False)]"/>
+                <filter name="refunds" string="Refunds" domain="[('amount_total', '&lt;', 0)]"/>
+                <group>
+                    <filter name="group_cashier" string="Cashier" context="{'group_by': 'employee_id'}"/>
+                    <filter name="group_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_terminal" string="Terminal" context="{'group_by': 'config_id'}"/>
+                    <filter name="group_date" string="Date" context="{'group_by': 'date_order:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_receipt_history" model="ir.actions.act_window">
+        <field name="name">Receipt History</field>
+        <field name="res_model">pos.order</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_pos_order_list_receipt_history"/>
+        <field name="search_view_id" ref="view_pos_order_search_receipt_history"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No receipts yet</p>
+            <p>Every completed sale, searchable by receipt number, invoice, customer, cashier or date.
+               Open one to print it again, download the PDF or email it to the customer.</p>
+        </field>
+    </record>
+
+</odoo>

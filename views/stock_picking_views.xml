@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_picking_form_pos_retail_grn" model="ir.ui.view">
+        <field name="name">stock.picking.form.pos.retail.grn</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_print_goods_receipt" type="object"
+                        string="Print GRN" icon="fa-print"
+                        invisible="picking_type_code != 'incoming'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_picking_list_goods_receipt" model="ir.ui.view">
+        <field name="name">stock.picking.list.goods.receipt</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <list string="Goods Receipts" create="false" default_order="scheduled_date desc">
+                <field name="name" string="GRN No"/>
+                <field name="partner_id" string="Vendor"/>
+                <field name="purchase_id" string="Purchase Order" optional="show"/>
+                <field name="origin" string="Source" optional="hide"/>
+                <field name="scheduled_date" string="Scheduled"/>
+                <field name="date_done" string="Received On" optional="show"/>
+                <field name="user_id" string="Received By" optional="show"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_picking_search_goods_receipt" model="ir.ui.view">
+        <field name="name">stock.picking.search.goods.receipt</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <search string="Goods Receipts">
+                <field name="name" string="GRN Number"/>
+                <field name="partner_id" string="Vendor"/>
+                <field name="purchase_id" string="Purchase Order"/>
+                <field name="origin" string="Source"/>
+                <field name="user_id" string="Received By"/>
+                <filter name="done" string="Received" domain="[('state', '=', 'done')]"/>
+                <filter name="pending" string="Pending" domain="[('state', 'not in', ('done', 'cancel'))]"/>
+                <separator/>
+                <filter name="filter_scheduled" date="scheduled_date" string="Scheduled Date"/>
+                <group>
+                    <filter name="group_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_month" string="Month" context="{'group_by': 'scheduled_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_goods_receipts" model="ir.actions.act_window">
+        <field name="name">Goods Receipts</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_picking_list_goods_receipt"/>
+        <field name="search_view_id" ref="view_picking_search_goods_receipt"/>
+        <field name="domain">[('picking_type_code', '=', 'incoming')]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No goods receipts yet</p>
+            <p>Every delivery received from a vendor. Open one and use Print GRN for a
+               Goods Receipt Note with costs, batch numbers and signature boxes.</p>
+        </field>
+    </record>
+
+</odoo>

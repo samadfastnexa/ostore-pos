@@ -106,6 +106,56 @@ class PosConfig(models.Model):
              "Pay stays green, discounts orange, returns red and customer blue so "
              "cashiers always recognise those actions whatever colour is chosen.",
     )
+    # --- Receipt Studio ---
+    # Layout, paper width and content of the printed receipt. Native fields
+    # already cover: logo (company logo), header/footer messages
+    # (receipt_header/receipt_footer), the company address/VAT/contact block,
+    # cashier, receipt number, tax detail, auto-print. These add what native
+    # has no concept of.
+    pos_retail_receipt_style = fields.Selection(
+        [('standard', "Standard"), ('modern', "Modern"), ('minimal', "Minimal")],
+        string="Receipt Template Style", default='standard', required=True,
+        help="Standard: the classic layout. Modern: bolder headings and framed "
+             "totals. Minimal: hides the logo and per-line detail for the "
+             "shortest possible ticket.",
+    )
+    pos_retail_receipt_width = fields.Selection(
+        [('80', "80 mm (Standard Thermal)"), ('58', "58 mm (Compact Thermal)")],
+        string="Receipt Paper Width", default='80', required=True,
+        help="Match your thermal printer's paper roll. Affects both printer "
+             "output and the browser print preview.",
+    )
+    pos_retail_receipt_font = fields.Selection(
+        [('small', "Small"), ('normal', "Normal"), ('large', "Large")],
+        string="Receipt Font Size", default='normal', required=True,
+    )
+    pos_retail_receipt_show_sku = fields.Boolean(
+        string="Show SKU on Receipt Lines", default=True,
+        help="Print each product's internal reference under its line.",
+    )
+    pos_retail_receipt_show_qr = fields.Boolean(
+        string="Show Receipt QR Code", default=True,
+        help="Print a QR code of the receipt reference for quick lookup.",
+    )
+    pos_retail_receipt_show_ref_barcode = fields.Boolean(
+        string="Show Reference Barcode", default=False,
+        help="Print the receipt reference as a scannable Code128 barcode in "
+             "the footer. Needs a network connection at print time.",
+    )
+    pos_retail_receipt_thankyou = fields.Char(
+        string="Thank-You Message", default="Thank you for shopping with us!",
+        help="Printed prominently above the receipt footer. Leave empty to skip.",
+    )
+    pos_retail_receipt_social = fields.Char(
+        string="Website & Social Line",
+        help="One line for your website and social handles, printed under the "
+             "store name in the footer. Example: www.mystore.pk | fb.com/mystore",
+    )
+    pos_retail_receipt_terms = fields.Text(
+        string="Terms & Conditions",
+        help="Printed on PDF receipts (A4). Kept off the thermal ticket to "
+             "save paper; the Return Policy block covers the essentials there.",
+    )
     # --- Quotations (#11) ---
     pos_retail_allow_quotation = fields.Boolean(
         string="Allow Quotations", default=True,
@@ -209,4 +259,49 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.pos_retail_receipt_show_discount_details',
         readonly=False,
         string="Show Discount Details on Receipt",
+    )
+    pos_retail_receipt_style = fields.Selection(
+        related='pos_config_id.pos_retail_receipt_style',
+        readonly=False,
+        string="Receipt Template Style",
+    )
+    pos_retail_receipt_width = fields.Selection(
+        related='pos_config_id.pos_retail_receipt_width',
+        readonly=False,
+        string="Receipt Paper Width",
+    )
+    pos_retail_receipt_font = fields.Selection(
+        related='pos_config_id.pos_retail_receipt_font',
+        readonly=False,
+        string="Receipt Font Size",
+    )
+    pos_retail_receipt_show_sku = fields.Boolean(
+        related='pos_config_id.pos_retail_receipt_show_sku',
+        readonly=False,
+        string="Show SKU on Receipt Lines",
+    )
+    pos_retail_receipt_show_qr = fields.Boolean(
+        related='pos_config_id.pos_retail_receipt_show_qr',
+        readonly=False,
+        string="Show Receipt QR Code",
+    )
+    pos_retail_receipt_show_ref_barcode = fields.Boolean(
+        related='pos_config_id.pos_retail_receipt_show_ref_barcode',
+        readonly=False,
+        string="Show Reference Barcode",
+    )
+    pos_retail_receipt_thankyou = fields.Char(
+        related='pos_config_id.pos_retail_receipt_thankyou',
+        readonly=False,
+        string="Thank-You Message",
+    )
+    pos_retail_receipt_social = fields.Char(
+        related='pos_config_id.pos_retail_receipt_social',
+        readonly=False,
+        string="Website & Social Line",
+    )
+    pos_retail_receipt_terms = fields.Text(
+        related='pos_config_id.pos_retail_receipt_terms',
+        readonly=False,
+        string="Terms & Conditions",
     )

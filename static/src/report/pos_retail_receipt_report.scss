@@ -1,0 +1,60 @@
+// Styles for the thermal PDF receipt. Registered in BOTH
+// web.report_assets_common (HTML preview) and web.report_assets_pdf (the
+// bundle wkhtmltopdf actually consumes) so the printed PDF matches the
+// preview. Sizing is in mm because the paperformat is a physical 80mm roll.
+
+.pos-retail-pdf-thermal {
+    width: 72mm;
+    margin: 0 auto;
+    font-size: 9pt;
+    line-height: 1.25;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #000;
+
+    .pos-retail-pdf-logo {
+        max-width: 40mm;
+        max-height: 18mm;
+        margin-bottom: 2mm;
+    }
+
+    .pos-retail-pdf-company {
+        font-size: 12pt;
+        font-weight: 700;
+    }
+
+    // Dashed separator, the receipt idiom for "new section".
+    .pos-retail-pdf-rule {
+        border-top: 1px dashed #000;
+        margin: 1.5mm 0;
+    }
+
+    .pos-retail-pdf-sku {
+        font-size: 7.5pt;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+
+        td {
+            padding: 0;
+            vertical-align: top;
+        }
+    }
+
+    .pos-retail-pdf-totals td {
+        padding: 0.2mm 0;
+    }
+
+    .pos-retail-pdf-grand td {
+        font-size: 11pt;
+        font-weight: 700;
+        border-top: 1px solid #000;
+        border-bottom: 1px solid #000;
+        padding: 0.6mm 0;
+    }
+
+    .text-end { text-align: right; }
+    .text-center { text-align: center; }
+    .fw-bold { font-weight: 700; }
+}

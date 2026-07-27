@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.2.3.0',
+    'version': '19.0.2.7.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -46,6 +46,11 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'data/pos_retail_discount_reason_data.xml',
         'data/pos_retail_return_reason_data.xml',
         'data/pos_retail_price_reason_data.xml',
+        # Permission catalog seed: must load before all views because the
+        # menus file references the auto-created perm_*_res_groups xmlids.
+        'data/pos_retail_access_permission_data.xml',
+        'data/pos_retail_access_permission_crud_data.xml',
+        'data/pos_retail_access_role_data.xml',
         'views/product_brand_views.xml',
         'views/pos_retail_inventory_movement_views.xml',
         'views/pos_retail_expense_views.xml',
@@ -55,6 +60,12 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/pos_retail_price_reason_views.xml',
         'views/pos_retail_discount_log_views.xml',
         'report/pos_retail_discount_log_report.xml',
+        'report/pos_retail_receipt_report.xml',
+        'report/pos_retail_goods_receipt_report.xml',
+        # After the report: the template attaches the A4 report by xmlid.
+        'data/pos_retail_mail_template_data.xml',
+        'views/pos_order_views.xml',
+        'views/stock_picking_views.xml',
         'views/product_template_views.xml',
         'views/product_supplierinfo_views.xml',
         'views/purchase_report_views.xml',
@@ -71,6 +82,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/pos_config_views.xml',
         'views/pos_retail_dashboard_views.xml',
         'views/pos_retail_access_role_views.xml',
+        'views/pos_retail_access_permission_views.xml',
         'views/pos_retail_menus.xml',
         'views/res_users_views.xml',
         'views/login_templates.xml',
@@ -99,10 +111,19 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'web.assets_frontend': [
             'pos_retail/static/src/login/login.scss',
         ],
+        # Receipt PDF styling must be in both bundles: _common drives the HTML
+        # preview, _pdf is what wkhtmltopdf actually loads.
+        'web.report_assets_common': [
+            'pos_retail/static/src/report/pos_retail_receipt_report.scss',
+        ],
+        'web.report_assets_pdf': [
+            'pos_retail/static/src/report/pos_retail_receipt_report.scss',
+        ],
         'point_of_sale._assets_pos': [
             'pos_retail/static/src/receipt/receipt.js',
             'pos_retail/static/src/receipt/receipt.xml',
             'pos_retail/static/src/receipt/receipt_header.xml',
+            'pos_retail/static/src/receipt/receipt.scss',
             'pos_retail/static/src/overrides/negative_stock_warning.js',
             'pos_retail/static/src/overrides/order_discount.js',
             'pos_retail/static/src/overrides/order_discount.xml',
@@ -119,7 +140,6 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/orderline_qty.js',
             'pos_retail/static/src/overrides/orderline_qty.xml',
             'pos_retail/static/src/overrides/backend_login.js',
-            'pos_retail/static/src/overrides/receipt_screen.xml',
             'pos_retail/static/src/overrides/payment_screen.xml',
             'pos_retail/static/src/overrides/return_refund.js',
             'pos_retail/static/src/overrides/return_no_receipt_popup.js',
@@ -128,6 +148,11 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/return_no_receipt.xml',
             'pos_retail/static/src/overrides/quotation.js',
             'pos_retail/static/src/overrides/quotation.xml',
+        ],
+        # The customer display page is served from its own bundle, separate
+        # from the main POS assets.
+        'point_of_sale.customer_display_assets': [
+            'pos_retail/static/src/customer_display/customer_display.xml',
         ],
     },
     'installable': True,

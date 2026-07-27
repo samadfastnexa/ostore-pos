@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Goods Receipt Note. Ordered quantity and unit cost come from the
+         purchase order line when the picking originates from a PO, falling
+         back to the move's own demand and the product's cost otherwise, so
+         the document is still complete for a manual receipt. -->
+    <template id="report_goods_receipt_document">
+        <t t-set="po" t-value="o.purchase_id"/>
+        <t t-call="web.external_layout">
+            <div class="page">
+                <h2>Goods Receipt Note <span t-esc="o.name"/></h2>
+
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <table class="table table-sm table-borderless">
+                            <tr><td class="fw-bold">GRN No</td><td t-esc="o.name"/></tr>
+                            <tr t-if="po"><td class="fw-bold">Purchase Order</td><td t-esc="po.name"/></tr>
+                            <tr t-if="o.origin"><td class="fw-bold">Source</td><td t-esc="o.origin"/></tr>
+                            <tr><td class="fw-bold">Warehouse</td><td t-esc="o.picking_type_id.warehouse_id.name or ''"/></tr>
+                        </table>
+                    </div>
+                    <div class="col-6">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td class="fw-bold">Received Date</td>
+                                <td><span t-esc="o.date_done or o.scheduled_date" t-options='{"widget": "datetime"}'/></td>
+                            </tr>
+                            <tr><td class="fw-bold">Received By</td><td t-esc="o.user_id.name or ''"/></tr>
+                            <tr><td class="fw-bold">Status</td><td t-esc="dict(o._fields['state'].selection).get(o.state, o.state)"/></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-2" t-if="o.partner_id">
+                    <strong>Vendor</strong>
+                    <div t-esc="o.partner_id.name"/>
+                    <div t-if="o.partner_id.vendor_contact_person">Contact: <t t-esc="o.partner_id.vendor_contact_person"/></div>
+                    <div t-if="o.partner_id.phone">Tel: <t t-esc="o.partner_id.phone"/></div>
+                    <div t-if="o.partner_id.email"><t t-esc="o.partner_id.email"/></div>
+                </div>
+
+                <t t-set="lines" t-value="o.move_ids.filtered(lambda m: m.product_uom_qty or m.quantity)"/>
+                <t t-set="total_qty" t-value="sum(lines.mapped('quantity'))"/>
+                <t t-set="total_cost" t-value="0"/>
+                <table class="table table-sm o_main_table mt-3">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>SKU</th>
+                            <th>Barcode</th>
+                            <th class="text-end">Ordered</th>
+                            <th class="text-end">Received</th>
+                            <th>UoM</th>
+                            <th class="text-end">Unit Cost</th>
+                            <th class="text-end">Total Cost</th>
+                            <th>Batch / Expiry</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="lines" t-as="move">
+                            <t t-set="pol" t-value="move.purchase_line_id"/>
+                            <t t-set="unit_cost" t-value="pol.price_unit if pol else move.product_id.standard_price"/>
+                            <t t-set="line_total" t-value="unit_cost * move.quantity"/>
+                            <t t-set="total_cost" t-value="total_cost + line_total"/>
+                            <td t-esc="move.product_id.display_name"/>
+                            <td t-esc="move.product_id.default_code or ''"/>
+                            <td t-esc="move.product_id.barcode or ''"/>
+                            <td class="text-end" t-esc="pol.product_qty if pol else move.product_uom_qty"/>
+                            <td class="text-end" t-esc="move.quantity"/>
+                            <td t-esc="move.product_uom.name or ''"/>
+                            <td class="text-end">
+                                <span t-esc="unit_cost" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                            </td>
+                            <td class="text-end">
+                                <span t-esc="line_total" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                            </td>
+                            <td>
+                                <div t-foreach="move.move_line_ids.filtered(lambda ml: ml.lot_id)" t-as="ml">
+                                    <span t-esc="ml.lot_id.name"/>
+                                    <t t-if="ml.lot_id.expiration_date">
+                                        (exp. <span t-esc="ml.lot_id.expiration_date" t-options='{"widget": "date"}'/>)
+                                    </t>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="row justify-content-end">
+                    <div class="col-5">
+                        <table class="table table-sm">
+                            <tr><td>Total Products</td><td class="text-end" t-esc="len(lines)"/></tr>
+                            <tr><td>Total Quantity Received</td><td class="text-end" t-esc="total_qty"/></tr>
+                            <tr class="fw-bold">
+                                <td>Total Received Cost</td>
+                                <td class="text-end">
+                                    <span t-esc="total_cost" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                </td>
+                            </tr>
+                            <t t-if="po">
+                                <tr><td colspan="2" class="pt-2"><em>Per Purchase Order (ordered quantities)</em></td></tr>
+                                <tr>
+                                    <td>Untaxed</td>
+                                    <td class="text-end"><span t-esc="po.amount_untaxed" t-options='{"widget": "monetary", "display_currency": po.currency_id}'/></td>
+                                </tr>
+                                <tr>
+                                    <td>Tax</td>
+                                    <td class="text-end"><span t-esc="po.amount_tax" t-options='{"widget": "monetary", "display_currency": po.currency_id}'/></td>
+                                </tr>
+                                <tr class="fw-bold border-top">
+                                    <td>Grand Total</td>
+                                    <td class="text-end"><span t-esc="po.amount_total" t-options='{"widget": "monetary", "display_currency": po.currency_id}'/></td>
+                                </tr>
+                            </t>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="row mt-5">
+                    <div class="col-3">
+                        <div style="border-top:1px solid #000; padding-top:4px; min-height:70px;">
+                            <strong>Received By</strong>
+                            <div t-if="o.signature">
+                                <img t-att-src="image_data_uri(o.signature)"
+                                     style="max-height:2.5cm; max-width:100%;" alt="Signature"/>
+                            </div>
+                            <div t-esc="o.user_id.name or ''"/>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div style="border-top:1px solid #000; padding-top:4px; min-height:70px;">
+                            <strong>Checked By</strong>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div style="border-top:1px solid #000; padding-top:4px; min-height:70px;">
+                            <strong>Approved By</strong>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div style="border-top:1px solid #000; padding-top:4px; min-height:70px;">
+                            <strong>Vendor Representative</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_goods_receipt">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="pos_retail.report_goods_receipt_document"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_goods_receipt" model="ir.actions.report">
+        <field name="name">Goods Receipt Note</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_goods_receipt</field>
+        <field name="report_file">pos_retail.report_goods_receipt</field>
+        <field name="print_report_name">'GRN - %s' % ((object.name or '').replace('/', '-'))</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+        <field name="domain">[('picking_type_code', '=', 'incoming')]</field>
+    </record>
+
+</odoo>

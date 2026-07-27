@@ -8,13 +8,19 @@
         action="product_brand_action"
         sequence="7"/>
 
+    <!-- Configuration list menus: also visible to holders of the "Manage POS
+         Configuration Lists" catalog permission (the perm_*_res_groups xmlids
+         are the auto-created groups behind the seeded permissions). NOTE:
+         menuitem groups= produces additive (4) links on upgrade; removing a
+         group from this attribute later does NOT remove it from the DB. -->
+
     <!-- Configuration > Membership Levels -->
     <menuitem id="menu_pos_membership_level"
         name="Membership Levels"
         parent="point_of_sale.menu_point_config_product"
         action="pos_membership_level_action"
         sequence="60"
-        groups="point_of_sale.group_pos_manager"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
 
     <!-- Configuration > Discount Roles -->
     <menuitem id="menu_pos_retail_discount_role"
@@ -22,7 +28,7 @@
         parent="point_of_sale.menu_point_config_product"
         action="pos_retail_discount_role_action"
         sequence="70"
-        groups="point_of_sale.group_pos_manager"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
 
     <!-- Configuration > Discount Reasons -->
     <menuitem id="menu_pos_retail_discount_reason"
@@ -30,7 +36,7 @@
         parent="point_of_sale.menu_point_config_product"
         action="pos_retail_discount_reason_action"
         sequence="80"
-        groups="point_of_sale.group_pos_manager"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
 
     <!-- Configuration > Return Reasons -->
     <menuitem id="menu_pos_retail_return_reason"
@@ -38,7 +44,7 @@
         parent="point_of_sale.menu_point_config_product"
         action="pos_retail_return_reason_action"
         sequence="85"
-        groups="point_of_sale.group_pos_manager"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
 
     <!-- Configuration > Price Reasons -->
     <menuitem id="menu_pos_retail_price_reason"
@@ -46,7 +52,7 @@
         parent="point_of_sale.menu_point_config_product"
         action="pos_retail_price_reason_action"
         sequence="86"
-        groups="point_of_sale.group_pos_manager"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
 
     <!-- Reporting > Customer Ledger. Gated on POS Manager, the persona this
          was built for: point_of_sale's own ACL already grants POS users READ
@@ -54,14 +60,18 @@
          customer-form smart button stays accounting-gated separately, because
          the res.partner.credit field it displays is itself field-level
          restricted to those groups in core. -->
+    <!-- Sequence 8: keep all single-page report entries clustered together
+         (Inventory Movements 5, Discount Log 6, Returns 7, Customer Ledger 8,
+         Expenses by Category 9) ahead of the report sub-groups (10/12/14) so
+         none of them gets lost between two groups' children. -->
     <menuitem id="pos_retail_menu_customer_ledger" name="Customer Ledger"
         parent="point_of_sale.menu_point_rep" action="action_pos_retail_customer_ledger"
-        sequence="13" groups="point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly"/>
+        sequence="8" groups="point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,perm_reporting_res_groups"/>
 
     <!-- Reporting > Price Reports -->
     <menuitem id="pos_retail_menu_price_reports" name="Price Reports"
         parent="point_of_sale.menu_point_rep" sequence="14"
-        groups="point_of_sale.group_pos_manager"/>
+        groups="point_of_sale.group_pos_manager,perm_reporting_res_groups"/>
 
     <menuitem id="pos_retail_menu_price_analysis" name="Price Analysis"
         parent="pos_retail_menu_price_reports" action="action_pos_retail_price_analysis" sequence="10"/>
@@ -76,10 +86,20 @@
     <menuitem id="pos_retail_menu_price_by_reason" name="Price Adjustment Reasons"
         parent="pos_retail_menu_price_reports" action="action_pos_retail_price_by_reason" sequence="60"/>
 
-    <!-- Purchase > Reporting > Vendor Reports -->
+    <!-- Purchase > Orders > Goods Receipts -->
+    <menuitem id="pos_retail_menu_goods_receipts" name="Goods Receipts"
+        parent="purchase.menu_procurement_management" action="action_pos_retail_goods_receipts"
+        sequence="15"
+        groups="purchase.group_purchase_user,perm_purchases_view_res_groups,perm_inventory_view_res_groups"/>
+
+    <!-- Purchase > Reporting > Vendor Reports. Also opened up to plain
+         purchase users so the "Manage Purchases" catalog permission (implying
+         purchase.group_purchase_user) covers them; all child action models
+         are readable to that group. The payment summary child keeps its own
+         stricter accounting gate. -->
     <menuitem id="pos_retail_menu_vendor_reports" name="Vendor Reports"
         parent="purchase.purchase_report_main" sequence="10"
-        groups="purchase.group_purchase_manager"/>
+        groups="purchase.group_purchase_manager,purchase.group_purchase_user"/>
 
     <menuitem id="pos_retail_menu_vendor_purchase_summary" name="Vendor Purchase Summary"
         parent="pos_retail_menu_vendor_reports" action="action_vendor_purchase_summary" sequence="10"/>
@@ -100,32 +120,40 @@
     <!-- Point of Sale > Reporting > Inventory Movements -->
     <menuitem id="pos_retail_menu_inventory_movement" name="Inventory Movements"
         parent="point_of_sale.menu_point_rep" action="pos_retail_inventory_movement_action"
-        sequence="5" groups="point_of_sale.group_pos_manager"/>
+        sequence="5" groups="point_of_sale.group_pos_manager,perm_reporting_res_groups"/>
 
     <!-- Point of Sale > Reporting > Returns and Refunds -->
     <menuitem id="pos_retail_menu_returns" name="Returns and Refunds"
         parent="point_of_sale.menu_point_rep" action="action_pos_retail_returns"
-        sequence="7" groups="point_of_sale.group_pos_manager"/>
+        sequence="7" groups="point_of_sale.group_pos_manager,perm_reporting_res_groups"/>
 
-    <!-- Point of Sale > Orders > Quotations -->
+    <!-- Point of Sale > Orders > Receipt History -->
+    <menuitem id="pos_retail_menu_receipt_history" name="Receipt History"
+        parent="point_of_sale.menu_point_of_sale" action="action_pos_retail_receipt_history"
+        sequence="5" groups="point_of_sale.group_pos_manager,perm_reporting_res_groups"/>
+
+    <!-- Point of Sale > Orders > Quotations. Gated on POS Manager as well as
+         salespeople: the store admin runs quotations without being a
+         "salesperson" in Odoo's sense (sale.order read comes via the
+         stock-user group POS Manager already implies). -->
     <menuitem id="pos_retail_menu_quotations" name="Quotations"
         parent="point_of_sale.menu_point_of_sale" action="action_pos_retail_quotations"
-        sequence="4" groups="sales_team.group_sale_salesman"/>
+        sequence="4" groups="point_of_sale.group_pos_manager,sales_team.group_sale_salesman,perm_sales_view_res_groups,perm_sales_create_res_groups,perm_sales_edit_res_groups,perm_sales_delete_res_groups"/>
 
     <!-- Point of Sale > Expenses -->
     <menuitem id="pos_retail_menu_expense" name="Expenses"
         parent="point_of_sale.menu_point_root" action="pos_retail_expense_action"
-        sequence="15" groups="point_of_sale.group_pos_manager"/>
+        sequence="15" groups="point_of_sale.group_pos_manager,perm_expenses_res_groups,perm_expenses_create_res_groups,perm_expenses_edit_res_groups,perm_expenses_delete_res_groups"/>
 
     <!-- Point of Sale > Reporting > Expenses by Category -->
     <menuitem id="pos_retail_menu_expense_pivot" name="Expenses by Category"
         parent="point_of_sale.menu_point_rep" action="pos_retail_expense_action_pivot"
-        sequence="15" groups="point_of_sale.group_pos_manager"/>
+        sequence="9" groups="point_of_sale.group_pos_manager,perm_expenses_res_groups,perm_expenses_create_res_groups,perm_expenses_edit_res_groups,perm_expenses_delete_res_groups,perm_reporting_res_groups"/>
 
     <!-- Point of Sale > Reporting > POS Sales Reports -->
     <menuitem id="pos_retail_menu_pos_reports" name="POS Sales Reports"
         parent="point_of_sale.menu_point_rep" sequence="10"
-        groups="point_of_sale.group_pos_manager"/>
+        groups="point_of_sale.group_pos_manager,perm_reporting_res_groups"/>
 
     <menuitem id="pos_retail_menu_sales_by_category" name="Sales by Category"
         parent="pos_retail_menu_pos_reports" action="action_pos_retail_sales_by_category" sequence="10"/>
@@ -141,12 +169,12 @@
     <!-- Point of Sale > Discount Audit Log -->
     <menuitem id="pos_retail_menu_discount_log" name="Discount Audit Log"
         parent="point_of_sale.menu_point_rep" action="pos_retail_discount_log_action"
-        sequence="6" groups="point_of_sale.group_pos_manager"/>
+        sequence="6" groups="point_of_sale.group_pos_manager,perm_reporting_res_groups"/>
 
     <!-- Point of Sale > Reporting > Discount Reports -->
     <menuitem id="pos_retail_menu_discount_reports" name="Discount Reports"
         parent="point_of_sale.menu_point_rep" sequence="12"
-        groups="point_of_sale.group_pos_manager"/>
+        groups="point_of_sale.group_pos_manager,perm_reporting_res_groups"/>
 
     <menuitem id="pos_retail_menu_discount_totals" name="Total Order Discounts"
         parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_totals" sequence="10"/>
@@ -174,6 +202,85 @@
         action="pos_retail_access_role_action"
         sequence="90"
         groups="base.group_system"/>
+
+    <!-- Configuration > Permissions Catalog (same super-admin gate). -->
+    <menuitem id="menu_pos_retail_access_permission"
+        name="Permissions Catalog"
+        parent="point_of_sale.menu_point_config_product"
+        action="pos_retail_access_permission_action"
+        sequence="95"
+        groups="base.group_system"/>
+
+    <!-- Core menu gates opened to catalog permissions. Direct catalog
+         permissions (ACL-based ones) do not imply group_pos_user, so the POS
+         root menu and the manager-gated Configuration container must also
+         accept their groups or the whole subtree stays hidden (a gated
+         ancestor cuts its children). Idempotent (4) links; reapplied on every
+         upgrade. Implied-group permissions (Use POS, Manage Purchases, etc.)
+         need nothing here: the native gates already list their groups. -->
+    <record id="point_of_sale.menu_point_root" model="ir.ui.menu">
+        <field name="group_ids" eval="[
+            (4, ref('perm_products_create_res_groups')),
+            (4, ref('perm_products_edit_res_groups')),
+            (4, ref('perm_products_delete_res_groups')),
+            (4, ref('perm_expenses_res_groups')),
+            (4, ref('perm_expenses_create_res_groups')),
+            (4, ref('perm_expenses_edit_res_groups')),
+            (4, ref('perm_expenses_delete_res_groups')),
+            (4, ref('perm_reporting_res_groups')),
+            (4, ref('perm_config_lists_res_groups')),
+            (4, ref('perm_config_lists_create_res_groups')),
+            (4, ref('perm_config_lists_edit_res_groups')),
+            (4, ref('perm_config_lists_delete_res_groups')),
+            (4, ref('perm_sales_view_res_groups')),
+            (4, ref('perm_sales_create_res_groups')),
+            (4, ref('perm_sales_edit_res_groups')),
+            (4, ref('perm_sales_delete_res_groups')),
+        ]"/>
+    </record>
+    <record id="point_of_sale.menu_point_config_product" model="ir.ui.menu">
+        <field name="group_ids" eval="[
+            (4, ref('perm_config_lists_res_groups')),
+            (4, ref('perm_config_lists_create_res_groups')),
+            (4, ref('perm_config_lists_edit_res_groups')),
+            (4, ref('perm_config_lists_delete_res_groups')),
+        ]"/>
+    </record>
+    <!-- Purchase > Reporting parent is manager-gated in core; open it to
+         plain purchase users so "Manage Purchases" reaches Vendor Reports.
+         Its native "Purchase" child stays manager-only. -->
+    <record id="purchase.purchase_report_main" model="ir.ui.menu">
+        <field name="group_ids" eval="[(4, ref('purchase.group_purchase_user'))]"/>
+    </record>
+    <!-- App root menus for the per-area CRUD slices: the slices grant model
+         access via their own ACL rows (not by implying the native app-user
+         group), so the gated app roots must also accept their groups or the
+         apps stay invisible. Menus INSIDE these apps are mostly ungated and
+         appear automatically once the action's model is readable. -->
+    <record id="purchase.menu_purchase_root" model="ir.ui.menu">
+        <field name="group_ids" eval="[
+            (4, ref('perm_purchases_view_res_groups')),
+            (4, ref('perm_purchases_create_res_groups')),
+            (4, ref('perm_purchases_edit_res_groups')),
+            (4, ref('perm_purchases_delete_res_groups')),
+        ]"/>
+    </record>
+    <record id="stock.menu_stock_root" model="ir.ui.menu">
+        <field name="group_ids" eval="[
+            (4, ref('perm_inventory_view_res_groups')),
+            (4, ref('perm_inventory_create_res_groups')),
+            (4, ref('perm_inventory_edit_res_groups')),
+            (4, ref('perm_inventory_delete_res_groups')),
+        ]"/>
+    </record>
+    <record id="account.menu_finance" model="ir.ui.menu">
+        <field name="group_ids" eval="[
+            (4, ref('perm_invoicing_view_res_groups')),
+            (4, ref('perm_invoicing_create_res_groups')),
+            (4, ref('perm_invoicing_edit_res_groups')),
+            (4, ref('perm_invoicing_delete_res_groups')),
+        ]"/>
+    </record>
 
     <!--
         Hide the Discuss app tile from the apps switcher for this store.

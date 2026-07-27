@@ -13,6 +13,18 @@
             <div t-if="order.partner_id.ref">
                 <span>Customer ID: </span><span t-esc="order.partner_id.ref"/>
             </div>
+            <div t-if="order.partner_id.membership_level_id" class="pos-retail-membership">
+                <span>Membership: </span><span t-esc="order.partner_id.membership_level_id.name"/>
+            </div>
+        </xpath>
+        <!-- Invoice number, once the order is invoiced and synced (shows on
+             reprints from the Orders screen and on the receipt screen after
+             an invoiced order syncs). -->
+        <xpath expr="//div[hasclass('pos-receipt-customer')]" position="after">
+            <div t-if="order.account_move" class="pos-retail-invoice-no text-center"
+                 style="font-size:80%;">
+                Invoice: <t t-esc="order.account_move.name"/>
+            </div>
         </xpath>
         <xpath expr="//div[hasclass('pos-receipt-customer')]" position="after">
             <div t-if="!order.partner_id" class="pos-receipt-customer pos-retail-walkin mt-2 text-center">
