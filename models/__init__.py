@@ -11,6 +11,7 @@ from . import pos_retail_access_role
 from . import pos_retail_discount_log
 from . import product_template
 from . import product_product
+from . import product_uom
 from . import product_supplierinfo
 from . import res_country
 from . import res_partner

@@ -160,6 +160,14 @@ class PosOrder(models.Model):
 class PosOrderLine(models.Model):
     _inherit = 'pos.order.line'
 
+    # Which package was sold, when the line came from scanning a package
+    # barcode. The quantity on the line stays in the product's own unit (so
+    # stock moves correctly), and this records the size the customer actually
+    # bought, for the receipt and for the package reports.
+    pos_retail_package_id = fields.Many2one(
+        'product.uom', string="Package", ondelete='set null', index='btree_not_null',
+    )
+
     # Snapshots of the product's selling range as it stood when the sale was
     # rung up. The product's own prices drift over time, so reporting "sold
     # below default" months later has to compare against what was in force then.
@@ -216,7 +224,7 @@ class PosOrderLine(models.Model):
             return result
         for field in ('pos_retail_default_price', 'pos_retail_min_price', 'pos_retail_max_price',
                       'pos_retail_price_state', 'pos_retail_price_manager_id',
-                      'pos_retail_price_reason_id'):
+                      'pos_retail_price_reason_id', 'pos_retail_package_id'):
             if field not in result:
                 result.append(field)
         return result

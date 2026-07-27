@@ -62,6 +62,15 @@ class ProductTemplate(models.Model):
              "on purpose: a role can grant one of the two without the other.",
     )
 
+    # Packages live on the variant (product.product.product_uom_ids); this
+    # surfaces them on the template form, which is where shopkeepers work.
+    # Only meaningful for single-variant products -- the Packages page is
+    # hidden otherwise and those are managed on the variant itself.
+    pos_retail_package_ids = fields.One2many(
+        related='product_variant_id.product_uom_ids', readonly=False,
+        string="Packages",
+    )
+
     linked_vendor_ids = fields.Many2many(
         'res.partner', compute='_compute_linked_vendor_ids', string="Linked Vendors",
         help="Technical field: vendors already linked via the Vendors tab below. "

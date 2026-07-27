@@ -8,6 +8,13 @@
         action="product_brand_action"
         sequence="7"/>
 
+    <!-- Products > Product Packages -->
+    <menuitem id="menu_pos_retail_packages"
+        name="Product Packages"
+        parent="point_of_sale.pos_config_menu_catalog"
+        action="action_pos_retail_packages"
+        sequence="8"/>
+
     <!-- Configuration list menus: also visible to holders of the "Manage POS
          Configuration Lists" catalog permission (the perm_*_res_groups xmlids
          are the auto-created groups behind the seeded permissions). NOTE:
@@ -67,6 +74,18 @@
     <menuitem id="pos_retail_menu_customer_ledger" name="Customer Ledger"
         parent="point_of_sale.menu_point_rep" action="action_pos_retail_customer_ledger"
         sequence="8" groups="point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,perm_reporting_res_groups"/>
+
+    <!-- Reporting > Package Reports -->
+    <menuitem id="pos_retail_menu_package_reports" name="Package Reports"
+        parent="point_of_sale.menu_point_rep" sequence="13"
+        groups="point_of_sale.group_pos_manager,perm_reporting_res_groups"/>
+
+    <menuitem id="pos_retail_menu_package_sales" name="Sales by Package"
+        parent="pos_retail_menu_package_reports" action="action_pos_retail_package_sales" sequence="10"/>
+    <menuitem id="pos_retail_menu_package_top_sizes" name="Most Sold Package Sizes"
+        parent="pos_retail_menu_package_reports" action="action_pos_retail_package_top_sizes" sequence="20"/>
+    <menuitem id="pos_retail_menu_package_inventory" name="Package Inventory and Profitability"
+        parent="pos_retail_menu_package_reports" action="action_pos_retail_package_inventory" sequence="30"/>
 
     <!-- Reporting > Price Reports -->
     <menuitem id="pos_retail_menu_price_reports" name="Price Reports"

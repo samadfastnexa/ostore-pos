@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Barcode bodies for generated package barcodes. The 2xx range is
+         reserved by GS1 for in-store use, so generated codes cannot clash
+         with a manufacturer's real barcodes. Prefix 299 specifically: Odoo
+         hands out 200-prefixed codes to products itself, and sharing that
+         run would make every generated package barcode collide with an
+         existing product. The sequence supplies the 12 significant digits;
+         the check digit is computed on top (product_uom.py). -->
+    <record id="seq_pos_retail_package_barcode" model="ir.sequence">
+        <field name="name">POS Retail Package Barcode</field>
+        <field name="code">pos.retail.package.barcode</field>
+        <field name="prefix">299</field>
+        <field name="padding">9</field>
+        <field name="number_next">1</field>
+        <field name="number_increment">1</field>
+        <field name="implementation">no_gap</field>
+    </record>
+
+</odoo>

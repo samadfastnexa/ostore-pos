@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Package sales analysis, built on the order lines that recorded which
+         package was sold (pos.order.line.pos_retail_package_id). Lines rung
+         up without scanning a package have none, so these views are scoped to
+         lines that do; that keeps "sales by package" honest rather than
+         lumping loose sales into a package bucket. -->
+
+    <record id="pos_retail_package_sales_view_search" model="ir.ui.view">
+        <field name="name">pos.order.line.search.pos.retail.package</field>
+        <field name="model">pos.order.line</field>
+        <field name="arch" type="xml">
+            <search string="Package Sales">
+                <field name="pos_retail_package_id" string="Package"/>
+                <field name="product_id"/>
+                <field name="order_id"/>
+                <filter name="filter_date" date="create_date" string="Date"/>
+                <group>
+                    <filter name="group_package" string="Package"
+                            context="{'group_by': 'pos_retail_package_id'}"/>
+                    <filter name="group_product" string="Product"
+                            context="{'group_by': 'product_id'}"/>
+                    <filter name="group_month" string="Month"
+                            context="{'group_by': 'create_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_package_sales_view_list" model="ir.ui.view">
+        <field name="name">pos.order.line.list.pos.retail.package</field>
+        <field name="model">pos.order.line</field>
+        <field name="arch" type="xml">
+            <list string="Package Sales" create="false" edit="false" default_order="id desc">
+                <field name="create_date" string="Date"/>
+                <field name="order_id" string="Order"/>
+                <field name="product_id"/>
+                <field name="pos_retail_package_id" string="Package"/>
+                <field name="qty" string="Base Qty" sum="Total Base Qty"/>
+                <field name="price_unit" string="Unit Price" optional="hide"/>
+                <field name="price_subtotal_incl" string="Total" sum="Total Sold"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_package_sales_view_pivot" model="ir.ui.view">
+        <field name="name">pos.order.line.pivot.pos.retail.package</field>
+        <field name="model">pos.order.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Sales by Package" sample="1">
+                <field name="pos_retail_package_id" type="row"/>
+                <field name="price_subtotal_incl" type="measure"/>
+                <field name="qty" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="pos_retail_package_sales_view_graph" model="ir.ui.view">
+        <field name="name">pos.order.line.graph.pos.retail.package</field>
+        <field name="model">pos.order.line</field>
+        <field name="arch" type="xml">
+            <graph string="Most Sold Package Sizes" type="bar" sample="1">
+                <field name="pos_retail_package_id"/>
+                <field name="price_subtotal_incl" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_package_sales" model="ir.actions.act_window">
+        <field name="name">Sales by Package</field>
+        <field name="res_model">pos.order.line</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="pos_retail_package_sales_view_search"/>
+        <field name="domain">[('pos_retail_package_id', '!=', False)]</field>
+        <field name="context">{'search_default_group_package': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No package sales yet</p>
+            <p>Once cashiers scan package barcodes at the till, this shows which
+               sizes sell and how much each brings in.</p>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_package_top_sizes" model="ir.actions.act_window">
+        <field name="name">Most Sold Package Sizes</field>
+        <field name="res_model">pos.order.line</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="pos_retail_package_sales_view_search"/>
+        <field name="domain">[('pos_retail_package_id', '!=', False)]</field>
+        <field name="context">{'search_default_group_package': 1}</field>
+    </record>
+
+    <!-- Package master data as a report in its own right: prices, margin and
+         how many whole packages the current base stock can still fill. -->
+    <record id="pos_retail_package_stock_view_list" model="ir.ui.view">
+        <field name="name">product.uom.list.pos.retail.stock</field>
+        <field name="model">product.uom</field>
+        <field name="arch" type="xml">
+            <list string="Package Inventory" create="false" default_order="product_id, package_qty">
+                <field name="currency_id" column_invisible="1"/>
+                <field name="product_id"/>
+                <field name="display_package_name" string="Package"/>
+                <field name="package_qty" string="Contains"/>
+                <field name="barcode"/>
+                <field name="sku" optional="show"/>
+                <field name="standard_price" string="Cost" optional="show"/>
+                <field name="list_price" string="Selling Price"/>
+                <field name="package_margin" string="Margin" optional="show"/>
+                <field name="package_margin_percent" string="Margin %" optional="hide"/>
+                <field name="qty_available_packages" string="Packages in Stock"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_package_inventory" model="ir.actions.act_window">
+        <field name="name">Package Inventory &amp; Profitability</field>
+        <field name="res_model">product.uom</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="pos_retail_package_stock_view_list"/>
+        <field name="search_view_id" ref="product_uom_view_search_package"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No packages yet</p>
+            <p>Cost, price and margin per package, with how many whole packages
+               the product's current stock can fill.</p>
+        </field>
+    </record>
+
+</odoo>

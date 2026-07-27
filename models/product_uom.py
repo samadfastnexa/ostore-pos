@@ -1,0 +1,280 @@
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError, ValidationError
+
+
+class ProductUom(models.Model):
+    """A sellable package of a product: the 500g packet, the 5kg bag, the sack.
+
+    Odoo 19 replaced the old product.packaging model with this one: a link
+    between a product and a unit of measure, carrying the barcode. That gives
+    us the structure for free -- the barcode is unique (SQL constraint here
+    plus a cross-check against product barcodes), the POS already loads these
+    records, and scanning a package barcode already resolves to the base
+    product with the package quantity, so stock keeps moving in base units.
+
+    What native has no concept of is the commercial side: a package has no
+    price of its own, so a 5 kg bag could only ever cost five times the 1 kg
+    price. Shops price bulk below that on purpose. These fields add the
+    per-package economics; `unit_price` converts a package price back to the
+    per-unit price the till actually charges, which keeps the sold quantity
+    (and therefore inventory) honest.
+    """
+    _inherit = 'product.uom'
+    _order = 'product_id, package_qty, id'
+
+    # Native marks the barcode required, which would force the shopkeeper to
+    # invent one by hand for every package. Relaxed here so it can be left
+    # blank and filled by create() below; the database column stays NOT NULL,
+    # so a package still never ends up without a barcode.
+    barcode = fields.Char(required=False)
+
+    package_name = fields.Char(
+        string="Package Name",
+        help="Shown on the receipt and in reports, e.g. \"5 KG Bag\". "
+             "Defaults to the unit's own name when left empty.",
+    )
+    display_package_name = fields.Char(
+        string="Package", compute='_compute_display_package_name',
+    )
+    sku = fields.Char(
+        string="SKU",
+        help="Internal reference for this package, independent of the "
+             "product's own reference.",
+    )
+    active = fields.Boolean(default=True)
+
+    package_qty = fields.Float(
+        string="Quantity", compute='_compute_package_qty', store=True,
+        digits='Product Unit of Measure',
+        help="How much of the product this package holds, in the product's "
+             "own unit. A 5 kg bag of a product stocked in kg holds 5.",
+    )
+    currency_id = fields.Many2one(
+        'res.currency', related='product_id.currency_id', readonly=True,
+    )
+    list_price = fields.Monetary(
+        string="Selling Price",
+        help="Price for one whole package. Leave at zero to charge the "
+             "product's own price multiplied by the package quantity.",
+    )
+    standard_price = fields.Monetary(
+        string="Cost Price", help="What one whole package costs you.",
+    )
+    min_price = fields.Monetary(
+        string="Minimum Price",
+        help="Lowest price this package may be sold at. Zero means no limit.",
+    )
+    max_price = fields.Monetary(
+        string="Maximum Price",
+        help="Highest price this package may be sold at, e.g. a printed MRP. "
+             "Zero means no limit.",
+    )
+    unit_price = fields.Monetary(
+        string="Price per Unit", compute='_compute_unit_price', store=True,
+        help="The package price spread over its quantity. This is what the "
+             "till charges per unit, so the receipt total matches the package "
+             "price while stock still moves in base units.",
+    )
+    weight = fields.Float(
+        string="Weight", digits='Stock Weight',
+        help="Gross weight of one package, for shipping and labels.",
+    )
+    package_margin = fields.Monetary(
+        string="Margin", compute='_compute_package_margin',
+        help="Selling price less cost price, for one package.",
+    )
+    package_margin_percent = fields.Float(
+        string="Margin (%)", compute='_compute_package_margin',
+    )
+    qty_available_packages = fields.Float(
+        string="Packages in Stock", compute='_compute_qty_available_packages',
+        digits='Product Unit of Measure',
+        help="How many whole packages the product's current stock can fill. "
+             "Stock is held on the product itself, so every package size draws "
+             "from the same quantity.",
+    )
+    image_128 = fields.Image(string="Package Image", max_width=128, max_height=128)
+
+    @api.model
+    def _load_pos_data_fields(self, config):
+        """Ship the commercial fields to the till.
+
+        The POS module already loads this model (id/barcode/product_id/uom_id)
+        so that scanning a package barcode finds the product and its quantity;
+        these fields are what let it also charge the package's own price and
+        name the package on the receipt.
+        """
+        result = super()._load_pos_data_fields(config)
+        for fname in ('package_name', 'sku', 'package_qty', 'unit_price',
+                      'list_price', 'min_price', 'max_price'):
+            if fname not in result:
+                result.append(fname)
+        return result
+
+    @api.depends('package_name', 'uom_id.name')
+    def _compute_display_package_name(self):
+        for package in self:
+            package.display_package_name = package.package_name or package.uom_id.name
+
+    @api.depends('uom_id.factor', 'product_id.uom_id.factor')
+    def _compute_package_qty(self):
+        """Base-unit content of one package.
+
+        uom.uom.factor is the absolute size of a unit within its category, so
+        the ratio between the package unit and the product's own unit is the
+        quantity -- the same arithmetic the POS uses natively when a package
+        barcode is scanned (pos_order_line.js setOptions).
+        """
+        for package in self:
+            base_factor = package.product_id.uom_id.factor
+            package.package_qty = (
+                package.uom_id.factor / base_factor if base_factor else 0.0
+            )
+
+    @api.depends('list_price', 'package_qty')
+    def _compute_unit_price(self):
+        for package in self:
+            package.unit_price = (
+                package.list_price / package.package_qty
+                if package.list_price and package.package_qty else 0.0
+            )
+
+    @api.depends('list_price', 'standard_price')
+    def _compute_package_margin(self):
+        for package in self:
+            package.package_margin = package.list_price - package.standard_price
+            package.package_margin_percent = (
+                (package.package_margin / package.list_price) * 100
+                if package.list_price else 0.0
+            )
+
+    @api.depends('product_id.qty_available', 'package_qty')
+    def _compute_qty_available_packages(self):
+        """Whole packages the base stock can still fill.
+
+        Deliberately floored: half a bag is not a bag you can sell.
+        """
+        for package in self:
+            qty = package.product_id.qty_available
+            package.qty_available_packages = (
+                float(int(qty / package.package_qty))
+                if package.package_qty and qty > 0 else 0.0
+            )
+
+    @api.constrains('list_price', 'standard_price', 'min_price', 'max_price')
+    def _check_prices_non_negative(self):
+        labels = {
+            'list_price': _("Selling Price"), 'standard_price': _("Cost Price"),
+            'min_price': _("Minimum Price"), 'max_price': _("Maximum Price"),
+        }
+        for package in self:
+            for fname, label in labels.items():
+                if package[fname] < 0:
+                    raise ValidationError(
+                        _("%s must be zero or greater.", label))
+
+    @api.constrains('min_price', 'max_price', 'list_price')
+    def _check_package_price_range(self):
+        """Keep the package range coherent: minimum <= selling <= maximum.
+
+        Each bound is optional (0 means "not set"), matching how the product's
+        own selling range behaves, so a package priced without a range stays
+        valid and is simply unconstrained.
+        """
+        for package in self:
+            low, high, price = package.min_price, package.max_price, package.list_price
+            if low and high and low > high:
+                raise ValidationError(_(
+                    "On package \"%(name)s\": the minimum price cannot be "
+                    "above the maximum price.",
+                    name=package.display_package_name or '',
+                ))
+            if price:
+                if low and price < low:
+                    raise ValidationError(_(
+                        "On package \"%(name)s\": the selling price is below "
+                        "the minimum price.",
+                        name=package.display_package_name or '',
+                    ))
+                if high and price > high:
+                    raise ValidationError(_(
+                        "On package \"%(name)s\": the selling price is above "
+                        "the maximum price.",
+                        name=package.display_package_name or '',
+                    ))
+
+    @api.constrains('uom_id', 'product_id')
+    def _check_package_uom_category(self):
+        """A package has to measure the same kind of thing as the product.
+
+        Without this the quantity ratio is meaningless (a "Box" of a product
+        stocked in kg would compute a nonsense package quantity, and the till
+        would sell the wrong amount).
+        """
+        for package in self:
+            product_uom = package.product_id.uom_id
+            if not product_uom or not package.uom_id:
+                continue
+            if package.uom_id._has_common_reference(product_uom):
+                continue
+            raise ValidationError(_(
+                "The package unit \"%(package)s\" cannot be converted to "
+                "\"%(product)s\", the unit this product is stocked in. Pick a "
+                "package unit of the same kind.",
+                package=package.uom_id.display_name,
+                product=product_uom.display_name,
+            ))
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Give every package a barcode, generating one when none was typed.
+
+        The barcode is what makes a package scannable, and the column is NOT
+        NULL, so leaving it to the user to invent would either block the save
+        or leave the package unusable at the till.
+        """
+        for vals in vals_list:
+            if not vals.get('barcode'):
+                vals['barcode'] = self._pos_retail_next_free_barcode()
+        return super().create(vals_list)
+
+    @api.model
+    def _pos_retail_next_free_barcode(self):
+        """A generated EAN-13 that no package and no product already uses."""
+        sequence = self.env['ir.sequence']
+        # Generous retry budget: a barcode range can contain a long unbroken
+        # run of codes already used elsewhere, and skipping past it costs
+        # nothing but sequence numbers.
+        for _attempt in range(100):
+            body = sequence.next_by_code('pos.retail.package.barcode')
+            if not body:
+                raise UserError(_(
+                    "The package barcode sequence is missing. Upgrade the POS "
+                    "Retail module to restore it, or type a barcode by hand."))
+            candidate = self._pos_retail_ean13(body)
+            taken = self.sudo().search_count([('barcode', '=', candidate)]) or \
+                self.env['product.product'].sudo().search_count(
+                    [('barcode', '=', candidate)])
+            if not taken:
+                return candidate
+        raise UserError(_(
+            "Could not generate a free barcode after several tries. Check the "
+            "package barcode sequence for clashes."))
+
+    def action_generate_barcode(self):
+        """Fill in a valid EAN-13 for packages that have none.
+
+        Existing barcodes are never overwritten: they may already be printed
+        on labels and stuck to stock.
+        """
+        for package in self:
+            if not package.barcode:
+                package.barcode = self._pos_retail_next_free_barcode()
+        return True
+
+    @api.model
+    def _pos_retail_ean13(self, body):
+        """Return a 13-digit EAN from up to 12 digits, adding the check digit."""
+        digits = ''.join(ch for ch in str(body) if ch.isdigit())[:12].rjust(12, '0')
+        total = sum(int(d) * (3 if i % 2 else 1) for i, d in enumerate(digits))
+        return digits + str((10 - total % 10) % 10)

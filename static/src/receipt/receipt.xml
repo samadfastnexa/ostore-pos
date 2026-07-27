@@ -11,11 +11,17 @@
             <attribute name="t-attf-class">pos-retail-style-{{order.config.pos_retail_receipt_style || 'standard'}} pos-retail-w{{order.config.pos_retail_receipt_width || '80'}} pos-retail-font-{{order.config.pos_retail_receipt_font || 'normal'}}</attribute>
         </xpath>
 
-        <!-- SKU under each product line (inside Orderline's info list). -->
+        <!-- Package sold and SKU, under each product line (inside
+             Orderline's info list). The package line names the size the
+             customer actually bought; the quantity above it stays in the
+             product's own unit, which is what stock moved by. -->
         <xpath expr="//Orderline" position="inside">
-            <li t-if="order.config.pos_retail_receipt_show_sku and line.product_id.default_code"
+            <li t-if="line.pos_retail_package_id" class="pos-retail-line-package">
+                Package: <t t-esc="line.pos_retail_package_id.package_name or line.pos_retail_package_id.uom_id.name"/>
+            </li>
+            <li t-if="order.config.pos_retail_receipt_show_sku and (line.pos_retail_package_id.sku or line.product_id.default_code)"
                 class="pos-retail-line-sku">
-                SKU: <t t-esc="line.product_id.default_code"/>
+                SKU: <t t-esc="line.pos_retail_package_id.sku or line.product_id.default_code"/>
             </li>
         </xpath>
 
