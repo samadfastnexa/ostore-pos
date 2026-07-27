@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Default roles, composed purely from the permission catalog. The role
+         model's create() syncs each role's group implied_ids from
+         permission_ids automatically. No users are assigned here; the Super
+         Admin assigns people under Configuration > Roles &amp; Permissions.
+         noupdate: the shop admin may re-tailor these; upgrades will not
+         overwrite them. NOTE: the Admin role lists every permission that
+         exists TODAY; permissions added in a future version must be ticked
+         onto it manually (noupdate prevents any automatic refresh). -->
+
+    <record id="access_role_admin" model="pos.retail.access.role">
+        <field name="name">Admin</field>
+        <field name="sequence">10</field>
+        <field name="permission_ids" eval="[(6, 0, [
+            ref('perm_products_create'),
+            ref('perm_products_edit'),
+            ref('perm_products_delete'),
+            ref('perm_products_price'),
+            ref('perm_products_cost'),
+            ref('perm_partners_manage'),
+            ref('perm_partners_create'),
+            ref('perm_partners_edit'),
+            ref('perm_partners_delete'),
+            ref('perm_pos_use'),
+            ref('perm_pos_admin'),
+            ref('perm_sales'),
+            ref('perm_sales_view'),
+            ref('perm_sales_create'),
+            ref('perm_sales_edit'),
+            ref('perm_sales_delete'),
+            ref('perm_purchases'),
+            ref('perm_purchases_view'),
+            ref('perm_purchases_create'),
+            ref('perm_purchases_edit'),
+            ref('perm_purchases_delete'),
+            ref('perm_inventory'),
+            ref('perm_inventory_view'),
+            ref('perm_inventory_create'),
+            ref('perm_inventory_edit'),
+            ref('perm_inventory_delete'),
+            ref('perm_invoicing'),
+            ref('perm_invoicing_view'),
+            ref('perm_invoicing_create'),
+            ref('perm_invoicing_edit'),
+            ref('perm_invoicing_delete'),
+            ref('perm_expenses'),
+            ref('perm_expenses_create'),
+            ref('perm_expenses_edit'),
+            ref('perm_expenses_delete'),
+            ref('perm_reporting'),
+            ref('perm_config_lists'),
+            ref('perm_config_lists_create'),
+            ref('perm_config_lists_edit'),
+            ref('perm_config_lists_delete'),
+        ])]"/>
+    </record>
+
+    <record id="access_role_cashier" model="pos.retail.access.role">
+        <field name="name">Cashier</field>
+        <field name="sequence">20</field>
+        <field name="permission_ids" eval="[(6, 0, [
+            ref('perm_pos_use'),
+        ])]"/>
+    </record>
+
+    <!-- Add products and make quotations, nothing else. Because its members
+         are in a role WITHOUT the price permissions, Sales Price and Cost of
+         EXISTING products are locked for them; new products can be created at
+         any price. -->
+    <record id="access_role_sub_admin" model="pos.retail.access.role">
+        <field name="name">Sub Admin</field>
+        <field name="sequence">30</field>
+        <field name="permission_ids" eval="[(6, 0, [
+            ref('perm_products_create'),
+            ref('perm_sales_create'),
+        ])]"/>
+    </record>
+
+</odoo>

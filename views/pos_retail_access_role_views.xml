@@ -9,8 +9,7 @@
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
                 <field name="user_ids" widget="many2many_tags"/>
-                <field name="can_edit_product_price" widget="boolean_toggle"/>
-                <field name="can_edit_product_cost" widget="boolean_toggle"/>
+                <field name="permission_ids" widget="many2many_tags"/>
             </list>
         </field>
     </record>
@@ -31,16 +30,16 @@
                     <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
                         <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
                         <div>
-                            <strong>Purpose:</strong> a named set of permissions the Super Admin can hand to a
+                            <strong>Purpose:</strong> a named set of permissions the Super Admin hands to a
                             user — e.g. "can add products, cannot delete them, cannot change prices on ones
                             that already exist."<br/>
-                            <strong>How it works:</strong> the Access tab controls whole actions (Create/Write/
-                            Delete) per model — this is real Odoo security, the same engine behind Settings ▸
-                            Groups. A role only ever <em>adds</em> permission on top of whatever else a user
-                            already has (e.g. via POS Manager) — it can never take one away.<br/>
-                            <strong>Sales Price / Cost</strong> are the one exception: those two toggles below
-                            are enforced directly by this app, so they always apply regardless of a user's
-                            other groups.
+                            <strong>How it works:</strong> tick permissions from the catalog below. This is
+                            real Odoo security (the same engine behind Settings ▸ Groups); granting and
+                            revoking take effect immediately. A role only ever <em>adds</em> access on top of
+                            whatever else a user already has — it can never take access away.<br/>
+                            <strong>Sales Price / Cost</strong> are the one exception: the two price
+                            permissions are enforced directly by this app, so as soon as a user is in ANY
+                            role, existing products' prices are locked unless a role grants them.
                         </div>
                     </div>
                     <div class="oe_title">
@@ -51,29 +50,76 @@
                         <field name="user_ids" widget="many2many_tags" string="Assigned Users"/>
                     </group>
                     <notebook>
-                        <page string="Access" name="access">
+                        <page string="Permissions" name="permissions">
+                            <group>
+                                <group string="Products">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'products')]"/>
+                                </group>
+                                <group string="Customers &amp; Vendors">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'partners')]"/>
+                                </group>
+                                <group string="Point of Sale">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'pos')]"/>
+                                </group>
+                                <group string="Sales">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'sales')]"/>
+                                </group>
+                                <group string="Purchases">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'purchases')]"/>
+                                </group>
+                                <group string="Inventory">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'inventory')]"/>
+                                </group>
+                                <group string="Invoicing">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'accounting')]"/>
+                                </group>
+                                <group string="Store Expenses">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'expenses')]"/>
+                                </group>
+                                <group string="Reporting">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'reporting')]"/>
+                                </group>
+                                <group string="Configuration">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="many2many_checkboxes"
+                                           domain="[('category', '=', 'configuration')]"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Advanced (technical)" name="access" groups="base.group_no_one">
                             <p class="text-muted">
-                                Pick any model and toggle what this role may do to it. Read access is always on
-                                (a role cannot hide records, only restrict changing them).
+                                The raw access rules this role's group carries (including rules created before
+                                the permission catalog existed). Read-only; compose roles with the Permissions
+                                tab instead.
                             </p>
-                            <field name="model_access"
-                                   context="{'default_name': name, 'default_perm_read': True,
-                                             'default_perm_write': False, 'default_perm_create': False,
-                                             'default_perm_unlink': False}">
-                                <list editable="bottom">
+                            <field name="model_access" readonly="1">
+                                <list>
+                                    <field name="name"/>
                                     <field name="model_id" string="Model"/>
-                                    <field name="perm_read" string="Read" column_invisible="1"/>
+                                    <field name="perm_read" string="Read"/>
                                     <field name="perm_create" string="Create"/>
                                     <field name="perm_write" string="Edit"/>
                                     <field name="perm_unlink" string="Delete"/>
                                 </list>
                             </field>
-                        </page>
-                        <page string="Product Price Protection" name="price_protection">
-                            <group>
-                                <field name="can_edit_product_price"/>
-                                <field name="can_edit_product_cost"/>
-                            </group>
                         </page>
                     </notebook>
                 </sheet>
@@ -88,6 +134,7 @@
             <search string="Roles &amp; Permissions">
                 <field name="name"/>
                 <field name="user_ids"/>
+                <field name="permission_ids"/>
                 <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
             </search>
         </field>

@@ -1,4 +1,7 @@
 from odoo import _, api, fields, models
+from odoo.fields import Command
+
+from .pos_retail_access_permission import fill_access_names
 
 
 class PosRetailAccessRole(models.Model):
@@ -12,12 +15,12 @@ class PosRetailAccessRole(models.Model):
     engine (`ir.model.access`), not a parallel system a determined user could
     bypass via direct RPC.
 
-    `model_access` (which model/group can Create/Edit/Delete) is delegated
-    straight from `res.groups` -- shown directly in this model's own form, not
-    copied into a second custom line model. A hand-synced copy would be a
-    stale-data bug waiting to happen (edit/delete a line, forget to also
-    update the real ir.model.access row); exposing the real field means there
-    is exactly one place this data lives.
+    Roles are composed from the PERMISSION CATALOG (`permission_ids` ->
+    pos.retail.access.permission): assigning permissions makes this role's
+    group imply the permissions' groups, which Odoo 19 resolves dynamically
+    everywhere (ACLs, record rules, menus, view gates). The raw `model_access`
+    grid (delegated straight from `res.groups`) remains visible read-only in
+    debug mode for transparency; it is no longer the editing surface.
 
     The two `can_edit_product_*` booleans are the one thing `ir.model.access`
     cannot express natively: "settable when creating a product, locked once it
@@ -41,17 +44,48 @@ class PosRetailAccessRole(models.Model):
              "role is unarchived later. Re-add them manually if needed.",
     )
 
+    permission_ids = fields.Many2many(
+        'pos.retail.access.permission', 'pos_retail_role_permission_rel',
+        'role_id', 'permission_id', string="Permissions",
+        help="What this role grants. Each permission is backed by a real "
+             "group; the role's own group implies the selected permissions' "
+             "groups, so granting and revoking take effect immediately for "
+             "every member.",
+    )
     can_edit_product_price = fields.Boolean(
-        string="Can Edit Sales Price on Existing Products", default=False,
-        help="A user with only this role may still CREATE a product at any "
-             "price. This flag controls whether they may also change the "
-             "Sales Price on a product that already exists. Off by default: "
-             "assigning a role locks price edits unless explicitly granted here.",
+        string="Can Edit Sales Price on Existing Products",
+        compute='_compute_can_edit_flags',
+        help="Computed from the assigned permissions (the \"Change Sales "
+             "Price on Existing Products\" catalog entry). A user with only "
+             "this role may still CREATE a product at any price; this "
+             "controls changing the price of one that already exists.",
     )
     can_edit_product_cost = fields.Boolean(
-        string="Can Edit Cost on Existing Products", default=False,
+        string="Can Edit Cost on Existing Products",
+        compute='_compute_can_edit_flags',
         help="Same as above, for the Cost field.",
     )
+
+    @api.depends('permission_ids.grants_price_edit', 'permission_ids.grants_cost_edit')
+    def _compute_can_edit_flags(self):
+        for role in self:
+            role.can_edit_product_price = any(role.permission_ids.mapped('grants_price_edit'))
+            role.can_edit_product_cost = any(role.permission_ids.mapped('grants_cost_edit'))
+
+    def _pos_retail_sync_permission_groups(self):
+        """Make the role's group imply EXACTLY the selected permissions'
+        groups. Full replace on purpose: permission_ids is the single source
+        of truth for this group's implied_ids -- anything hand-added through
+        Settings > Technical > Groups is wiped on the next role save. The
+        set-compare guard avoids a gratuitous res.groups.write (and its
+        registry cache clears) when nothing actually changed. Not sudo():
+        res.groups sets _allow_sudo_commands = False, and the only writers
+        here are base.group_system users who hold the res.groups ACL anyway.
+        """
+        for role in self:
+            wanted = role.permission_ids.group_id
+            if set(role.group_id.implied_ids.ids) != set(wanted.ids):
+                role.group_id.implied_ids = [Command.set(wanted.ids)]
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -66,6 +100,7 @@ class PosRetailAccessRole(models.Model):
         for vals in vals_list:
             self._pos_retail_fill_access_names(vals.get('name') or _('New Role'), vals)
         roles = super().create(vals_list)
+        roles._pos_retail_sync_permission_groups()
         # clear_cache() (default namespace), NOT clear_cache('groups'):
         # _pos_retail_can_edit_price_field lives in the default namespace so
         # that core's own membership writes (res.users.write / res.groups.write
@@ -75,20 +110,14 @@ class PosRetailAccessRole(models.Model):
 
     @api.model
     def _pos_retail_fill_access_names(self, role_name, vals):
-        for command in vals.get('model_access') or []:
-            # Only (0, 0, {...}) "create a new line" commands carry a vals
-            # dict to patch; (1, id, {...}) updates and (4, id) links have
-            # nothing here to fill in and are left untouched.
-            if command[0] != 0 or not isinstance(command[2], dict) or command[2].get('name'):
-                continue
-            model_id = command[2].get('model_id')
-            model_name = self.env['ir.model'].browse(model_id).model if model_id else '?'
-            command[2]['name'] = "%s: %s" % (role_name, model_name)
+        fill_access_names(self.env, role_name, vals)
 
     def write(self, vals):
         if 'model_access' in vals and len(self) == 1:
             self._pos_retail_fill_access_names(self.name, vals)
         res = super().write(vals)
+        if 'permission_ids' in vals:
+            self._pos_retail_sync_permission_groups()
         if 'active' in vals and not vals['active']:
             # Archiving is the primary way to revoke a role (see unlink() for
             # why hard delete is a secondary action). Clear its members
@@ -97,7 +126,7 @@ class PosRetailAccessRole(models.Model):
             # itself is not deleted (nothing else does that automatically;
             # see unlink()), but with zero users it grants nothing.
             self.mapped('group_id').write({'user_ids': [(5, 0, 0)]})
-        if set(vals) & {'active', 'can_edit_product_price', 'can_edit_product_cost', 'user_ids'}:
+        if set(vals) & {'active', 'user_ids', 'permission_ids'}:
             self.env.registry.clear_cache()
         return res
 
