@@ -8,6 +8,21 @@
                     t-on-click="() => this.onClickSaveAsQuotation()">
                 <i class="fa fa-file-text-o me-1"/>Save as Quotation
             </button>
+            <button t-if="pos.config.pos_retail_allow_quotation"
+                    class="btn btn-secondary btn-lg py-5 pos-retail-quotation-btn"
+                    t-on-click="() => this.onClickSaveQuotationDraft()">
+                <i class="fa fa-pencil-square-o me-1"/>Save Draft
+            </button>
+            <button t-if="pos.config.pos_retail_allow_quotation"
+                    class="btn btn-secondary btn-lg py-5 pos-retail-quotation-btn"
+                    t-on-click="() => this.onClickUpdateQuotation()">
+                <i class="fa fa-refresh me-1"/>Update Quote
+            </button>
+            <button t-if="pos.config.pos_retail_allow_quotation"
+                    class="btn btn-secondary btn-lg py-5 pos-retail-quotation-btn"
+                    t-on-click="() => this.onClickDuplicateQuotation()">
+                <i class="fa fa-clone me-1"/>Duplicate Quote
+            </button>
         </xpath>
     </t>
 

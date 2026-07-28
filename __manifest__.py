@@ -64,6 +64,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'report/pos_retail_discount_log_report.xml',
         'report/pos_retail_receipt_report.xml',
         'report/pos_retail_goods_receipt_report.xml',
+        'report/pos_retail_quotation_report.xml',
         # After the report: the template attaches the A4 report by xmlid.
         'data/pos_retail_mail_template_data.xml',
         'views/pos_order_views.xml',
@@ -162,6 +163,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/return_no_receipt.xml',
             'pos_retail/static/src/overrides/quotation.js',
             'pos_retail/static/src/overrides/quotation.xml',
+            'pos_retail/static/src/overrides/quotation_picker.js',
+            'pos_retail/static/src/overrides/quotation_picker.xml',
         ],
         # The customer display page is served from its own bundle, separate
         # from the main POS assets.

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Quotation PDF.
+         Odoo's own quotation report already carries the company logo and
+         address, the customer block, per-line discounts and taxes, the
+         validity date, the salesperson, terms and conditions and a signature
+         area. Rather than replace a well-tested document, this adds the two
+         things it has no notion of: product thumbnails and a QR code that
+         opens the quotation online.
+
+         The image goes INSIDE the description cell rather than in a column of
+         its own on purpose: the native template computes footer colspans
+         arithmetically from how many optional columns are shown, so adding a
+         column would silently misalign every total row. -->
+
+    <template id="report_saleorder_document_pos_retail"
+              inherit_id="sale.report_saleorder_document">
+
+        <xpath expr="//td[@name='td_product_name']/span[@t-field='line.name']" position="before">
+            <img t-if="doc.company_id.pos_retail_quote_show_images and line.product_id.image_128"
+                 t-att-src="image_data_uri(line.product_id.image_128)"
+                 style="max-height:18mm; max-width:18mm; float:left; margin:0 3mm 1mm 0;"
+                 alt=""/>
+        </xpath>
+
+        <!-- QR code beside the totals, where the customer looks once they
+             have read the offer. Encodes the portal link, so scanning opens
+             the quotation itself rather than just its number. -->
+        <xpath expr="//div[@id='total']" position="before">
+            <div t-if="doc.company_id.pos_retail_quote_show_qr"
+                 class="pos-retail-quote-qr"
+                 style="float:left; text-align:center; margin-top:4mm;">
+                <img t-att-src="doc._pos_retail_quote_qr_url()"
+                     style="width:26mm; height:26mm;" alt="Quotation QR code"/>
+                <div style="font-size:7pt;">Scan to view online</div>
+            </div>
+        </xpath>
+
+    </template>
+
+</odoo>

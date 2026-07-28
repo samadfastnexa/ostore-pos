@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.QuotationPicker">
+        <Dialog title="props.title" bodyClass="'pos-retail-quote-picker'">
+
+            <div class="d-flex gap-2 mb-2">
+                <input type="text" class="form-control"
+                       placeholder="Search by quotation number or customer"
+                       t-model="state.search"/>
+                <button t-if="props.partner"
+                        class="btn"
+                        t-att-class="state.onlyThisCustomer ? 'btn-primary' : 'btn-secondary'"
+                        t-on-click="() => this.toggleCustomerFilter()">
+                    <t t-esc="props.partner.name"/>
+                </button>
+            </div>
+
+            <div t-if="state.loading" class="text-center p-4">
+                <i class="fa fa-circle-o-notch fa-spin fa-2x"/>
+                <div class="mt-2">Loading quotations…</div>
+            </div>
+
+            <div t-elif="state.failed" class="alert alert-warning" role="alert">
+                <strong>Quotations need a connection.</strong>
+                They live on the server, so they cannot be listed while the till is offline.
+            </div>
+
+            <div t-elif="!visibleQuotes.length" class="o_empty text-muted p-3">
+                No open quotations found. Only draft and sent quotations can be changed;
+                once an order is confirmed it is no longer a quotation.
+            </div>
+
+            <div t-else="" class="pos-retail-quote-picker__list">
+                <button t-foreach="visibleQuotes" t-as="quote" t-key="quote.id"
+                        class="pos-retail-quote-row"
+                        t-on-click="() => this.select(quote)">
+                    <div class="pos-retail-quote-row__main">
+                        <span class="fw-bolder" t-esc="quote.name"/>
+                        <span class="badge text-bg-light ms-1" t-esc="stateLabel(quote)"/>
+                        <span t-if="quote.approved" class="badge text-bg-success ms-1">Approved</span>
+                    </div>
+                    <div class="pos-retail-quote-row__sub text-muted">
+                        <t t-esc="quote.partner_name"/>
+                        · <t t-esc="quote.line_count"/> line(s)
+                        <t t-if="quote.validity_date"> · valid to <t t-esc="quote.validity_date"/></t>
+                    </div>
+                    <div class="pos-retail-quote-row__amount fw-bolder" t-esc="money(quote.amount_total)"/>
+                </button>
+            </div>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary btn-lg" t-on-click="() => this.props.close()">
+                    Cancel
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

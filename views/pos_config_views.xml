@@ -127,6 +127,14 @@
                         <label string="Allow Quotations" for="pos_retail_allow_quotation" class="col-lg-4 o_light_label"/>
                         <field name="pos_retail_allow_quotation"/>
                     </div>
+                    <div class="row mt8" invisible="not pos_retail_allow_quotation">
+                        <label string="Product Images on Quotation PDF" for="pos_retail_quote_show_images" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_quote_show_images"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_allow_quotation">
+                        <label string="QR Code on Quotation PDF" for="pos_retail_quote_show_qr" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_quote_show_qr"/>
+                    </div>
                 </div>
                 <div class="mt-3">
                     <span class="o_form_label fw-bold">Flexible Pricing</span>

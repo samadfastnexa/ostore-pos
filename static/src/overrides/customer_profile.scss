@@ -115,3 +115,33 @@
 @media (max-width: 480px) {
     .pos-retail-profile__grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+// Quotation picker: one tap per row, sized for a touch screen.
+.pos-retail-quote-picker {
+    &__list {
+        max-height: 52vh;
+        overflow-y: auto;
+    }
+}
+
+.pos-retail-quote-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "main amount" "sub amount";
+    gap: 0 .75rem;
+    width: 100%;
+    text-align: left;
+    border: 1px solid rgba(0, 0, 0, .1);
+    border-radius: .6rem;
+    background: transparent;
+    padding: .55rem .75rem;
+    margin-bottom: .4rem;
+    cursor: pointer;
+
+    &:hover { background: rgba(124, 58, 237, .07); }
+    &:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
+
+    &__main   { grid-area: main; }
+    &__sub    { grid-area: sub; font-size: .8rem; }
+    &__amount { grid-area: amount; align-self: center; white-space: nowrap; }
+}

@@ -230,6 +230,16 @@ class ResConfigSettings(models.TransientModel):
         readonly=False,
         string="Return Needs Manager Approval",
     )
+    pos_retail_quote_show_images = fields.Boolean(
+        related='company_id.pos_retail_quote_show_images',
+        readonly=False,
+        string="Show Product Images on Quotations",
+    )
+    pos_retail_quote_show_qr = fields.Boolean(
+        related='company_id.pos_retail_quote_show_qr',
+        readonly=False,
+        string="Show QR Code on Quotations",
+    )
     pos_retail_allow_quotation = fields.Boolean(
         related='pos_config_id.pos_retail_allow_quotation',
         readonly=False,
