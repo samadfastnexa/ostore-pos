@@ -91,6 +91,12 @@ class PosRetailDashboard(models.AbstractModel):
 
         return {
             'period': period,
+            # The resolved window, so a card's drill-through opens exactly the
+            # records that produced the figure rather than re-deriving dates
+            # client-side and drifting from them.
+            'period_start': fields.Datetime.to_string(start) if start else False,
+            'period_end': fields.Datetime.to_string(end) if end else False,
+            'drill': self._get_drill_targets(start, end, movement),
             'currency_id': self.env.company.currency_id.id,
             'company_name': self.env.company.name,
             'kpis': kpis,
@@ -344,6 +350,56 @@ class PosRetailDashboard(models.AbstractModel):
         return rows[:limit]
 
     # ------------------------------------------------------------------
+    # Record ids behind each figure, so every card can be opened
+    # ------------------------------------------------------------------
+    def _get_drill_targets(self, start, end, movement):
+        """Ids the dashboard cards drill into.
+
+        Sent as explicit id lists rather than domains the client rebuilds:
+        several figures (dead stock, expired lots, products in POS) come from
+        python-side filtering that no simple domain reproduces, and a card
+        that opened a *slightly* different set than the number it sits under
+        would quietly undermine trust in the whole dashboard.
+        """
+        Product = self.env['product.product']
+        storable = Product.search([('is_storable', '=', True), ('available_in_pos', '=', True)])
+        quants = self.env['stock.quant']._read_group(
+            [('product_id', 'in', storable.ids), ('location_id.usage', '=', 'internal')],
+            groupby=['product_id'], aggregates=['quantity:sum'],
+        )
+        qty_by_product = {product: qty or 0.0 for product, qty in quants}
+
+        expired_lot_ids = []
+        Lot = self.env['stock.lot']
+        if 'expiration_date' in Lot._fields:
+            now = fields.Datetime.now()
+            expired_lot_ids = [
+                lot.id for lot in Lot.search(
+                    [('expiration_date', '!=', False), ('expiration_date', '<', now)])
+                if (lot.product_qty or 0.0) > 0
+            ]
+
+        reorder_ids = [
+            op.id for op in self.env['stock.warehouse.orderpoint'].search([])
+            if op.qty_on_hand <= op.product_min_qty
+            and (op.product_max_qty or op.product_min_qty) - op.qty_on_hand > 0
+        ]
+
+        today_start = self._local_midnight_utc(fields.Date.context_today(self))
+        return {
+            'pos_product_ids': storable.ids,
+            'out_of_stock_ids': [p.id for p in storable if qty_by_product.get(p, 0.0) <= 0],
+            'in_stock_ids': [p.id for p in storable if qty_by_product.get(p, 0.0) > 0],
+            'negative_stock_ids': [p.id for p in storable if qty_by_product.get(p, 0.0) < 0],
+            'dead_stock_ids': movement['dead_stock_all_ids'],
+            'fast_mover_ids': movement['fast_mover_all_ids'],
+            'slow_mover_ids': movement['slow_mover_all_ids'],
+            'expired_lot_ids': expired_lot_ids,
+            'reorder_ids': reorder_ids,
+            'today_start': fields.Datetime.to_string(today_start),
+        }
+
+    # ------------------------------------------------------------------
     # Stock movement today (goods physically received vs shipped out)
     # ------------------------------------------------------------------
     def _get_stock_flow_today(self):
@@ -519,14 +575,21 @@ class PosRetailDashboard(models.AbstractModel):
         ]
         dead.sort(key=lambda r: -r['stock_value'])
 
+        # Slow movers must still be products that SOLD; anything with no
+        # sales belongs in dead stock, not at the bottom of this list.
+        slow = [r for r in reversed(movers) if r['qty_sold'] > 0]
         return {
             'fast_movers': movers[:limit],
-            # Slow movers must still be products that SOLD; anything with no
-            # sales belongs in dead stock, not at the bottom of this list.
-            'slow_movers': [r for r in reversed(movers) if r['qty_sold'] > 0][:limit],
+            'slow_movers': slow[:limit],
             'dead_stock': dead[:limit],
             'dead_stock_count': len(dead),
             'dead_stock_value': sum(r['stock_value'] for r in dead),
+            # Full id lists for the drill-throughs: the panels show the worst
+            # few, but clicking the headline figure must open everything it
+            # counted, not just the visible rows.
+            'dead_stock_all_ids': [r['product_id'] for r in dead],
+            'fast_mover_all_ids': [r['product_id'] for r in movers],
+            'slow_mover_all_ids': [r['product_id'] for r in slow],
         }
 
     # ------------------------------------------------------------------

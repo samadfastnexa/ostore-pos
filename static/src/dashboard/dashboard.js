@@ -204,6 +204,120 @@ export class PosRetailDashboard extends Component {
         });
     }
 
+    // --- generic openers -------------------------------------------------
+    /** Open a list, optionally pivot/graph-first for figures that are sums. */
+    openList(model, domain, name, views) {
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name,
+            res_model: model,
+            views: views || [
+                [false, "list"],
+                [false, "form"],
+            ],
+            domain: domain || [],
+        });
+    }
+
+    get drill() {
+        return this.state.data?.drill || {};
+    }
+
+    /** Records the server counted, opened by id so the list always matches
+     *  the number on the card exactly. */
+    openIds(model, ids, name, views) {
+        this.openList(model, [["id", "in", ids || []]], name, views);
+    }
+
+    /** The period the dashboard filter is currently showing. */
+    periodDomain(field) {
+        const d = [];
+        if (this.state.data?.period_start) {
+            d.push([field, ">=", this.state.data.period_start]);
+        }
+        if (this.state.data?.period_end) {
+            d.push([field, "<=", this.state.data.period_end]);
+        }
+        return d;
+    }
+
+    openPeriodOrders(extra, name) {
+        this.openOrders(
+            [...this.periodDomain("date_order"), ...(extra || [])],
+            `${name} — ${this.periodLabel}`
+        );
+    }
+
+    openSoldLines(name) {
+        // Order lines rather than orders: these figures (profit, COGS, taxes,
+        // discounts) are line-level sums, so the lines are what explains them.
+        this.openList(
+            "pos.order.line",
+            [
+                ...this.periodDomain("order_id.date_order"),
+                ["order_id.state", "in", ["paid", "done", "invoiced"]],
+            ],
+            `${name} — ${this.periodLabel}`,
+            [[false, "list"], [false, "pivot"], [false, "form"]]
+        );
+    }
+
+    openProducts(ids, name) {
+        this.openIds("product.product", ids, name);
+    }
+
+    openStockMoves(direction, name) {
+        // Mirrors _get_stock_flow_today: completed move lines since local
+        // midnight, excluding internal shuffling.
+        const base = [
+            ["state", "=", "done"],
+            ["date", ">=", this.drill.today_start],
+        ];
+        const flow =
+            direction === "in"
+                ? [
+                      ["location_id.usage", "not in", ["internal", "transit"]],
+                      ["location_dest_id.usage", "=", "internal"],
+                  ]
+                : [
+                      ["location_id.usage", "=", "internal"],
+                      ["location_dest_id.usage", "not in", ["internal", "transit"]],
+                  ];
+        this.openList("stock.move.line", [...base, ...flow], name);
+    }
+
+    openScrap() {
+        this.openList(
+            "stock.scrap",
+            [["state", "=", "done"], ...this.periodDomain("date_done")],
+            `Damaged Stock — ${this.periodLabel}`
+        );
+    }
+
+    openExpiredLots() {
+        this.openIds("stock.lot", this.drill.expired_lot_ids, "Expired Stock");
+    }
+
+    openReorderRules() {
+        this.openIds(
+            "stock.warehouse.orderpoint",
+            this.drill.reorder_ids,
+            "Products to Reorder"
+        );
+    }
+
+    openSessions() {
+        this.openList("pos.session", [["state", "=", "opened"]], "Open Shifts");
+    }
+
+    openCustomersList() {
+        this.openList(
+            "res.partner",
+            [["customer_rank", ">", 0]],
+            "Customers"
+        );
+    }
+
     openExpenses(domain, name) {
         this.action.doAction({
             type: "ir.actions.act_window",

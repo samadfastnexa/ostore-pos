@@ -210,6 +210,38 @@
     .o_click_row { cursor: pointer; }
     .o_click_row:hover { background-color: var(--gray-200, #e9ecef); }
 
+    // ---- Every figure opens the records behind it ------------------------
+    // The affordance has to be visible before the pointer arrives, otherwise
+    // people never discover that a number is a doorway. A quiet corner arrow
+    // does that without competing with the figure itself.
+    .o_kpi_card,
+    .o_inv_stat.o_click_row {
+        cursor: pointer;
+
+        &::after {
+            content: "\f105";  // fa-angle-right
+            font-family: FontAwesome;
+            position: absolute;
+            right: .55rem;
+            bottom: .35rem;
+            font-size: .8rem;
+            opacity: .35;
+            transition: opacity .12s ease, transform .12s ease;
+        }
+
+        &:hover::after { opacity: .9; transform: translateX(2px); }
+        &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+    }
+
+    // The inventory stats are not positioned by default; the arrow needs it.
+    .o_inv_stat.o_click_row { position: relative; }
+
+    .o_kpi_card:hover { transform: translateY(-1px); }
+
+    // A skeleton is not clickable and must not advertise otherwise.
+    .o_kpi_card.o_skeleton { cursor: default; }
+    .o_kpi_card.o_skeleton::after { content: none; }
+
     // ---- Skeleton loader (replaces the spinner while the first load runs) --
     .o_skeleton {
         background: linear-gradient(90deg, var(--gray-200, #e9ecef) 25%, var(--gray-100, #f3f4f6) 50%, var(--gray-200, #e9ecef) 75%);
