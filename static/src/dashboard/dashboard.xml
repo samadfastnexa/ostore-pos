@@ -237,6 +237,128 @@ How to use: switch Today/Week/Month/Custom above to change the period; click any
                     </div>
                 </div>
 
+                <!-- Stock movement, losses and turnover -->
+                <div class="row g-3 mt-0 mb-1">
+                    <div class="col-12">
+                        <div class="o_dash_panel">
+                            <div class="o_dash_panel_title">Stock movement and losses</div>
+                            <div class="o_inv_grid">
+                                <div class="o_inv_stat">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.stock_in_value_today)"/>
+                                    <div class="o_inv_stat_label">
+                                        Stock in today
+                                        <span class="o_inv_stat_sub" t-esc="qtyLabel(state.data.kpis.stock_in_qty_today)"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.stock_out_value_today)"/>
+                                    <div class="o_inv_stat_label">
+                                        Stock out today
+                                        <span class="o_inv_stat_sub" t-esc="qtyLabel(state.data.kpis.stock_out_qty_today)"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat"
+                                     t-att-class="state.data.kpis.damaged_value > 0 ? 'o_status_warning' : ''">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.damaged_value)"/>
+                                    <div class="o_inv_stat_label">
+                                        Damaged (scrapped)
+                                        <span class="o_inv_stat_sub" t-esc="qtyLabel(state.data.kpis.damaged_qty)"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat"
+                                     t-att-class="state.data.kpis.expired_value > 0 ? 'o_status_serious' : ''">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.expired_value)"/>
+                                    <div class="o_inv_stat_label">
+                                        Expired stock
+                                        <span class="o_inv_stat_sub"
+                                              t-esc="state.data.kpis.expired_lot_count + ' lot(s)'"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat"
+                                     t-att-class="state.data.kpis.dead_stock_value > 0 ? 'o_status_warning' : ''">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.dead_stock_value)"/>
+                                    <div class="o_inv_stat_label">
+                                        Dead stock
+                                        <span class="o_inv_stat_sub"
+                                              t-esc="state.data.kpis.dead_stock_count + ' product(s)'"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat">
+                                    <div class="o_inv_stat_value" t-esc="turnoverLabel"/>
+                                    <div class="o_inv_stat_label">
+                                        Stock turnover
+                                        <span class="o_inv_stat_sub">cost of sales vs stock value</span>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.reorder_cost)"/>
+                                    <div class="o_inv_stat_label">
+                                        Expected reorder cost
+                                        <span class="o_inv_stat_sub"
+                                              t-esc="state.data.kpis.reorder_product_count + ' product(s)'"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- What moves, what does not -->
+                <div class="row g-3 mt-0 mb-1">
+                    <div class="col-12 col-lg-4">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">Fast moving</div>
+                            <t t-if="!state.data.fast_movers.length">
+                                <div class="o_empty">No sales in this period.</div>
+                            </t>
+                            <t t-else="">
+                                <div t-foreach="state.data.fast_movers" t-as="row" t-key="row.product_id"
+                                     class="o_list_row">
+                                    <span class="o_list_name" t-esc="row.name"/>
+                                    <span class="o_list_value">
+                                        <t t-esc="row.qty_sold"/> sold
+                                    </span>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">Slow moving</div>
+                            <t t-if="!state.data.slow_movers.length">
+                                <div class="o_empty">No sales in this period.</div>
+                            </t>
+                            <t t-else="">
+                                <div t-foreach="state.data.slow_movers" t-as="row" t-key="row.product_id"
+                                     class="o_list_row">
+                                    <span class="o_list_name" t-esc="row.name"/>
+                                    <span class="o_list_value">
+                                        <t t-esc="row.qty_sold"/> sold
+                                    </span>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">
+                                Dead stock
+                                <span class="o_dash_panel_hint">in stock, nothing sold</span>
+                            </div>
+                            <t t-if="!state.data.dead_stock.length">
+                                <div class="o_empty">Everything on the shelf sold at least once.</div>
+                            </t>
+                            <t t-else="">
+                                <div t-foreach="state.data.dead_stock" t-as="row" t-key="row.product_id"
+                                     class="o_list_row">
+                                    <span class="o_list_name" t-esc="row.name"/>
+                                    <span class="o_list_value" t-esc="money(row.stock_value)"/>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row g-3 mt-0">
                     <!-- Sales trend -->
                     <div class="col-12 col-lg-8">

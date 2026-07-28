@@ -162,6 +162,48 @@
             text-transform: uppercase;
             letter-spacing: .03em;
         }
+        // Secondary line under a stat label: the quantity behind a value, or
+        // what the ratio is measuring. Deliberately quieter than the label.
+        .o_inv_stat_sub {
+            display: block;
+            font-size: .68rem;
+            text-transform: none;
+            letter-spacing: 0;
+            opacity: .75;
+        }
+    }
+
+    // ---- Simple name/value lists (movement panels) -----------------------
+    .o_list_row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: .75rem;
+        padding: .3rem 0;
+        border-bottom: 1px solid var(--border-color, #eceef1);
+
+        &:last-child { border-bottom: 0; }
+
+        .o_list_name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: .88rem;
+        }
+        .o_list_value {
+            flex: none;
+            font-weight: 650;
+            font-size: .88rem;
+        }
+    }
+
+    .o_dash_panel_hint {
+        display: block;
+        font-weight: 400;
+        font-size: .72rem;
+        color: var(--text-muted, #6c757d);
     }
 
     // ---- Clickable rows --------------------------------------------------

@@ -72,6 +72,20 @@ export class PosRetailDashboard extends Component {
         return formatMonetary(value ?? 0, { currencyId: this.state.data.currency_id });
     }
 
+    /** Quantities are counts of goods, not money: no currency, no decimals
+     *  unless the number actually has them. */
+    qtyLabel(value) {
+        const qty = Math.round((value ?? 0) * 100) / 100;
+        return `${qty} unit(s)`;
+    }
+
+    /** Turnover reads as "1.8x": how many times the current shelf was sold
+     *  over during the period. */
+    get turnoverLabel() {
+        const t = this.state.data?.kpis?.stock_turnover ?? 0;
+        return `${(Math.round(t * 100) / 100).toFixed(2)}x`;
+    }
+
     shortDate(isoDate) {
         const d = new Date(isoDate + "T00:00:00");
         return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
