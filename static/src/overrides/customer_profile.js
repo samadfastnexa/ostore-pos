@@ -4,6 +4,8 @@ import { _t } from "@web/core/l10n/translation";
 import { Component } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
 import { usePos } from "@point_of_sale/app/hooks/pos_hook";
+import { useService } from "@web/core/utils/hooks";
+import { PosRetailCustomerHistory } from "@pos_retail/overrides/customer_history";
 
 // Customer profile shown at the till: what this customer is worth, what they
 // owe, and how much credit they have left. The figures come from the session
@@ -19,10 +21,21 @@ export class PosRetailCustomerProfile extends Component {
 
     setup() {
         this.pos = usePos();
+        this.dialog = useService("dialog");
     }
 
     get partner() {
         return this.props.partner;
+    }
+
+    /** Counter-facing tags: "wholesale", "pays on time", "deliver to home". */
+    get tags() {
+        return this.partner.category_id || [];
+    }
+
+    showHistory() {
+        this.props.close();
+        this.dialog.add(PosRetailCustomerHistory, { partner: this.partner });
     }
 
     formatCurrency(value) {

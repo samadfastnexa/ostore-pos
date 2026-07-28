@@ -61,13 +61,27 @@
                 </div>
             </div>
 
+            <div t-if="tags.length" class="pos-retail-profile__tags mt-3">
+                <span t-foreach="tags" t-as="tag" t-key="tag.id"
+                      class="pos-retail-profile__tag" t-esc="tag.name"/>
+            </div>
+
+            <div t-if="props.partner.pos_retail_note"
+                 class="pos-retail-profile__note mt-3" role="note">
+                <i class="fa fa-sticky-note-o me-1"/>
+                <t t-esc="props.partner.pos_retail_note"/>
+            </div>
+
             <div t-if="overLimit" class="alert alert-danger mt-3 mb-0" role="alert">
                 This customer is over their credit limit. A manager's approval is
                 needed to sell to them on account.
             </div>
 
             <t t-set-slot="footer">
-                <button class="btn btn-primary btn-lg" t-on-click="() => this.props.close()">
+                <button class="btn btn-primary btn-lg" t-on-click="() => this.showHistory()">
+                    <i class="fa fa-history me-1"/> Customer History
+                </button>
+                <button class="btn btn-secondary btn-lg" t-on-click="() => this.props.close()">
                     Close
                 </button>
             </t>

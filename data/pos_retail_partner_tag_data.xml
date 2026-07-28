@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Starter counter tags. These are ordinary partner categories, so they
+         also work everywhere else in Odoo (filters, reports, pricelists);
+         the POS shows them on the customer card so the cashier knows who they
+         are dealing with before ringing anything up. Shops can rename, delete
+         or add their own. -->
+
+    <record id="partner_tag_vip" model="res.partner.category">
+        <field name="name">VIP</field>
+        <field name="color">3</field>
+    </record>
+
+    <record id="partner_tag_wholesale" model="res.partner.category">
+        <field name="name">Wholesale</field>
+        <field name="color">4</field>
+    </record>
+
+    <record id="partner_tag_regular" model="res.partner.category">
+        <field name="name">Regular</field>
+        <field name="color">10</field>
+    </record>
+
+    <record id="partner_tag_pays_on_time" model="res.partner.category">
+        <field name="name">Pays on time</field>
+        <field name="color">7</field>
+    </record>
+
+    <record id="partner_tag_slow_payer" model="res.partner.category">
+        <field name="name">Slow payer</field>
+        <field name="color">2</field>
+    </record>
+
+    <record id="partner_tag_allow_credit" model="res.partner.category">
+        <field name="name">Allow credit</field>
+        <field name="color">5</field>
+    </record>
+
+    <record id="partner_tag_home_delivery" model="res.partner.category">
+        <field name="name">Deliver to home</field>
+        <field name="color">6</field>
+    </record>
+
+    <record id="partner_tag_invoice_required" model="res.partner.category">
+        <field name="name">Invoice required</field>
+        <field name="color">1</field>
+    </record>
+
+</odoo>

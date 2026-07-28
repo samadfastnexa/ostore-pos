@@ -75,6 +75,11 @@
         parent="point_of_sale.menu_point_rep" action="action_pos_retail_customer_ledger"
         sequence="8" groups="point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,perm_reporting_res_groups"/>
 
+    <!-- Reporting > Credit Approvals -->
+    <menuitem id="pos_retail_menu_credit_overrides" name="Credit Approvals"
+        parent="point_of_sale.menu_point_rep" action="action_pos_retail_credit_overrides"
+        sequence="11" groups="point_of_sale.group_pos_manager,perm_reporting_res_groups"/>
+
     <!-- Reporting > Package Reports -->
     <menuitem id="pos_retail_menu_package_reports" name="Package Reports"
         parent="point_of_sale.menu_point_rep" sequence="13"

@@ -68,6 +68,49 @@
     }
 }
 
+.pos-retail-profile {
+    &__tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem;
+    }
+
+    &__tag {
+        padding: .15rem .55rem;
+        border-radius: 1rem;
+        font-size: .78rem;
+        font-weight: 650;
+        color: #1f2937;
+        background: rgba(0, 0, 0, .07);
+    }
+
+    &__note {
+        padding: .55rem .75rem;
+        border-left: 3px solid #d97706;
+        border-radius: .35rem;
+        background: rgba(217, 119, 6, .08);
+        font-size: .9rem;
+        white-space: pre-line;
+    }
+}
+
+// Customer history dialog.
+.pos-retail-history {
+    &__last {
+        padding: .65rem .85rem;
+        border: 1px solid rgba(0, 0, 0, .1);
+        border-radius: .6rem;
+        background: rgba(124, 58, 237, .05);
+    }
+
+    &__body {
+        max-height: 46vh;
+        overflow-y: auto;
+    }
+
+    table { margin-bottom: 0; }
+}
+
 // Narrow screens (a phone-sized till): one figure per row stays readable.
 @media (max-width: 480px) {
     .pos-retail-profile__grid { grid-template-columns: minmax(0, 1fr); }

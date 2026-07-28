@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.CustomerHistory">
+        <Dialog title="props.partner.name + ' — History'" bodyClass="'pos-retail-history'">
+
+            <div t-if="state.loading" class="text-center p-4">
+                <i class="fa fa-circle-o-notch fa-spin fa-2x"/>
+                <div class="mt-2">Loading history…</div>
+            </div>
+
+            <div t-elif="state.failed" class="alert alert-warning" role="alert">
+                <strong>History needs a connection.</strong>
+                Sales, payments and the ledger live on the server, so they cannot be
+                shown while the till is offline. The customer summary card still works.
+            </div>
+
+            <t t-else="">
+                <!-- Last basket, with the one-tap repeat -->
+                <div t-if="state.data.last_basket.length"
+                     class="pos-retail-history__last d-flex align-items-center gap-3 mb-3">
+                    <div class="flex-grow-1">
+                        <div class="fw-bolder">
+                            Last order
+                            <span class="text-muted fw-normal" t-esc="state.data.last_order_name"/>
+                        </div>
+                        <div class="small text-muted">
+                            <t t-foreach="state.data.last_basket" t-as="item" t-key="item.product_id">
+                                <span t-esc="item.name"/><t t-if="!item_last">, </t>
+                            </t>
+                            — <span class="fw-bold" t-esc="state.data.last_order_total"/>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg" t-on-click="() => this.repeatLastOrder()">
+                        <i class="fa fa-repeat me-1"/> Repeat
+                    </button>
+                </div>
+
+                <!-- Section switcher -->
+                <div class="pos-retail-history__tabs d-flex flex-wrap gap-1 mb-2">
+                    <button t-foreach="tabs" t-as="tab" t-key="tab.id"
+                            class="btn btn-sm"
+                            t-att-class="state.tab === tab.id ? 'btn-primary' : 'btn-secondary'"
+                            t-on-click="() => this.setTab(tab.id)">
+                        <t t-esc="tab.label"/>
+                        <span class="badge text-bg-light ms-1" t-esc="tab.count"/>
+                    </button>
+                </div>
+
+                <div class="pos-retail-history__body">
+                    <!-- What they usually buy -->
+                    <t t-if="state.tab === 'purchases'">
+                        <div t-if="!state.data.top_products.length" class="text-muted p-3">
+                            Nothing bought yet.
+                        </div>
+                        <table t-else="" class="table table-sm">
+                            <thead>
+                                <tr><th>Product</th><th class="text-end">Times</th>
+                                    <th class="text-end">Quantity</th><th class="text-end">Spent</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.top_products" t-as="p" t-key="p.name">
+                                    <td t-esc="p.name"/>
+                                    <td class="text-end fw-bold" t-esc="p.times"/>
+                                    <td class="text-end" t-esc="p.qty"/>
+                                    <td class="text-end" t-esc="p.spent_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- Order-shaped sections -->
+                    <t t-if="['sales', 'credit', 'refunds'].includes(state.tab)">
+                        <t t-set="rows"
+                           t-value="state.tab === 'sales' ? state.data.sales : (state.tab === 'credit' ? state.data.credit_sales : state.data.refunds)"/>
+                        <div t-if="!rows.length" class="text-muted p-3">Nothing here yet.</div>
+                        <table t-else="" class="table table-sm">
+                            <thead>
+                                <tr><th>Date</th><th>Reference</th><th>Cashier</th>
+                                    <th class="text-end">Amount</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="rows" t-as="row" t-key="row.id">
+                                    <td t-esc="row.date.slice(0, 16)"/>
+                                    <td>
+                                        <t t-esc="row.name"/>
+                                        <span t-if="row.invoice" class="badge text-bg-light ms-1"
+                                              t-esc="row.invoice"/>
+                                    </td>
+                                    <td t-esc="row.cashier"/>
+                                    <td class="text-end" t-esc="row.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- Money in, and what is still owed -->
+                    <t t-if="['payments', 'open'].includes(state.tab)">
+                        <t t-set="rows"
+                           t-value="state.tab === 'payments' ? state.data.payments : state.data.open_invoices"/>
+                        <div t-if="!rows.length" class="text-muted p-3">
+                            <t t-if="state.tab === 'payments'">No payments recorded.</t>
+                            <t t-else="">Nothing outstanding. This customer is settled up.</t>
+                        </div>
+                        <table t-else="" class="table table-sm">
+                            <thead>
+                                <tr><th>Date</th><th>Reference</th>
+                                    <th class="text-end">
+                                        <t t-if="state.tab === 'payments'">Paid</t>
+                                        <t t-else="">Still Unpaid</t>
+                                    </th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="rows" t-as="row" t-key="row.ref + row.date + row.label">
+                                    <td t-esc="row.date"/>
+                                    <td><t t-esc="row.ref"/> <span class="text-muted small" t-esc="row.label"/></td>
+                                    <td class="text-end"
+                                        t-esc="state.tab === 'payments' ? row.amount_formatted : row.residual_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- Open quotations -->
+                    <t t-if="state.tab === 'quotations'">
+                        <div t-if="!state.data.quotations.length" class="text-muted p-3">
+                            No open quotations.
+                        </div>
+                        <table t-else="" class="table table-sm">
+                            <thead>
+                                <tr><th>Date</th><th>Quotation</th><th>Status</th>
+                                    <th class="text-end">Amount</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.quotations" t-as="q" t-key="q.name">
+                                    <td t-esc="q.date.slice(0, 10)"/>
+                                    <td t-esc="q.name"/>
+                                    <td t-esc="q.state"/>
+                                    <td class="text-end" t-esc="q.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+                </div>
+            </t>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary btn-lg" t-on-click="() => this.props.close()">
+                    Close
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

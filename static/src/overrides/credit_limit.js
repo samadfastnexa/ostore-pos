@@ -102,8 +102,14 @@ patch(PaymentScreen.prototype, {
             return false;
         }
 
+        // Snapshot the figures the manager actually approved against: the
+        // customer's balance moves on, and an audit trail that recomputes it
+        // later would show numbers nobody ever saw.
         order.pos_retail_credit_manager_id = manager;
         order.pos_retail_credit_over_amount = over;
+        order.pos_retail_credit_before = balance;
+        order.pos_retail_credit_after = projected;
+        order.pos_retail_credit_limit = limit;
         this.posRetailNotification.add(
             _t("Credit approved by %s", manager.name),
             { type: "success" }

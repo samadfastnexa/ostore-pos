@@ -28,6 +28,18 @@ class PosOrder(models.Model):
     pos_retail_credit_over_amount = fields.Monetary(
         string="Amount Over Credit Limit", currency_field='currency_id',
     )
+    pos_retail_credit_before = fields.Monetary(
+        string="Outstanding Before Sale", currency_field='currency_id',
+        help="What the customer owed when the sale was approved. Stored rather "
+             "than recomputed: their balance keeps moving, and an audit has to "
+             "show the figure the manager actually saw.",
+    )
+    pos_retail_credit_after = fields.Monetary(
+        string="Outstanding After Sale", currency_field='currency_id',
+    )
+    pos_retail_credit_limit = fields.Monetary(
+        string="Credit Limit at Sale", currency_field='currency_id',
+    )
 
     return_reason_id = fields.Many2one('pos.retail.return.reason', string="Return Reason")
     return_reason_notes = fields.Text(string="Return Reason Notes")
@@ -132,7 +144,9 @@ class PosOrder(models.Model):
             return result
         for field in ('discount_manager_id', 'discount_reason_id', 'discount_reason_notes', 'discount_input_type',
                       'return_reason_id', 'return_reason_notes',
-                      'pos_retail_credit_manager_id', 'pos_retail_credit_over_amount'):
+                      'pos_retail_credit_manager_id', 'pos_retail_credit_over_amount',
+                      'pos_retail_credit_before', 'pos_retail_credit_after',
+                      'pos_retail_credit_limit'):
             if field not in result:
                 result.append(field)
         return result

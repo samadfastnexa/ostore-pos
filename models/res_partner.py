@@ -67,6 +67,13 @@ class ResPartner(models.Model):
              "and store-credit balances are money rather than points, so they "
              "are deliberately not counted here.",
     )
+    pos_retail_note = fields.Text(
+        string="Counter Note",
+        help="Shown to the cashier when this customer is selected, e.g. "
+             "\"deliver to home\" or \"always needs an invoice\". Keep it short; "
+             "it is read mid-sale.",
+    )
+
     # Till-safe mirrors of the accounting figures. Core restricts `credit` and
     # `credit_limit` to the accounting groups at FIELD level, so a cashier
     # cannot read them at all -- yet the cashier is exactly who needs to know
@@ -100,10 +107,149 @@ class ResPartner(models.Model):
                       'pos_total_spent', 'pos_avg_order_value',
                       'pos_last_purchase_date', 'pos_sales_order_count',
                       'pos_loyalty_points', 'pos_outstanding_balance',
-                      'pos_credit_limit', 'pos_credit_available'):
+                      'pos_credit_limit', 'pos_credit_available',
+                      'category_id', 'pos_retail_note'):
             if fname not in result:
                 result.append(fname)
         return result
+
+    def get_pos_customer_history(self, limit=12):
+        """Everything the cashier might want to know about a customer, in one call.
+
+        Deliberately one round trip rather than several: it is triggered by a
+        cashier tapping a button mid-sale, so latency is felt directly. The
+        POS session only carries recent orders, and nothing at all about
+        payments, invoices or the ledger, so this has to come from the server;
+        the caller is expected to handle being offline.
+
+        Runs as sudo on purpose: a cashier legitimately needs to see what this
+        customer owes and has bought, but must not be given accounting rights
+        to get it (core restricts those fields to the accounting groups).
+        """
+        self.ensure_one()
+        partner = self.sudo()
+        currency = self.env.company.currency_id
+
+        def money(amount):
+            return {'amount': amount, 'formatted': currency.format(amount)}
+
+        # --- POS sales, split into ordinary sales and refunds -------------
+        # id desc breaks ties: several orders can share a timestamp on a busy
+        # till, and "their last order" must be a single definite basket.
+        orders = self.env['pos.order'].sudo().search(
+            [('partner_id', '=', partner.id), ('state', '!=', 'cancel')],
+            order='date_order desc, id desc', limit=200,
+        )
+        sales = orders.filtered(lambda o: o.amount_total >= 0)
+        refunds = orders - sales
+
+        def order_row(order):
+            return {
+                'id': order.id,
+                'name': order.pos_reference or order.name,
+                'date': order.date_order and str(order.date_order) or '',
+                'amount': order.amount_total,
+                'amount_formatted': currency.format(order.amount_total),
+                'state': order.state,
+                'invoice': order.account_move.name or '',
+                'cashier': order.employee_id.name or order.user_id.name or '',
+            }
+
+        # --- What they usually buy ---------------------------------------
+        # Counted by number of separate visits the product appeared in, not by
+        # quantity: "bought milk 120 times" is what a cashier means, whereas
+        # summing litres would rank one bulk purchase above a daily habit.
+        lines = self.env['pos.order.line'].sudo().search(
+            [('order_id', 'in', orders.ids), ('qty', '>', 0)],
+        )
+        product_stats = {}
+        for line in lines:
+            product = line.product_id
+            if not product:
+                continue
+            stat = product_stats.setdefault(product.id, {
+                'name': product.display_name, 'times': 0, 'qty': 0.0, 'spent': 0.0,
+            })
+            stat['times'] += 1
+            stat['qty'] += line.qty
+            stat['spent'] += line.price_subtotal_incl
+        top_products = sorted(
+            product_stats.values(), key=lambda s: (-s['times'], -s['spent']))[:8]
+        for stat in top_products:
+            stat['spent_formatted'] = currency.format(stat['spent'])
+
+        # --- The last basket, for a one-tap repeat ------------------------
+        last_order = sales[:1]
+        last_basket = []
+        if last_order:
+            for line in last_order.lines:
+                if line.qty <= 0 or not line.product_id:
+                    continue
+                last_basket.append({
+                    'product_id': line.product_id.id,
+                    'name': line.full_product_name or line.product_id.display_name,
+                    'qty': line.qty,
+                })
+
+        # --- Money owed and paid -----------------------------------------
+        receivable = self.env['account.move.line'].sudo().search(
+            [('partner_id', '=', partner.id),
+             ('account_id.account_type', '=', 'asset_receivable'),
+             ('parent_state', '=', 'posted')],
+            order='date desc, id desc', limit=limit,
+        )
+        payments, charges, open_invoices = [], [], []
+        for line in receivable:
+            row = {
+                'date': str(line.date),
+                'ref': line.move_id.name or '',
+                'label': line.name or '',
+                'debit': line.debit,
+                'credit': line.credit,
+                'amount_formatted': currency.format(line.credit or line.debit),
+                'residual': line.amount_residual,
+            }
+            (payments if line.credit else charges).append(row)
+            if line.debit and line.amount_residual:
+                open_invoices.append(dict(
+                    row, residual_formatted=currency.format(line.amount_residual)))
+
+        # --- Quotations still open ---------------------------------------
+        quotations = []
+        sale_order = self.env['sale.order'].sudo()
+        for so in sale_order.search(
+            [('partner_id', '=', partner.id), ('state', 'in', ('draft', 'sent'))],
+            order='date_order desc', limit=limit,
+        ):
+            quotations.append({
+                'name': so.name,
+                'date': so.date_order and str(so.date_order) or '',
+                'amount_formatted': currency.format(so.amount_total),
+                'state': so.state,
+            })
+
+        return {
+            'partner_id': partner.id,
+            'sales': [order_row(o) for o in sales[:limit]],
+            'sales_count': len(sales),
+            'refunds': [order_row(o) for o in refunds[:limit]],
+            'refunds_count': len(refunds),
+            'credit_sales': [
+                order_row(o) for o in sales.filtered(
+                    lambda o: any(p.payment_method_id.type == 'pay_later'
+                                  for p in o.payment_ids))[:limit]
+            ],
+            'payments': payments,
+            'charges': charges,
+            'open_invoices': open_invoices,
+            'quotations': quotations,
+            'top_products': top_products,
+            'last_basket': last_basket,
+            'last_order_name': last_order.pos_reference or last_order.name or '',
+            'last_order_date': last_order.date_order and str(last_order.date_order) or '',
+            'last_order_total': last_order and currency.format(last_order.amount_total) or '',
+            'outstanding': money(partner.credit or 0.0),
+        }
 
     def _compute_pos_loyalty_points(self):
         """Points across all of the customer's loyalty/eWallet cards.

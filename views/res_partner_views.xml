@@ -149,6 +149,13 @@
                         </div>
                     </div>
                     <field name="pos_history_currency_id" invisible="1"/>
+                    <group string="At the Counter">
+                        <field name="category_id" widget="many2many_tags"
+                               options="{'color_field': 'color'}"
+                               string="Customer Tags"
+                               placeholder="e.g. Wholesale, Pays on time, VIP"/>
+                        <field name="pos_retail_note" placeholder="e.g. Deliver to home; always needs an invoice"/>
+                    </group>
                     <group>
                         <group string="Purchase Summary">
                             <field name="pos_sales_order_count"/>
