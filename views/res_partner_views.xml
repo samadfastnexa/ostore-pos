@@ -156,9 +156,16 @@
                             <field name="pos_avg_order_value"/>
                             <field name="pos_last_purchase_date"/>
                         </group>
-                        <group string="Balances">
+                        <group string="Balances &amp; Rewards">
                             <field name="pos_refund_total"/>
-                            <field name="credit" string="Outstanding Balance" widget="monetary"/>
+                            <field name="pos_outstanding_balance" widget="monetary"/>
+                            <field name="credit_limit" string="Credit Limit" widget="monetary"
+                                   groups="account.group_account_invoice,account.group_account_readonly"
+                                   help="How much this customer may owe at once. Zero means no limit. Checked at the till when paying by Customer Account."/>
+                            <field name="pos_credit_available" widget="monetary"
+                                   groups="account.group_account_invoice,account.group_account_readonly"
+                                   decoration-danger="pos_credit_available &lt; 0"/>
+                            <field name="pos_loyalty_points"/>
                         </group>
                     </group>
                     <separator string="Orders"/>

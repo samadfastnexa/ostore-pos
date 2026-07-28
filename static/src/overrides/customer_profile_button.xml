@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- A separate info button beside the customer button. Kept separate on
+         purpose: tapping the customer's name must still open the customer
+         list to change them, which is the far more frequent action. -->
+    <t t-inherit="point_of_sale.SelectPartnerButton" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('set-partner')]" position="after">
+            <button t-if="props.partner"
+                    class="pos-retail-profile-btn btn btn-secondary btn-lg lh-lg"
+                    title="Customer details"
+                    t-on-click="() => this.posRetailShowProfile()">
+                <i class="fa fa-id-card-o" role="img" aria-label="Customer details"/>
+            </button>
+        </xpath>
+    </t>
+
+</templates>

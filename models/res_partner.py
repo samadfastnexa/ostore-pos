@@ -61,16 +61,77 @@ class ResPartner(models.Model):
         string="Refunds Total (POS)", compute='_compute_pos_history',
         currency_field='pos_history_currency_id',
     )
+    pos_loyalty_points = fields.Float(
+        string="Loyalty Points", compute='_compute_pos_loyalty_points',
+        help="Points this customer has earned on loyalty programmes. Gift card "
+             "and store-credit balances are money rather than points, so they "
+             "are deliberately not counted here.",
+    )
+    # Till-safe mirrors of the accounting figures. Core restricts `credit` and
+    # `credit_limit` to the accounting groups at FIELD level, so a cashier
+    # cannot read them at all -- yet the cashier is exactly who needs to know
+    # what this customer owes before selling to them on account. These expose
+    # those two numbers, and nothing else, computed with sudo.
+    pos_outstanding_balance = fields.Monetary(
+        string="Outstanding Balance", compute='_compute_pos_credit_figures',
+        compute_sudo=True, currency_field='pos_history_currency_id',
+        help="What this customer currently owes the shop.",
+    )
+    pos_credit_limit = fields.Monetary(
+        string="Credit Limit", compute='_compute_pos_credit_figures',
+        compute_sudo=True, currency_field='pos_history_currency_id',
+        help="How much this customer may owe at once. Zero means no limit.",
+    )
+    pos_credit_available = fields.Monetary(
+        string="Credit Available", compute='_compute_pos_credit_figures',
+        compute_sudo=True, currency_field='pos_history_currency_id',
+        help="Credit limit less what the customer already owes. Negative means "
+             "they are already over their limit.",
+    )
 
     @api.model
     def _load_pos_data_fields(self, config):
         result = super()._load_pos_data_fields(config)
         # 'phone' is already loaded natively; add 'ref' so the receipt can show
         # a Customer ID. birthday/membership_level_id are for POS customer info.
-        for fname in ('birthday', 'membership_level_id', 'ref'):
+        # The rest feed the in-POS customer profile card and the credit-limit
+        # check on Customer Account payments.
+        for fname in ('birthday', 'membership_level_id', 'ref',
+                      'pos_total_spent', 'pos_avg_order_value',
+                      'pos_last_purchase_date', 'pos_sales_order_count',
+                      'pos_loyalty_points', 'pos_outstanding_balance',
+                      'pos_credit_limit', 'pos_credit_available'):
             if fname not in result:
                 result.append(fname)
         return result
+
+    def _compute_pos_loyalty_points(self):
+        """Points across all of the customer's loyalty/eWallet cards.
+
+        Read in one grouped query rather than per partner: the customer list
+        renders this for everyone on screen at once.
+        """
+        self.pos_loyalty_points = 0.0
+        if not self.ids:
+            return
+        card = self.env['loyalty.card'].sudo()
+        grouped = card._read_group(
+            [('partner_id', 'in', self.ids),
+             ('program_id.program_type', '=', 'loyalty')],
+            ['partner_id'], ['points:sum'],
+        )
+        totals = {partner.id: points for partner, points in grouped}
+        for partner in self:
+            partner.pos_loyalty_points = totals.get(partner.id, 0.0)
+
+    @api.depends('credit_limit', 'credit')
+    def _compute_pos_credit_figures(self):
+        for partner in self:
+            balance = partner.credit or 0.0
+            limit = partner.credit_limit or 0.0
+            partner.pos_outstanding_balance = balance
+            partner.pos_credit_limit = limit
+            partner.pos_credit_available = limit - balance
 
     @api.model
     def _load_pos_data_domain(self, data, config):

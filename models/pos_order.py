@@ -17,6 +17,18 @@ class PosOrder(models.Model):
         [('fixed', 'Fixed Amount'), ('percent', 'Percentage')],
         string="Discount Entry Type",
     )
+    # Credit-limit override: who let this customer go further into debt than
+    # their limit allowed, and by how much. Recorded so the decision has a name
+    # against it, the same way discount approvals do.
+    pos_retail_credit_manager_id = fields.Many2one(
+        'hr.employee', string="Credit Approved By",
+        help="Set when a sale on Customer Account would have taken the customer "
+             "past their credit limit and a manager approved it by PIN.",
+    )
+    pos_retail_credit_over_amount = fields.Monetary(
+        string="Amount Over Credit Limit", currency_field='currency_id',
+    )
+
     return_reason_id = fields.Many2one('pos.retail.return.reason', string="Return Reason")
     return_reason_notes = fields.Text(string="Return Reason Notes")
 
@@ -119,7 +131,8 @@ class PosOrder(models.Model):
         if not result:
             return result
         for field in ('discount_manager_id', 'discount_reason_id', 'discount_reason_notes', 'discount_input_type',
-                      'return_reason_id', 'return_reason_notes'):
+                      'return_reason_id', 'return_reason_notes',
+                      'pos_retail_credit_manager_id', 'pos_retail_credit_over_amount'):
             if field not in result:
                 result.append(field)
         return result
