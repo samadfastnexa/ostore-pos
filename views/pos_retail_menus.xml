@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- "Contacts" says nothing about who is in there. For a shop the app
+         holds the people it sells to and the people it buys from, so name it
+         that; the child list keeps a neutral name because it genuinely does
+         contain everyone, including contacts that are neither. -->
+    <record id="contacts.menu_contacts" model="ir.ui.menu">
+        <field name="name">Customers &amp; Vendors</field>
+    </record>
+    <record id="contacts.res_partner_menu_contacts" model="ir.ui.menu">
+        <field name="name">All Contacts</field>
+    </record>
+
     <!-- Products > Product Brands -->
     <menuitem id="menu_product_brand"
         name="Product Brands"
