@@ -22,14 +22,31 @@ class ResPartner(models.Model):
                     vals['name'] = phone
         return super().create(vals_list)
 
-    birthday = fields.Date(string="Birthday")
+    birthday = fields.Date(
+        string="Birthday",
+        help="The customer's date of birth, if they are happy to give it. Shown "
+             "to the cashier at the till so you can greet regulars or run "
+             "birthday offers.",
+    )
     membership_level_id = fields.Many2one(
         'pos.membership.level', string="Membership Level", index=True,
         ondelete='set null',
+        help="Which tier this customer belongs to, e.g. Silver or Gold. Leave "
+             "empty for an ordinary walk-in customer with no membership.",
     )
 
-    mobile = fields.Char(string="Mobile")
-    vendor_contact_person = fields.Char(string="Contact Person")
+    mobile = fields.Char(
+        string="Mobile",
+        help="Mobile number for this contact, kept apart from the main phone. "
+             "This is usually the number that actually reaches a customer or a "
+             "vendor's salesman.",
+    )
+    vendor_contact_person = fields.Char(
+        string="Contact Person",
+        help="The person you actually deal with at this vendor, e.g. the "
+             "salesman who takes your order. Useful when the vendor record is a "
+             "company rather than a person.",
+    )
 
     # --- Vendor management ------------------------------------------------
     # Native already covers: name, company, phone, mobile, email, website,
@@ -74,9 +91,13 @@ class ResPartner(models.Model):
 
     supplierinfo_ids = fields.One2many(
         'product.supplierinfo', 'partner_id', string="Products Supplied",
+        help="Everything this vendor is set up to sell you, each line carrying "
+             "their price, minimum order quantity and lead time for that item.",
     )
     products_supplied_count = fields.Integer(
         string="# Products Supplied", compute='_compute_products_supplied_count',
+        help="How many different products this vendor is set up to supply. Zero "
+             "means no product pricing has been linked to them yet.",
     )
 
     # --- POS purchase history (#14) --------------------------------------
@@ -89,20 +110,32 @@ class ResPartner(models.Model):
     pos_total_spent = fields.Monetary(
         string="Total Spending (POS)", compute='_compute_pos_history',
         currency_field='pos_history_currency_id',
+        help="Everything this customer has ever paid at the till, across every "
+             "session since you started. Refunds are counted separately and are "
+             "not deducted here.",
     )
     pos_avg_order_value = fields.Monetary(
         string="Average Order Value (POS)", compute='_compute_pos_history',
         currency_field='pos_history_currency_id',
+        help="Their all-time till spending divided by the number of sales, so "
+             "you can see the size of their typical basket at a glance.",
     )
     pos_last_purchase_date = fields.Datetime(
         string="Last Purchase", compute='_compute_pos_history',
+        help="When this customer last bought something at the till. Blank means "
+             "they have never bought from you, or only ever returned goods.",
     )
     pos_sales_order_count = fields.Integer(
         string="POS Sales Orders", compute='_compute_pos_history',
+        help="How many separate till sales this customer has made, all time. "
+             "Refunds are not included in this count.",
     )
     pos_refund_total = fields.Monetary(
         string="Refunds Total (POS)", compute='_compute_pos_history',
         currency_field='pos_history_currency_id',
+        help="Total value of goods this customer has returned at the till, all "
+             "time, shown as a positive amount. A high figure next to modest "
+             "spending is worth a look.",
     )
     pos_loyalty_points = fields.Float(
         string="Loyalty Points", compute='_compute_pos_loyalty_points',

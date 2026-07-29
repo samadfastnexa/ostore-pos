@@ -34,7 +34,85 @@ function isMeaningfullyRequired(modelField) {
     return !["boolean", "one2many", "many2many"].includes(modelField.type);
 }
 
+// Odoo shows its "?" explanation icon only on fields that carry help text.
+// Across a real Product, Customer or Invoice form roughly half to three
+// quarters of the fields have none, so the icon appears in a scatter and the
+// user cannot tell whether a missing "?" means "no explanation exists" or
+// "nothing to explain".
+//
+// Curated help is always better and is used whenever it exists. This is the
+// fallback for everything else: it describes what the field IS from what the
+// server already told us -- the kind of value, whether it must be filled in,
+// what it links to, what the choices are. It deliberately does not invent
+// business meaning, because a confidently wrong explanation is worse than an
+// honest description.
+const TYPE_WORDS = {
+    char: "Short text.",
+    text: "Long text.",
+    html: "Formatted text.",
+    integer: "A whole number.",
+    float: "A number.",
+    monetary: "An amount of money.",
+    boolean: "A yes/no tick box.",
+    date: "A date.",
+    datetime: "A date and time.",
+    binary: "An attached file.",
+    image: "An image.",
+    selection: "Pick one of the listed options.",
+    many2one: "Links to another record.",
+    one2many: "A list of related records.",
+    many2many: "Any number of related records.",
+};
+
+function describeField(modelField, fieldInfo) {
+    if (!modelField) {
+        return "";
+    }
+    const parts = [];
+
+    if (modelField.type === "selection" && Array.isArray(modelField.selection)) {
+        const choices = modelField.selection.map((option) => option[1]).filter(Boolean);
+        parts.push(
+            choices.length && choices.length <= 8
+                ? `Pick one of: ${choices.join(", ")}.`
+                : TYPE_WORDS.selection
+        );
+    } else if (["many2one", "one2many", "many2many"].includes(modelField.type)) {
+        const target = modelField.relation_field_label || modelField.string;
+        parts.push(
+            modelField.type === "many2one"
+                ? `Links to another record${target ? ` (${target})` : ""}.`
+                : TYPE_WORDS[modelField.type]
+        );
+    } else {
+        parts.push(TYPE_WORDS[modelField.type] || "");
+    }
+
+    if (modelField.required && !["boolean", "one2many", "many2many"].includes(modelField.type)) {
+        parts.push("Must be filled in.");
+    }
+    // A computed, non-editable field is the single most common "why can't I
+    // type here?" question, so it is worth saying plainly.
+    if (modelField.readonly || fieldInfo?.readonly === "1" || fieldInfo?.readonly === "True") {
+        parts.push("Worked out automatically; you cannot type into it.");
+    }
+
+    return parts.filter(Boolean).join(" ");
+}
+
 patch(FormLabel.prototype, {
+    get tooltipHelp() {
+        // Curated help always wins; this only fills the silence.
+        const curated = super.tooltipHelp;
+        if (curated) {
+            return curated;
+        }
+        return describeField(
+            this.props.record.fields?.[this.props.fieldName],
+            this.props.fieldInfo
+        );
+    },
+
     get className() {
         const classes = super.className;
         const { required, readonly } = fieldVisualFeedback(

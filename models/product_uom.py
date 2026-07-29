@@ -26,7 +26,12 @@ class ProductUom(models.Model):
     # invent one by hand for every package. Relaxed here so it can be left
     # blank and filled by create() below; the database column stays NOT NULL,
     # so a package still never ends up without a barcode.
-    barcode = fields.Char(required=False)
+    barcode = fields.Char(
+        required=False,
+        help="The code scanned at the till to sell this whole package. Leave it "
+             "blank and one is generated for you when you save; it must not "
+             "clash with any product or any other package.",
+    )
 
     package_name = fields.Char(
         string="Package Name",
@@ -35,13 +40,21 @@ class ProductUom(models.Model):
     )
     display_package_name = fields.Char(
         string="Package", compute='_compute_display_package_name',
+        help="What this package is called on screens and receipts: your own "
+             "Package Name when you have typed one, otherwise the name of the "
+             "unit itself.",
     )
     sku = fields.Char(
         string="SKU",
         help="Internal reference for this package, independent of the "
              "product's own reference.",
     )
-    active = fields.Boolean(default=True)
+    active = fields.Boolean(
+        default=True,
+        help="Untick to retire this pack size. It stops appearing at the till "
+             "and on new paperwork, while past sales that used it keep their "
+             "history.",
+    )
 
     package_qty = fields.Float(
         string="Quantity", compute='_compute_package_qty', store=True,
@@ -51,6 +64,18 @@ class ProductUom(models.Model):
     )
     currency_id = fields.Many2one(
         'res.currency', related='product_id.currency_id', readonly=True,
+        help="Currency the package prices are in. It follows the product, so "
+             "you cannot price a package in a different currency to the item "
+             "it belongs to.",
+    )
+    product_id = fields.Many2one(
+        help="The item this package contains. Stock is counted on this product, "
+             "so every package size you sell draws down the same quantity.",
+    )
+    uom_id = fields.Many2one(
+        help="The unit that defines how much this package holds, e.g. a 5 kg "
+             "unit for a 5 kg bag. It must measure the same thing as the "
+             "product's own unit, otherwise the quantity sold would be wrong.",
     )
     list_price = fields.Monetary(
         string="Selling Price",
@@ -85,6 +110,9 @@ class ProductUom(models.Model):
     )
     package_margin_percent = fields.Float(
         string="Margin (%)", compute='_compute_package_margin',
+        help="The margin on one package as a share of its selling price, so a "
+             "bag sold at 100 that cost 80 shows 20%. Handy for comparing a "
+             "bulk pack against the loose price.",
     )
     qty_available_packages = fields.Float(
         string="Packages in Stock", compute='_compute_qty_available_packages',
@@ -93,7 +121,11 @@ class ProductUom(models.Model):
              "Stock is held on the product itself, so every package size draws "
              "from the same quantity.",
     )
-    image_128 = fields.Image(string="Package Image", max_width=128, max_height=128)
+    image_128 = fields.Image(
+        string="Package Image", max_width=128, max_height=128,
+        help="Optional photo of this pack, so staff can tell a 1 kg packet from "
+             "a 5 kg bag at a glance.",
+    )
 
     @api.model
     def _load_pos_data_fields(self, config):

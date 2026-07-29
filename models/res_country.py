@@ -11,4 +11,11 @@ class ResCountry(models.Model):
     # archived, never deleted, so existing addresses keep their country and any
     # country can be re-enabled from Contacts > Configuration > Localization >
     # Countries via the Archived filter.
-    active = fields.Boolean(default=True)
+    active = fields.Boolean(
+        default=True,
+        help="Untick to hide this country from address forms and the POS "
+             "customer editor, so staff only scroll through the countries you "
+             "actually deal with. Nothing is deleted; existing addresses keep "
+             "their country and you can bring one back with the Archived "
+             "filter.",
+    )

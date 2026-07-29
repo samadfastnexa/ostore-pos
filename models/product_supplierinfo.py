@@ -29,16 +29,26 @@ class ProductSupplierinfo(models.Model):
     last_purchase_price = fields.Monetary(
         string="Last Purchase Price", currency_field='currency_id',
         compute='_compute_last_purchase', store=True, readonly=True, copy=False,
+        help="Unit price you actually paid on the most recent confirmed order "
+             "from this vendor for this item. Filled in automatically; zero "
+             "means you have never bought it from them.",
     )
     last_purchase_date = fields.Date(
         string="Last Purchase Date",
         compute='_compute_last_purchase', store=True, readonly=True, copy=False,
+        help="When that last confirmed order was placed, so you can see how old "
+             "the price above is before relying on it.",
     )
     current_stock = fields.Float(
         string="Current Stock", compute='_compute_current_stock',
+        help="How much of this item you have on the shelf right now, whoever it "
+             "came from. Shown here to help you decide whether to reorder.",
     )
     total_purchased_qty = fields.Float(
         string="Total Purchased Qty", compute='_compute_total_purchased_qty',
+        help="Everything you have ever bought of this item from this vendor on "
+             "confirmed orders. A good measure of how much you really rely on "
+             "them.",
     )
     product_display_name = fields.Char(related='product_tmpl_id.name', string="Product")
     product_image = fields.Image(related='product_tmpl_id.image_128', string="Image")

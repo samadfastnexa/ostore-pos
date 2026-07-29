@@ -46,8 +46,15 @@ class PosRetailAccessPermission(models.Model):
 
     group_id = fields.Many2one(
         'res.groups', string="Group", required=True, ondelete='restrict', index=True,
+        help="Technical field: the security group that actually carries this "
+             "permission's rights. It is created with the permission and "
+             "maintained automatically, so leave it as it is.",
     )
-    sequence = fields.Integer(default=10)
+    sequence = fields.Integer(
+        default=10,
+        help="Order this permission appears in within its category, lowest "
+             "number first. It has no effect on what the permission grants.",
+    )
     category = fields.Selection(
         [
             ('products', "Products"),
@@ -62,6 +69,9 @@ class PosRetailAccessPermission(models.Model):
             ('configuration', "Configuration"),
         ],
         required=True, default='products', index=True,
+        help="Which part of the business this permission belongs to. It only "
+             "groups the catalogue so staff can find the right entry; it grants "
+             "nothing on its own.",
     )
     description = fields.Text(
         help="Admin-facing explanation of exactly what this permission unlocks.",
@@ -78,6 +88,9 @@ class PosRetailAccessPermission(models.Model):
     role_ids = fields.Many2many(
         'pos.retail.access.role', 'pos_retail_role_permission_rel',
         'permission_id', 'role_id', string="Used by Roles", readonly=True,
+        help="The roles that currently include this permission. Read-only here: "
+             "add or remove it on the role itself. A permission still listed "
+             "against a role cannot be deleted.",
     )
 
     _group_uniq = models.Constraint(

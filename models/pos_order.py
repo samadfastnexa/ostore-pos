@@ -11,11 +11,24 @@ class PosOrder(models.Model):
         help="Set when an order discount exceeded the cashier's limit and a "
              "manager authenticated via PIN to approve it.",
     )
-    discount_reason_id = fields.Many2one('pos.retail.discount.reason', string="Discount Reason")
-    discount_reason_notes = fields.Text(string="Discount Reason Notes")
+    discount_reason_id = fields.Many2one(
+        'pos.retail.discount.reason', string="Discount Reason",
+        help="Why money was taken off this sale, picked by the cashier from the "
+             "list your shop keeps. Recorded at the moment of sale so discounts "
+             "can be reviewed later.",
+    )
+    discount_reason_notes = fields.Text(
+        string="Discount Reason Notes",
+        help="Anything the cashier typed to explain the discount beyond the "
+             "reason chosen, e.g. the name of the regular customer it was given "
+             "to.",
+    )
     discount_input_type = fields.Selection(
         [('fixed', 'Fixed Amount'), ('percent', 'Percentage')],
         string="Discount Entry Type",
+        help="Whether the cashier keyed the discount as a flat amount off or as "
+             "a percentage. Kept for the record, since either way of entering it "
+             "can end up as the same money off.",
     )
     # Credit-limit override: who let this customer go further into debt than
     # their limit allowed, and by how much. Recorded so the decision has a name
@@ -27,6 +40,9 @@ class PosOrder(models.Model):
     )
     pos_retail_credit_over_amount = fields.Monetary(
         string="Amount Over Credit Limit", currency_field='currency_id',
+        help="How far past their credit limit this sale pushed the customer, "
+             "worked out at the moment it was approved. Zero means the sale "
+             "stayed inside the limit.",
     )
     pos_retail_credit_before = fields.Monetary(
         string="Outstanding Before Sale", currency_field='currency_id',
@@ -36,13 +52,27 @@ class PosOrder(models.Model):
     )
     pos_retail_credit_after = fields.Monetary(
         string="Outstanding After Sale", currency_field='currency_id',
+        help="What the customer owed once this sale was added on, captured at "
+             "the moment of sale. Payments and purchases made afterwards do not "
+             "change this figure.",
     )
     pos_retail_credit_limit = fields.Monetary(
         string="Credit Limit at Sale", currency_field='currency_id',
+        help="The credit limit that applied when this sale was approved. Stored "
+             "because limits get raised and lowered over time, and an audit has "
+             "to show the limit in force on the day.",
     )
 
-    return_reason_id = fields.Many2one('pos.retail.return.reason', string="Return Reason")
-    return_reason_notes = fields.Text(string="Return Reason Notes")
+    return_reason_id = fields.Many2one(
+        'pos.retail.return.reason', string="Return Reason",
+        help="Why the goods came back, picked by the cashier from the list your "
+             "shop keeps. Only filled in on refunds.",
+    )
+    return_reason_notes = fields.Text(
+        string="Return Reason Notes",
+        help="Anything the cashier typed about the return beyond the reason "
+             "chosen, e.g. what was wrong with the item.",
+    )
 
     # --- Receipt management -------------------------------------------------
 
@@ -193,6 +223,9 @@ class PosOrderLine(models.Model):
     # bought, for the receipt and for the package reports.
     pos_retail_package_id = fields.Many2one(
         'product.uom', string="Package", ondelete='set null', index='btree_not_null',
+        help="The pack size the customer actually bought on this line, e.g. a "
+             "5 kg bag, filled in when a package barcode was scanned. Blank "
+             "means the item was sold loose in its own unit.",
     )
 
     # Snapshots of the product's selling range as it stood when the sale was
@@ -204,9 +237,15 @@ class PosOrderLine(models.Model):
     )
     pos_retail_min_price = fields.Monetary(
         string="Minimum Allowed Price", currency_field='currency_id',
+        help="The lowest price this item could be sold at without a manager, as "
+             "the rule stood when this line was rung up. Changing the product's "
+             "limits later does not change this.",
     )
     pos_retail_max_price = fields.Monetary(
         string="Maximum Allowed Price", currency_field='currency_id',
+        help="The highest price this item could be sold at without a manager, "
+             "as the rule stood when this line was rung up. Changing the "
+             "product's limits later does not change this.",
     )
     pos_retail_price_state = fields.Selection(
         [
@@ -215,6 +254,9 @@ class PosOrderLine(models.Model):
             ('overridden', "Overridden (outside range)"),
         ],
         string="Price Status", default='default', index=True,
+        help="How the price charged compared with the rules at the time: the "
+             "standard price, changed but still inside the allowed range, or "
+             "pushed outside it, which needs a manager's approval.",
     )
     pos_retail_price_manager_id = fields.Many2one(
         'hr.employee', string="Price Approved By",
@@ -223,6 +265,8 @@ class PosOrderLine(models.Model):
     )
     pos_retail_price_reason_id = fields.Many2one(
         'pos.retail.price.reason', string="Price Reason",
+        help="Why the price on this line was changed, picked by the cashier "
+             "from the list your shop keeps. Recorded at the moment of sale.",
     )
     pos_retail_price_variance = fields.Monetary(
         string="Price Variance", currency_field='currency_id',

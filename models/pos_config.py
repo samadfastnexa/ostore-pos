@@ -128,6 +128,9 @@ class PosConfig(models.Model):
     pos_retail_receipt_font = fields.Selection(
         [('small', "Small"), ('normal', "Normal"), ('large', "Large")],
         string="Receipt Font Size", default='normal', required=True,
+        help="How big the printed text is on the ticket. Small fits more lines "
+             "per receipt and saves paper; Large is easier for customers to "
+             "read but makes every receipt longer.",
     )
     pos_retail_receipt_show_sku = fields.Boolean(
         string="Show SKU on Receipt Lines", default=True,

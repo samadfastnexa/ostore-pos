@@ -7,6 +7,9 @@ class ProductTemplate(models.Model):
 
     brand_id = fields.Many2one(
         'product.brand', string="Brand", index=True, ondelete='set null',
+        help="Maker or brand this item is sold under, e.g. Nestle or Tapal. "
+             "Used to group and filter products in the catalogue and reports; "
+             "leave empty for loose or unbranded goods.",
     )
     wholesale_price = fields.Float(
         string="Wholesale Price", min_display_digits='Product Price',
@@ -27,13 +30,24 @@ class ProductTemplate(models.Model):
     )
     vendor_count = fields.Integer(
         string="# Vendors", compute='_compute_vendor_count', store=True,
+        help="How many different vendors you have pricing set up for on the "
+             "Vendors tab. Zero means nobody is set up to supply this item yet, "
+             "so purchase orders will not suggest a price.",
     )
 
     discount_type = fields.Selection(
         [('percent', "Percentage"), ('fixed', "Fixed Amount")],
         string="Discount Type", default='percent',
+        help="How to read the Discount Value beside it: as a percentage off the "
+             "Selling Price, or as a flat amount off. It only feeds the Final "
+             "Selling Price shown here; the till is not affected.",
     )
-    discount_value = fields.Float(string="Discount Value", default=0.0)
+    discount_value = fields.Float(
+        string="Discount Value", default=0.0,
+        help="How much to knock off the Selling Price, read as a percentage or "
+             "a fixed amount depending on the Discount Type. Leave at 0 for no "
+             "discount.",
+    )
     final_selling_price = fields.Monetary(
         string="Final Selling Price", currency_field='currency_id',
         compute='_compute_final_selling_price',
@@ -43,11 +57,33 @@ class ProductTemplate(models.Model):
 
     profit_amount = fields.Monetary(
         string="Profit Amount", currency_field='currency_id', compute='_compute_profit',
+        help="What you make on one unit at the current Selling Price: the "
+             "Selling Price less the Cost. A negative figure means you lose "
+             "money on every one you sell.",
     )
-    profit_margin_percent = fields.Float(string="Profit Margin %", compute='_compute_profit')
-    has_selling_below_cost = fields.Boolean(compute='_compute_profit')
-    has_low_margin = fields.Boolean(compute='_compute_profit')
-    has_min_selling_price_warning = fields.Boolean(compute='_compute_min_selling_price_warning')
+    profit_margin_percent = fields.Float(
+        string="Profit Margin %", compute='_compute_profit',
+        help="The profit measured against what the item costs you, so 100% "
+             "means you sell it for double the cost. Anything under 20% is "
+             "flagged as a thin margin.",
+    )
+    has_selling_below_cost = fields.Boolean(
+        compute='_compute_profit',
+        help="Technical field: true when the Selling Price sits below the Cost. "
+             "Used only to raise the loss-making warning on the product form.",
+    )
+    has_low_margin = fields.Boolean(
+        compute='_compute_profit',
+        help="Technical field: true when the item still makes a profit but the "
+             "margin is under 20%. Used only to raise the thin-margin warning "
+             "on the product form.",
+    )
+    has_min_selling_price_warning = fields.Boolean(
+        compute='_compute_min_selling_price_warning',
+        help="Technical field: true when the Minimum Selling Price has been set "
+             "above the Selling Price. Used only to raise that warning on the "
+             "product form.",
+    )
     pos_retail_price_locked = fields.Boolean(
         compute='_compute_pos_retail_price_locked',
         help="Technical field: whether the current user is blocked from "
@@ -69,6 +105,9 @@ class ProductTemplate(models.Model):
     pos_retail_package_ids = fields.One2many(
         related='product_variant_id.product_uom_ids', readonly=False,
         string="Packages",
+        help="The pack sizes this item is also sold in, e.g. a 5 kg bag as well "
+             "as loose kg. Each package has its own barcode and price, while "
+             "stock is still counted in the product's own unit.",
     )
 
     linked_vendor_ids = fields.Many2many(

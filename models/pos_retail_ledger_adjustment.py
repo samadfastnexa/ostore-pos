@@ -19,6 +19,9 @@ class PosRetailLedgerAdjustment(models.TransientModel):
     partner_id = fields.Many2one(
         'res.partner', string="Customer", required=True,
         default=lambda self: self.env.context.get('default_partner_id'),
+        help="The customer whose outstanding balance is being corrected. The "
+             "entry is posted against this customer's account, so it changes "
+             "their Amount Owed and shows as a new line on their ledger.",
     )
     direction = fields.Selection(
         [
@@ -26,12 +29,30 @@ class PosRetailLedgerAdjustment(models.TransientModel):
             ('decrease', "Customer owes LESS (waive / correction)"),
         ],
         required=True, default='increase',
+        help="Choose 'owes MORE' to bring in a debt the system does not know "
+             "about yet, such as a balance carried over from a paper khata; "
+             "choose 'owes LESS' to waive an amount or correct one downwards. "
+             "Either way a real accounting entry is posted and cannot be edited "
+             "afterwards, so a mistake is put right by posting a second "
+             "adjustment the other way.",
     )
-    amount = fields.Monetary(required=True, currency_field='currency_id')
+    amount = fields.Monetary(
+        required=True, currency_field='currency_id',
+        help="How much to move the balance by, always typed in as a positive "
+             "number. The direction above decides whether it is added to or "
+             "taken off what the customer owes.",
+    )
     currency_id = fields.Many2one(
         'res.currency', default=lambda self: self.env.company.currency_id,
+        help="Currency the amount above is measured in. It defaults to your "
+             "company currency.",
     )
-    date = fields.Date(required=True, default=fields.Date.context_today)
+    date = fields.Date(
+        required=True, default=fields.Date.context_today,
+        help="The date the accounting entry is filed under. Use the day the debt "
+             "really arose or was waived, because the ledger and your accounts "
+             "are ordered by this date, not by when you keyed it in.",
+    )
     reason = fields.Char(
         required=True,
         help="Shown on the ledger line and on the journal entry, e.g. "
@@ -48,6 +69,9 @@ class PosRetailLedgerAdjustment(models.TransientModel):
     journal_id = fields.Many2one(
         'account.journal', string="Journal", required=True,
         domain="[('type', '=', 'general')]",
+        help="The book the entry is recorded in; the Miscellaneous journal is "
+             "the normal choice. It decides where your accountant finds the "
+             "entry and has no effect on the customer's balance.",
         default=lambda self: self.env['account.journal'].search(
             [('type', '=', 'general'), ('company_id', '=', self.env.company.id)], limit=1),
     )

@@ -35,8 +35,15 @@ class PosRetailAccessRole(models.Model):
 
     group_id = fields.Many2one(
         'res.groups', string="Group", required=True, ondelete='restrict', index=True,
+        help="Technical field: the security group that actually carries this "
+             "role's rights. It is created and kept in step with the role "
+             "automatically, so there is no reason to change it by hand.",
     )
-    sequence = fields.Integer(default=10)
+    sequence = fields.Integer(
+        default=10,
+        help="Order this role appears in on the list, lowest number first. It "
+             "has no effect at all on what the role is allowed to do.",
+    )
     active = fields.Boolean(
         default=True,
         help="Archiving a role immediately removes ALL its users from it -- "

@@ -8,8 +8,18 @@ class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     # In-person / status-only customer approval of a POS quotation (no portal).
-    pos_customer_approved = fields.Boolean(string="Customer Approved", copy=False)
-    pos_approved_by = fields.Many2one('hr.employee', string="Approval Recorded By", copy=False)
+    pos_customer_approved = fields.Boolean(
+        string="Customer Approved", copy=False,
+        help="Tick this once the customer has agreed to the quotation at the "
+             "counter. It records their word only; it does not confirm the "
+             "order, reserve stock or take any money.",
+    )
+    pos_approved_by = fields.Many2one(
+        'hr.employee', string="Approval Recorded By", copy=False,
+        help="The member of staff who was standing there when the customer "
+             "agreed. Cleared automatically if the quotation is changed later, "
+             "because the customer approved the older version.",
+    )
 
     @api.model
     def _pos_retail_create_quotation(self, vals):
