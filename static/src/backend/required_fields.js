@@ -16,6 +16,24 @@ import { Field, fieldVisualFeedback } from "@web/views/fields/field";
 // into an asterisk. Doing it on the label rather than guessing with CSS
 // sibling selectors means the mark is right even in layouts where the label
 // and the input are not adjacent.
+// Not every field the ORM calls required is something a person must fill in,
+// and marking those spends the reader's attention without telling them
+// anything.
+//
+//  - Boolean: a checkbox is never empty, it is true or false, so "required"
+//    on one can never be acted upon.
+//  - one2many / many2many: a required x2many is a modelling constraint (a
+//    product template must own its variants), not a prompt to the user.
+//
+// Everything else stays marked, including fields that arrive with a default:
+// they really are mandatory, and saying so is honest.
+function isMeaningfullyRequired(modelField) {
+    if (!modelField?.required) {
+        return false;
+    }
+    return !["boolean", "one2many", "many2many"].includes(modelField.type);
+}
+
 patch(FormLabel.prototype, {
     get className() {
         const classes = super.className;
@@ -33,7 +51,7 @@ patch(FormLabel.prototype, {
         // marks almost nothing, which is exactly how a form ends up looking
         // like it has no mandatory fields at all.
         const modelField = this.props.record.fields?.[this.props.fieldName];
-        const isRequired = required || Boolean(modelField?.required);
+        const isRequired = required || isMeaningfullyRequired(modelField);
 
         // A readonly field cannot be filled in, so marking it required would
         // be an instruction the user cannot act on.
@@ -52,7 +70,7 @@ patch(Field.prototype, {
     get classNames() {
         const classNames = super.classNames;
         const modelField = this.props.record.fields?.[this.props.name];
-        if (modelField?.required) {
+        if (isMeaningfullyRequired(modelField)) {
             return `${classNames} o_pos_retail_required_field`.trim();
         }
         return classNames;
