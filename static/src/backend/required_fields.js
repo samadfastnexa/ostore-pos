@@ -2,7 +2,7 @@
 
 import { patch } from "@web/core/utils/patch";
 import { FormLabel } from "@web/views/form/form_label";
-import { fieldVisualFeedback } from "@web/views/fields/field";
+import { Field, fieldVisualFeedback } from "@web/views/fields/field";
 
 // Mark required fields on the label.
 //
@@ -25,11 +25,36 @@ patch(FormLabel.prototype, {
             this.props.fieldName,
             this.props.fieldInfo
         );
+
+        // fieldVisualFeedback only evaluates the VIEW's required modifier, and
+        // Odoo's arches almost never set one: a product's name and unit, an
+        // expense's amount and category are all required on the MODEL and
+        // carry nothing in the arch. Reading only the view modifier therefore
+        // marks almost nothing, which is exactly how a form ends up looking
+        // like it has no mandatory fields at all.
+        const modelField = this.props.record.fields?.[this.props.fieldName];
+        const isRequired = required || Boolean(modelField?.required);
+
         // A readonly field cannot be filled in, so marking it required would
         // be an instruction the user cannot act on.
-        if (required && !readonly) {
+        if (isRequired && !readonly) {
             return `${classes} o_pos_retail_required`.trim();
         }
         return classes;
+    },
+});
+
+// Same blind spot on the input itself: Odoo's own `o_required_modifier`
+// class (the one that tints the border) is also driven by the view modifier
+// alone, so a model-required field gets no visual treatment either. Tag those
+// so the stylesheet can outline them while they are still empty.
+patch(Field.prototype, {
+    get classNames() {
+        const classNames = super.classNames;
+        const modelField = this.props.record.fields?.[this.props.name];
+        if (modelField?.required) {
+            return `${classNames} o_pos_retail_required_field`.trim();
+        }
+        return classNames;
     },
 });

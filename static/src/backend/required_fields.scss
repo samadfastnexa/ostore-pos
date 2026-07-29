@@ -26,7 +26,11 @@ $pos-retail-required: #dc2626;
     // Only while EMPTY: once filled there is nothing left to prompt for, and a
     // permanent red edge on every filled-in mandatory field turns the whole
     // form into a wall of alarm.
-    .o_field_widget.o_required_modifier.o_field_empty {
+    //
+    // Two classes: Odoo's own (view-level required) and ours (model-level),
+    // because the native one covers almost nothing in practice.
+    .o_field_widget.o_required_modifier.o_field_empty,
+    .o_field_widget.o_pos_retail_required_field.o_field_empty {
         input,
         textarea,
         .o_input,
