@@ -7,9 +7,42 @@
          contain everyone, including contacts that are neither. -->
     <record id="contacts.menu_contacts" model="ir.ui.menu">
         <field name="name">Customers &amp; Vendors</field>
+        <field name="sequence">30</field>
     </record>
     <record id="contacts.res_partner_menu_contacts" model="ir.ui.menu">
         <field name="name">All Contacts</field>
+    </record>
+
+    <!-- App order: a shop opens the till all day, the books occasionally and
+         the rest rarely, so the sidebar follows that rather than Odoo's
+         generic ordering, which buried Point of Sale in fourth place. -->
+    <record id="point_of_sale.menu_point_root" model="ir.ui.menu">
+        <field name="sequence">10</field>
+    </record>
+    <record id="account.menu_finance" model="ir.ui.menu">
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Hide Odoo's spreadsheet "Dashboards" app. It ships seven empty
+         category groups for lines of business this shop does not run, and its
+         name claims the one thing it is not: the real dashboard lives at
+         Point of Sale > Dashboard. Set active back to True to restore it. -->
+    <record id="spreadsheet_dashboard.spreadsheet_dashboard_menu_root" model="ir.ui.menu">
+        <field name="active">False</field>
+    </record>
+
+    <!-- Invoicing had "Customers" as a section AND as an item inside it,
+         while the contact list already lives in its own app: the same word
+         meant three different things on one screen. The section is named for
+         what it holds, and the duplicate contact shortcut is dropped. -->
+    <record id="account.menu_finance_receivables" model="ir.ui.menu">
+        <field name="name">Sales Billing</field>
+    </record>
+    <record id="account.menu_finance_payables" model="ir.ui.menu">
+        <field name="name">Purchase Billing</field>
+    </record>
+    <record id="account.menu_account_customer" model="ir.ui.menu">
+        <field name="active">False</field>
     </record>
 
     <!-- Products > Product Brands -->
