@@ -10,6 +10,21 @@
                 <field name="membership_level_id"/>
                 <field name="birthday"/>
             </field>
+
+            <!-- "Misc" is Odoo's catch-all heading for the identification
+                 fields. Shop staff read this form daily; naming the section
+                 after what it holds saves them opening it to find out. -->
+            <group name="misc" position="attributes">
+                <attribute name="string">Identification</attribute>
+            </group>
+
+            <!-- The Reference is what the POS receipt and the customer card
+                 print as "Customer ID"; say so, so nobody fills it with
+                 something else. -->
+            <xpath expr="//group[@name='misc']/field[@name='ref']" position="attributes">
+                <attribute name="string">Reference / Customer ID</attribute>
+                <attribute name="placeholder">Printed on receipts as Customer ID</attribute>
+            </xpath>
         </field>
     </record>
 
