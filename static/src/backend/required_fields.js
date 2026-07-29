@@ -71,7 +71,12 @@ patch(Field.prototype, {
         const classNames = super.classNames;
         const modelField = this.props.record.fields?.[this.props.name];
         if (isMeaningfullyRequired(modelField)) {
-            return `${classNames} o_pos_retail_required_field`.trim();
+            // NOTE: Field.classNames returns an OBJECT of {class: bool}, not a
+            // string (field.js, `return classNames` after building a literal).
+            // Appending to it as a string yields "[object Object] ..." and
+            // wipes o_field_widget, o_field_empty and the widget-type class
+            // off every field in the backend. Set a key instead.
+            classNames.o_pos_retail_required_field = true;
         }
         return classNames;
     },
