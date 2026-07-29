@@ -1,4 +1,5 @@
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class ProductSupplierinfo(models.Model):
@@ -10,6 +11,21 @@ class ProductSupplierinfo(models.Model):
              "selection (new PO lines, reordering rules, Replenish) ahead of "
              "price/sequence.",
     )
+    # The vendor's own barcode for this item, which is often NOT the barcode
+    # the shop sells under: a wholesaler's carton label differs from the
+    # retail EAN on the unit. Kept separate from product_barcode below, which
+    # is a related read of our own product's code.
+    vendor_barcode = fields.Char(
+        string="Vendor Barcode",
+        help="Barcode printed on the goods as the vendor ships them, when it "
+             "differs from your own.",
+    )
+    default_order_qty = fields.Float(
+        string="Default Order Qty", digits='Product Unit of Measure',
+        help="Quantity to suggest when ordering this item from this vendor. "
+             "Must be at least the minimum order quantity.",
+    )
+
     last_purchase_price = fields.Monetary(
         string="Last Purchase Price", currency_field='currency_id',
         compute='_compute_last_purchase', store=True, readonly=True, copy=False,
@@ -98,3 +114,17 @@ class ProductSupplierinfo(models.Model):
                 ('is_preferred', '=', True),
                 ('id', '!=', rec.id),
             ]).write({'is_preferred': False})
+
+    @api.constrains('default_order_qty', 'min_qty')
+    def _check_default_order_qty(self):
+        """A default order below the vendor's minimum would be rejected by the
+        vendor, so catch it here rather than at the vendor's counter."""
+        for rec in self:
+            if rec.default_order_qty and rec.min_qty and rec.default_order_qty < rec.min_qty:
+                raise ValidationError(_(
+                    "Default order quantity (%(default)s) is below %(vendor)s's "
+                    "minimum of %(minimum)s for this product.",
+                    default=rec.default_order_qty,
+                    vendor=rec.partner_id.display_name,
+                    minimum=rec.min_qty,
+                ))

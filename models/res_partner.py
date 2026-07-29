@@ -1,5 +1,6 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.addons.pos_retail.models.pos_retail_expense import PAYMENT_METHODS
 
 
 class ResPartner(models.Model):
@@ -29,6 +30,48 @@ class ResPartner(models.Model):
 
     mobile = fields.Char(string="Mobile")
     vendor_contact_person = fields.Char(string="Contact Person")
+
+    # --- Vendor management ------------------------------------------------
+    # Native already covers: name, company, phone, mobile, email, website,
+    # VAT (tax registration), the whole address, supplier payment terms,
+    # purchase currency, credit limit, outstanding payable (debit) and bank
+    # accounts. These are the gaps.
+    vendor_code = fields.Char(
+        string="Vendor Code", copy=False, index='btree_not_null',
+        help="Short code for this vendor, generated on demand. Kept separate "
+             "from Reference, which is the customer-facing ID printed on "
+             "receipts.",
+    )
+    vendor_licence_no = fields.Char(
+        string="Business License No.",
+        help="Trade or business licence number, where the vendor has one.",
+    )
+    vendor_payment_method = fields.Selection(
+        PAYMENT_METHODS, string="Preferred Payment Method",
+        help="How this vendor usually wants to be paid.",
+    )
+    vendor_lead_time = fields.Integer(
+        string="Lead Time (Days)",
+        help="Typical days between ordering and delivery. Used as the default "
+             "for new product lines for this vendor; each product can override "
+             "it, since a vendor may be quick on one item and slow on another.",
+    )
+    vendor_delivery_method = fields.Char(
+        string="Delivery Method",
+        help="How goods arrive, e.g. own transport, TCS, Leopard, collection.",
+    )
+    vendor_status = fields.Selection(
+        [
+            ('active', "Active"),
+            ('inactive', "Inactive"),
+            ('blacklisted', "Blacklisted"),
+        ],
+        string="Vendor Status", default='active', index=True, tracking=True,
+        help="Blacklisted vendors cannot be put on new purchase orders. "
+             "Inactive is a softer state: still selectable, but flagged as one "
+             "you have stopped buying from.",
+    )
+
     supplierinfo_ids = fields.One2many(
         'product.supplierinfo', 'partner_id', string="Products Supplied",
     )
@@ -330,6 +373,18 @@ class ResPartner(models.Model):
         ))
         for partner in self:
             partner.products_supplied_count = counts.get(partner, 0)
+
+    def action_generate_vendor_code(self):
+        """Give each vendor a code, skipping any that already has one.
+
+        Never overwrites: a code may already be printed on the vendor's
+        paperwork or used in their own system.
+        """
+        sequence = self.env['ir.sequence']
+        for partner in self:
+            if not partner.vendor_code:
+                partner.vendor_code = sequence.next_by_code('pos.retail.vendor.code')
+        return True
 
     def action_view_supplierinfo(self):
         self.ensure_one()

@@ -18,4 +18,17 @@
         <field name="implementation">no_gap</field>
     </record>
 
+    <!-- Vendor codes. Generated on demand from the vendor form rather than
+         on create: most contacts are customers, and minting a vendor code for
+         every one of them would make the numbering meaningless. -->
+    <record id="seq_pos_retail_vendor_code" model="ir.sequence">
+        <field name="name">POS Retail Vendor Code</field>
+        <field name="code">pos.retail.vendor.code</field>
+        <field name="prefix">VND</field>
+        <field name="padding">5</field>
+        <field name="number_next">1</field>
+        <field name="number_increment">1</field>
+        <field name="implementation">no_gap</field>
+    </record>
+
 </odoo>

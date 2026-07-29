@@ -49,6 +49,32 @@
                 <field name="mobile" widget="phone"/>
                 <field name="vendor_contact_person"/>
             </group>
+
+            <!-- Vendor detail. Sits in the Sales & Purchase tab beside the
+                 native purchase settings (payment terms, currency), and only
+                 appears once the contact is actually a vendor, so it stays
+                 out of the way on ordinary customer records. -->
+            <group name="purchase" position="after">
+                <group string="Vendor Details" name="pos_retail_vendor"
+                       invisible="supplier_rank == 0">
+                    <label for="vendor_code"/>
+                    <div class="d-flex gap-2 align-items-center">
+                        <field name="vendor_code" nolabel="1" class="oe_inline"
+                               placeholder="e.g. VND00001"/>
+                        <button name="action_generate_vendor_code" type="object"
+                                string="Generate" class="btn-link"
+                                invisible="vendor_code"/>
+                    </div>
+                    <field name="vendor_status" widget="badge"
+                           decoration-success="vendor_status == 'active'"
+                           decoration-warning="vendor_status == 'inactive'"
+                           decoration-danger="vendor_status == 'blacklisted'"/>
+                    <field name="vendor_licence_no"/>
+                    <field name="vendor_payment_method"/>
+                    <field name="vendor_lead_time"/>
+                    <field name="vendor_delivery_method"/>
+                </group>
+            </group>
         </field>
     </record>
 
@@ -79,7 +105,13 @@
             </field>
             <filter name="inactive" position="after">
                 <filter string="Outstanding Balance" name="pos_retail_outstanding_balance" domain="[('debit', '&gt;', 0)]"/>
+                <separator/>
+                <filter string="Blacklisted Vendors" name="pos_retail_blacklisted"
+                        domain="[('vendor_status', '=', 'blacklisted')]"/>
             </filter>
+            <field name="category_id" position="before">
+                <field name="vendor_code"/>
+            </field>
         </field>
     </record>
 

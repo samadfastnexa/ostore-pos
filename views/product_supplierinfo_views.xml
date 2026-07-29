@@ -10,6 +10,8 @@
                 <field name="is_preferred" optional="show"/>
             </field>
             <field name="delay" position="after">
+                <field name="vendor_barcode" optional="hide"/>
+                <field name="default_order_qty" optional="hide"/>
                 <field name="last_purchase_price" optional="show" widget="monetary"/>
                 <field name="last_purchase_date" optional="show"/>
             </field>
@@ -23,6 +25,8 @@
         <field name="arch" type="xml">
             <field name="delay" position="after">
                 <field name="is_preferred"/>
+                <field name="vendor_barcode"/>
+                <field name="default_order_qty"/>
                 <field name="last_purchase_price" readonly="1"/>
                 <field name="last_purchase_date" readonly="1"/>
             </field>
