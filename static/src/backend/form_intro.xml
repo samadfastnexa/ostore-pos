@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Put the explanation immediately above the form body, so it is read
+         before the fields rather than after a scroll. Rendered only when the
+         model has an entry in FORM_INTROS; every other form is untouched. -->
+    <t t-inherit="web.FormView" t-inherit-mode="extension">
+        <xpath expr="//t[@t-component='props.Renderer']" position="before">
+            <div t-if="posRetailIntro" class="pos-retail-form-intro"
+                 t-att-class="posRetailIntro.warn ? 'is-warning' : ''"
+                 role="note">
+                <i class="fa" t-att-class="posRetailIntro.warn ? 'fa-exclamation-triangle' : 'fa-info-circle'"
+                   role="img" aria-label="About this screen" title="About this screen"/>
+                <span t-esc="posRetailIntro.text"/>
+            </div>
+        </xpath>
+    </t>
+
+</templates>
