@@ -50,6 +50,24 @@
                 <field name="vendor_contact_person"/>
             </group>
 
+            <!-- Tidy the smart buttons.
+                 Several core buttons carry no visibility condition at all, so
+                 a vendor record shows "Invoiced 0.00" (a customer figure that
+                 is structurally always zero for them) and every contact shows
+                 Purchases and Lots/Serial Numbers whether or not either has
+                 ever happened. A row of buttons that are mostly zero teaches
+                 people to stop reading the row. -->
+            <xpath expr="//button[@name='action_view_partner_invoices'][.//field[@name='total_invoiced']]"
+                   position="attributes">
+                <attribute name="invisible">not total_invoiced</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_view_stock_serial']" position="attributes">
+                <attribute name="invisible">supplier_rank == 0 and customer_rank == 0</attribute>
+            </xpath>
+            <xpath expr="//button[field[@name='purchase_order_count']]" position="attributes">
+                <attribute name="invisible">not purchase_order_count</attribute>
+            </xpath>
+
             <!-- Vendor detail. Sits in the Sales & Purchase tab beside the
                  native purchase settings (payment terms, currency), and only
                  appears once the contact is actually a vendor, so it stays
