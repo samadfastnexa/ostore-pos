@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Why stock gets written off in a shop. These are ordinary Odoo scrap
+         reason tags, so they also work in the native Inventory screens and in
+         its reporting; the simplified Record Damage screen just makes them the
+         first thing a staff member picks. Shops can rename or add their own. -->
+
+    <record id="scrap_reason_broken" model="stock.scrap.reason.tag">
+        <field name="name">Broken / Damaged</field>
+        <field name="sequence">10</field>
+        <field name="color">#dc2626</field>
+    </record>
+
+    <record id="scrap_reason_expired" model="stock.scrap.reason.tag">
+        <field name="name">Expired</field>
+        <field name="sequence">20</field>
+        <field name="color">#ea580c</field>
+    </record>
+
+    <record id="scrap_reason_spoiled" model="stock.scrap.reason.tag">
+        <field name="name">Spoiled</field>
+        <field name="sequence">30</field>
+        <field name="color">#d97706</field>
+    </record>
+
+    <record id="scrap_reason_theft" model="stock.scrap.reason.tag">
+        <field name="name">Theft / Shrinkage</field>
+        <field name="sequence">40</field>
+        <field name="color">#7c3aed</field>
+    </record>
+
+    <record id="scrap_reason_sample" model="stock.scrap.reason.tag">
+        <field name="name">Sample / Tasting</field>
+        <field name="sequence">50</field>
+        <field name="color">#2563eb</field>
+    </record>
+
+    <record id="scrap_reason_returned_to_vendor" model="stock.scrap.reason.tag">
+        <field name="name">Faulty from Vendor</field>
+        <field name="sequence">60</field>
+        <field name="color">#0891b2</field>
+    </record>
+
+    <record id="scrap_reason_other" model="stock.scrap.reason.tag">
+        <field name="name">Other</field>
+        <field name="sequence">99</field>
+        <field name="color">#6b7280</field>
+    </record>
+
+</odoo>
