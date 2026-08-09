@@ -531,3 +531,51 @@ $o_retail_blue: #2563eb;
 
     &:active { transform: scale(.94); }
 }
+
+// ---- Measurement-based selling --------------------------------------------
+// A cashier selling pipe by the metre and taps by the piece needs the unit
+// visible at a glance, on the card and on the cart line. Deliberately quieter
+// than the number itself: the quantity is what is being read, the unit is what
+// stops it being misread.
+
+.pos .product .pos-retail-card-uom {
+    font-size: .7rem;
+    font-weight: 600;
+    opacity: .7;
+    margin-left: .1rem;
+}
+
+.pos .pos-retail-line-uom {
+    font-size: 80%;
+    opacity: .72;
+}
+
+// Shortcut quantities on the selected cart line. Sized for a fingertip on a
+// touch screen, not a mouse: 2.1rem is the smallest reliable tap target here.
+.pos .pos-retail-quick-qty-btn {
+    min-width: 2.9rem;
+    height: 2.1rem;
+    padding: 0 .5rem;
+    font-size: .82rem;
+    font-weight: 700;
+    line-height: 1;
+    border-radius: .45rem;
+    border: 1px solid rgba(0, 0, 0, .18);
+    background-color: #fff;
+    color: inherit;
+
+    &:hover {
+        color: var(--pos-retail-accent);
+        background-color: color-mix(in srgb, var(--pos-retail-accent) 10%, #fff);
+    }
+
+    // The chip matching the line's current quantity, so the cashier can see
+    // which shortcut is in effect without reading the number back.
+    &.active {
+        color: #fff;
+        background-color: var(--pos-retail-accent);
+        border-color: var(--pos-retail-accent);
+    }
+
+    &:active { transform: scale(.94); }
+}

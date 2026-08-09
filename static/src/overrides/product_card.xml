@@ -14,7 +14,10 @@
         <xpath expr="//div[hasclass('product-content')]" position="inside">
             <t t-if="!props.isComboPopup" t-set="posRetailInfo" t-value="posRetailPriceInfo"/>
             <t t-if="!props.isComboPopup and posRetailInfo">
-                <div class="pos-retail-card-price" t-esc="posRetailInfo.price"/>
+                <div class="pos-retail-card-price">
+                    <t t-esc="posRetailInfo.price"/><small t-if="posRetailInfo.priceSuffix"
+                        class="pos-retail-card-uom" t-esc="posRetailInfo.priceSuffix"/>
+                </div>
                 <div t-if="posRetailInfo.hasRange"
                      class="pos-retail-card-range"
                      title="Allowed selling range">
@@ -24,7 +27,7 @@
                      class="pos-retail-card-stock"
                      t-att-class="{ 'pos-retail-card-stock--out': posRetailInfo.qty &lt;= 0 }">
                     <t t-if="posRetailInfo.qty &gt; 0">
-                        <t t-esc="posRetailInfo.qty"/> in stock
+                        <t t-esc="posRetailInfo.qtyLabel"/> in stock
                     </t>
                     <t t-else="">Out of stock</t>
                 </div>

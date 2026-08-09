@@ -28,10 +28,43 @@
         </xpath>
     </t>
 
-    <!-- Only the product-screen cart hands the callback to Orderline. -->
+    <!-- The unit, printed against the quantity. Core shows "12.50"; on a
+         product sold by the metre that is a different claim from "12.50 m",
+         and the cashier has no other way to tell which one the till means.
+         Suppressed for anything counted in pieces, where it is only noise. -->
+    <t t-name="pos_retail.OrderlineUom" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
+        <xpath expr="//span[hasclass('qty')]" position="inside">
+            <small t-if="props.posRetailUom"
+                   class="pos-retail-line-uom fw-normal ms-1"
+                   t-esc="props.posRetailUom"/>
+        </xpath>
+    </t>
+
+    <!-- Shortcut quantities for the selected measured line. -->
+    <t t-name="pos_retail.OrderlineQuickQty" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
+        <xpath expr="//ul[hasclass('info-list')]" position="before">
+            <div t-if="props.onQuickQty and props.posRetailQuickQtys.length"
+                 class="pos-retail-quick-qty d-flex flex-wrap gap-1 mt-1 ms-2">
+                <button t-foreach="props.posRetailQuickQtys" t-as="quickQty" t-key="quickQty"
+                        class="pos-retail-quick-qty-btn btn btn-sm"
+                        t-att-class="{ 'active': line.qty === quickQty }"
+                        t-attf-title="Sell {{ quickQty }} {{ props.posRetailUom }}"
+                        t-on-pointerdown.stop="() => {}"
+                        t-on-pointerup.stop="() => {}"
+                        t-on-click.stop="() => props.onQuickQty(line, quickQty)">
+                    <t t-esc="quickQty"/><t t-if="props.posRetailUom" t-esc="props.posRetailUom"/>
+                </button>
+            </div>
+        </xpath>
+    </t>
+
+    <!-- Only the product-screen cart hands the callbacks to Orderline. -->
     <t t-name="pos_retail.OrderSummaryQty" t-inherit="point_of_sale.OrderSummary" t-inherit-mode="extension">
         <xpath expr="//Orderline" position="attributes">
             <attribute name="onQtyStep">(line, delta) => this.posRetailQtyStep(line, delta)</attribute>
+            <attribute name="posRetailUom">this.posRetailUom(line)</attribute>
+            <attribute name="posRetailQuickQtys">this.posRetailQuickQtys(line)</attribute>
+            <attribute name="onQuickQty">(line, qty) => this.posRetailSetQty(line, qty)</attribute>
         </xpath>
     </t>
 
