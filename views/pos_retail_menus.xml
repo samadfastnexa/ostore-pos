@@ -3,14 +3,40 @@
 
     <!-- "Contacts" says nothing about who is in there. For a shop the app
          holds the people it sells to and the people it buys from, so name it
-         that; the child list keeps a neutral name because it genuinely does
-         contain everyone, including contacts that are neither. -->
+         that. -->
     <record id="contacts.menu_contacts" model="ir.ui.menu">
         <field name="name">Customers &amp; Vendors</field>
         <field name="sequence">30</field>
     </record>
     <record id="contacts.res_partner_menu_contacts" model="ir.ui.menu">
         <field name="name">All Contacts</field>
+    </record>
+
+    <!-- Customers and Vendors get their own sidebar entries. res.partner is one
+         shared table, so an unfiltered list also holds the partner row behind
+         every company, user login and employee work contact (Cash & Carry,
+         Administrator, Cashier Ali...). Those are system records, not
+         address-book entries: staff belong in Employees, the company in
+         Settings. Splitting the menu answers the question the shop actually
+         asks ("who do I sell to / buy from") instead of making them filter a
+         mixed list every time.
+         All Contacts is left unfiltered and keeps its own name honest: it is
+         still the way to reach a record that is neither. -->
+    <menuitem id="pos_retail_menu_customers"
+              name="Customers"
+              action="pos_retail.action_pos_retail_customers"
+              parent="contacts.menu_contacts"
+              sequence="1"/>
+    <menuitem id="pos_retail_menu_vendors"
+              name="Vendors"
+              action="pos_retail.action_pos_retail_vendors"
+              parent="contacts.menu_contacts"
+              sequence="2"/>
+    <record id="contacts.res_partner_menu_contacts" model="ir.ui.menu">
+        <field name="sequence">3</field>
+    </record>
+    <record id="contacts.res_partner_menu_config" model="ir.ui.menu">
+        <field name="sequence">10</field>
     </record>
 
     <!-- App order: a shop opens the till all day, the books occasionally and
@@ -207,6 +233,13 @@
     <menuitem id="pos_retail_menu_quotations" name="Quotations"
         parent="point_of_sale.menu_point_of_sale" action="action_pos_retail_quotations"
         sequence="4" groups="point_of_sale.group_pos_manager,sales_team.group_sale_salesman,perm_sales_view_res_groups,perm_sales_create_res_groups,perm_sales_edit_res_groups,perm_sales_delete_res_groups"/>
+
+    <!-- Point of Sale > Order Reception. Sits with the other shop-floor
+         stock jobs: whoever unpacks the delivery is the same person who
+         counts the shelf and writes off breakages. -->
+    <menuitem id="pos_retail_menu_reception" name="Order Reception"
+        parent="point_of_sale.menu_point_root" action="action_pos_retail_reception"
+        sequence="14" groups="point_of_sale.group_pos_manager,stock.group_stock_user,purchase.group_purchase_user,perm_inventory_view_res_groups"/>
 
     <!-- Point of Sale > Stock Count and Record Damage. Placed under Point of
          Sale rather than Inventory on purpose: these are daily shop-floor jobs

@@ -37,7 +37,7 @@
                 <field name="order_id" string="Order"/>
                 <field name="product_id"/>
                 <field name="pos_retail_package_id" string="Package"/>
-                <field name="qty" string="Base Qty" sum="Total Base Qty"/>
+                <field name="qty" string="Base Quantity" sum="Total Base Quantity"/>
                 <field name="price_unit" string="Unit Price" optional="hide"/>
                 <field name="price_subtotal_incl" string="Total" sum="Total Sold"/>
             </list>

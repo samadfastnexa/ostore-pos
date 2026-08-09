@@ -17,16 +17,61 @@
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_form_view"/>
         <field name="arch" type="xml">
-            <group name="group_standard_price" position="after">
-                <group name="pos_retail_pricing" string="Selling Price Range">
-                    <div class="text-muted small mb-2" colspan="2">
-                        Cashiers may sell anywhere between the Minimum Selling Price and the MRP
-                        without approval. Outside that range a manager PIN is required.
-                        Leave a bound at 0 to leave that side unrestricted.
+            <!-- Anchored on the two-column wrapper that holds Sales Price / Cost, not on
+                 group_standard_price itself: dropping it inside that wrapper made it a third
+                 child of a col=2 grid, so it rendered half-width on a second row under the
+                 fold and read as "missing" to anyone who had switched tabs. As a sibling of
+                 the wrapper it is a full-width section directly below the prices it bounds. -->
+            <xpath expr="//page[@name='general_information']/group[group[@name='group_standard_price']]"
+                   position="after">
+                <group name="pos_retail_pricing" string="Selling Price Range" col="4">
+                    <div class="text-muted small mb-2" colspan="4">
+                        Cashiers may sell anywhere between the Minimum Selling Price (the lowest
+                        allowed) and the Maximum Retail Price (the highest allowed, usually the
+                        price printed on the pack) without approval. Outside that range a manager
+                        PIN is required. Leave a price at 0 to leave that side unrestricted.
                     </div>
                     <field name="minimum_selling_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                     <field name="mrp" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                     <field name="wholesale_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Unit & Measurement. Sits directly under Selling Price Range because the
+         two answer the same question from opposite ends: what unit am I selling
+         in, and what may I charge for it. The base unit itself stays where Odoo
+         put it (next to Sales Price) rather than being duplicated here. -->
+    <record id="product_template_form_view_measurement" model="ir.ui.view">
+        <field name="name">product.template.form.pos.retail.measurement</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <group name="pos_retail_pricing" position="after">
+                <group name="pos_retail_measurement" string="Unit &amp; Measurement" col="4"
+                       invisible="type == 'combo'">
+                    <div class="text-muted small mb-2" colspan="4">
+                        Stock is always counted in the <b>Unit</b> set above, whatever unit you
+                        sell in. These settings only change how the till asks the cashier for a
+                        quantity.
+                    </div>
+                    <field name="pos_retail_measurement_type"/>
+                    <field name="pos_retail_allow_decimal"/>
+                    <field name="pos_retail_quick_qty"
+                           placeholder="e.g. 0.5, 1, 2, 5, 10"/>
+                    <label for="uom_ids" string="Also Sold In"/>
+                    <div>
+                        <field name="uom_ids" widget="many2many_tags" nolabel="1"
+                               options="{'no_quick_create': True}"
+                               placeholder="e.g. Roll of 100 m, Box of 10"/>
+                        <div class="text-muted small">
+                            Extra units this item may be sold in. They must measure the same
+                            thing as the base Unit, and Odoo converts back to it automatically.
+                            For a pack with its own barcode and price, use the
+                            <b>Packages</b> tab instead.
+                        </div>
+                    </div>
                 </group>
             </group>
         </field>

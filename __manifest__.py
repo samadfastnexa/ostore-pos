@@ -10,7 +10,7 @@ Custom extensions on top of Odoo Point of Sale for the retail MVP:
 * Product Brand (categorise products by brand)
 * Customer birthday + membership level
 * Vendor management: preferred vendor per product, purchase price history, 7 vendor reports
-* Product pricing: wholesale/minimum/MRP prices, profit & margin, discount settings, validation
+* Product pricing: wholesale / minimum / maximum retail prices, profit & margin, discount settings, validation
 * Real-time inventory movement audit trail per completed sale (with negative-stock warnings)
 * Business analytics dashboard: sales/financial/inventory KPIs, custom date range, drill-throughs
 * Lean business expenses tracking (rent, electricity, salaries, ...) with category reports
@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.2.7.0',
+    'version': '19.0.3.5.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -54,6 +54,9 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'data/pos_retail_package_data.xml',
         'data/pos_retail_partner_tag_data.xml',
         'data/pos_retail_scrap_reason_data.xml',
+        'data/pos_retail_uom_data.xml',
+        'data/pos_retail_uom_measurement_data.xml',
+        'data/pos_retail_pricelist_data.xml',
         'views/product_brand_views.xml',
         'views/pos_retail_inventory_movement_views.xml',
         'views/pos_retail_expense_views.xml',
@@ -71,7 +74,9 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/pos_order_views.xml',
         'views/stock_picking_views.xml',
         'views/stock_shopfloor_views.xml',
+        'views/stock_reception_views.xml',
         'views/product_template_views.xml',
+        'views/product_setup_views.xml',
         'views/product_uom_views.xml',
         'views/pos_retail_package_report_views.xml',
         'report/pos_retail_package_label_report.xml',
@@ -157,6 +162,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/customer_history.js',
             'pos_retail/static/src/overrides/customer_history.xml',
             'pos_retail/static/src/overrides/credit_limit.js',
+            'pos_retail/static/src/overrides/empty_product_screen.xml',
             'pos_retail/static/src/overrides/product_card.js',
             'pos_retail/static/src/overrides/product_card.xml',
             'pos_retail/static/src/overrides/orderline_qty.js',

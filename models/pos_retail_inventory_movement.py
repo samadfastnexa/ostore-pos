@@ -30,7 +30,7 @@ class PosRetailInventoryMovement(models.Model):
     )
 
     sku = fields.Char(
-        string="SKU",
+        string="Product Code (SKU)",
         help="The product's internal reference as it stood on the day of the "
              "sale. Kept as plain text, so renaming or recoding the product "
              "later does not rewrite this old record.",

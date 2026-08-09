@@ -11,6 +11,9 @@ from . import pos_retail_access_role
 from . import pos_retail_discount_log
 from . import product_template
 from . import product_product
+from . import product_measurement
+from . import product_category
+from . import pos_category
 from . import product_uom
 from . import product_supplierinfo
 from . import res_country
@@ -18,9 +21,11 @@ from . import res_company
 from . import res_partner
 from . import sale_order
 from . import purchase_order
+from . import account_move
 from . import hr_employee
 from . import pos_order
 from . import stock_picking
+from . import stock_picking_reception
 from . import pos_config
 from . import pos_session
 from . import pos_retail_dashboard

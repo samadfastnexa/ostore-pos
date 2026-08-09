@@ -22,6 +22,21 @@ class ResPartner(models.Model):
                     vals['name'] = phone
         return super().create(vals_list)
 
+    @api.model
+    def get_import_templates(self):
+        """Offer a supplier sheet on the Vendors Import screen.
+
+        No supplier_rank column: the Vendors action carries
+        default_supplier_rank=1 in its context, and base_import honours action
+        defaults on the records it creates. Importing the same file from All
+        Contacts would therefore make plain contacts instead of suppliers,
+        which is why the guide says which menu to use.
+        """
+        return [{
+            'label': _("Supplier List"),
+            'template': '/pos_retail/import-template/vendor.xlsx',
+        }]
+
     birthday = fields.Date(
         string="Birthday",
         help="The customer's date of birth, if they are happy to give it. Shown "
@@ -161,9 +176,15 @@ class ResPartner(models.Model):
         help="What this customer currently owes the shop.",
     )
     pos_credit_limit = fields.Monetary(
-        string="Credit Limit", compute='_compute_pos_credit_figures',
+        # NOT "Credit Limit": account already owns that label on res.partner, and
+        # two fields sharing one label makes Odoo warn at every install, breaks
+        # label-based import matching (our import templates key off labels) and
+        # gives exports two identical columns. Read-only mirror of the accounting
+        # figure, only ever rendered inside the POS, so the suffix costs nothing.
+        string="Credit Limit (Till)", compute='_compute_pos_credit_figures',
         compute_sudo=True, currency_field='pos_history_currency_id',
-        help="How much this customer may owe at once. Zero means no limit.",
+        help="How much this customer may owe at once, as enforced at the till. "
+             "Mirrors the accounting Credit Limit. Zero means no limit.",
     )
     pos_credit_available = fields.Monetary(
         string="Credit Available", compute='_compute_pos_credit_figures',

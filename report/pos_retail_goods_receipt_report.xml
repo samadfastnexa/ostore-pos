@@ -14,7 +14,7 @@
                 <div class="row mt-3">
                     <div class="col-6">
                         <table class="table table-sm table-borderless">
-                            <tr><td class="fw-bold">GRN No</td><td t-esc="o.name"/></tr>
+                            <tr><td class="fw-bold">Goods Receipt No. (GRN)</td><td t-esc="o.name"/></tr>
                             <tr t-if="po"><td class="fw-bold">Purchase Order</td><td t-esc="po.name"/></tr>
                             <tr t-if="o.origin"><td class="fw-bold">Source</td><td t-esc="o.origin"/></tr>
                             <tr><td class="fw-bold">Warehouse</td><td t-esc="o.picking_type_id.warehouse_id.name or ''"/></tr>
@@ -162,7 +162,7 @@
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">pos_retail.report_goods_receipt</field>
         <field name="report_file">pos_retail.report_goods_receipt</field>
-        <field name="print_report_name">'GRN - %s' % ((object.name or '').replace('/', '-'))</field>
+        <field name="print_report_name">'Goods Receipt Note - %s' % ((object.name or '').replace('/', '-'))</field>
         <field name="binding_model_id" ref="stock.model_stock_picking"/>
         <field name="binding_type">report</field>
         <field name="domain">[('picking_type_code', '=', 'incoming')]</field>

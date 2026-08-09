@@ -8,7 +8,7 @@
         <field name="arch" type="xml">
             <xpath expr="//header" position="inside">
                 <button name="action_print_goods_receipt" type="object"
-                        string="Print GRN" icon="fa-print"
+                        string="Print Goods Receipt Note" icon="fa-print"
                         invisible="picking_type_code != 'incoming'"/>
             </xpath>
         </field>
@@ -19,7 +19,7 @@
         <field name="model">stock.picking</field>
         <field name="arch" type="xml">
             <list string="Goods Receipts" create="false" default_order="scheduled_date desc">
-                <field name="name" string="GRN No"/>
+                <field name="name" string="Goods Receipt No. (GRN)"/>
                 <field name="partner_id" string="Vendor"/>
                 <field name="purchase_id" string="Purchase Order" optional="show"/>
                 <field name="origin" string="Source" optional="hide"/>
@@ -36,7 +36,7 @@
         <field name="model">stock.picking</field>
         <field name="arch" type="xml">
             <search string="Goods Receipts">
-                <field name="name" string="GRN Number"/>
+                <field name="name" string="Goods Receipt Number (GRN)"/>
                 <field name="partner_id" string="Vendor"/>
                 <field name="purchase_id" string="Purchase Order"/>
                 <field name="origin" string="Source"/>
@@ -63,8 +63,8 @@
         <field name="domain">[('picking_type_code', '=', 'incoming')]</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">No goods receipts yet</p>
-            <p>Every delivery received from a vendor. Open one and use Print GRN for a
-               Goods Receipt Note with costs, batch numbers and signature boxes.</p>
+            <p>Every delivery received from a vendor. Open one and use Print Goods Receipt Note
+               for a printable note with costs, batch numbers and signature boxes.</p>
         </field>
     </record>
 

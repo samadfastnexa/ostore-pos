@@ -21,7 +21,7 @@ class ProductSupplierinfo(models.Model):
              "differs from your own.",
     )
     default_order_qty = fields.Float(
-        string="Default Order Qty", digits='Product Unit of Measure',
+        string="Default Order Quantity", digits='Product Unit of Measure',
         help="Quantity to suggest when ordering this item from this vendor. "
              "Must be at least the minimum order quantity.",
     )
@@ -45,14 +45,14 @@ class ProductSupplierinfo(models.Model):
              "came from. Shown here to help you decide whether to reorder.",
     )
     total_purchased_qty = fields.Float(
-        string="Total Purchased Qty", compute='_compute_total_purchased_qty',
+        string="Total Purchased Quantity", compute='_compute_total_purchased_qty',
         help="Everything you have ever bought of this item from this vendor on "
              "confirmed orders. A good measure of how much you really rely on "
              "them.",
     )
     product_display_name = fields.Char(related='product_tmpl_id.name', string="Product")
     product_image = fields.Image(related='product_tmpl_id.image_128', string="Image")
-    product_sku = fields.Char(related='product_tmpl_id.default_code', string="SKU")
+    product_sku = fields.Char(related='product_tmpl_id.default_code', string="Product Code (SKU)")
     product_barcode = fields.Char(related='product_tmpl_id.barcode', string="Barcode")
     product_active = fields.Boolean(related='product_tmpl_id.active', string="Active")
 
@@ -64,16 +64,49 @@ class ProductSupplierinfo(models.Model):
     @api.depends('partner_id', 'product_id', 'product_tmpl_id')
     def _compute_total_purchased_qty(self):
         for rec in self:
+            # product_uom_qty, not product_qty: the latter is in each PO
+            # line's OWN unit, so two cartons of twelve and five loose units
+            # would add up to seven. product_uom_qty is core's conversion of
+            # the same quantity into the product's unit.
             rec.total_purchased_qty = sum(
-                rec._matching_purchase_order_lines().mapped('product_qty')
+                rec._matching_purchase_order_lines().mapped('product_uom_qty')
             )
 
     @api.depends('partner_id', 'product_id', 'product_tmpl_id')
     def _compute_last_purchase(self):
         for rec in self:
             last_line = rec._matching_purchase_order_lines(limit=1)
-            rec.last_purchase_price = last_line.price_unit if last_line else 0.0
+            rec.last_purchase_price = rec._pos_retail_line_unit_cost(last_line)
             rec.last_purchase_date = last_line.order_id.date_order.date() if last_line else False
+
+    def _pos_retail_line_unit_cost(self, line):
+        """What one unit of the PRODUCT really cost on that purchase line.
+
+        A purchase line's price_unit is per the line's own unit of measure and
+        in the order's own currency, and it ignores any discount agreed on the
+        line. Copying it straight across is how a carton of twelve bought for
+        6000 turns into a cost of 6000 per litre, and how a USD price gets
+        displayed as rupees. This does the same three conversions core does
+        when it writes a cost back (purchase_stock's _get_stock_move_price_unit):
+        discount, then unit, then currency.
+        """
+        self.ensure_one()
+        if not line:
+            return 0.0
+        price = getattr(line, 'price_unit_discounted', line.price_unit)
+        product = self.product_id or self.product_tmpl_id
+        target_uom = product.uom_id
+        if line.product_uom_id and target_uom and line.product_uom_id != target_uom:
+            price = line.product_uom_id._compute_price(price, target_uom)
+        order_currency = line.order_id.currency_id
+        target_currency = self.currency_id or self.env.company.currency_id
+        if order_currency and target_currency and order_currency != target_currency:
+            price = order_currency._convert(
+                price, target_currency,
+                self.company_id or self.env.company,
+                line.order_id.date_order.date() if line.order_id.date_order else None,
+            )
+        return price
 
     def _matching_purchase_order_lines(self, limit=None):
         self.ensure_one()

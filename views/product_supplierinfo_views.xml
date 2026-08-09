@@ -75,7 +75,7 @@
                 <button name="action_open_product" type="object" icon="fa-external-link" string="" title="Open Product"/>
                 <field name="product_image" widget="image" nolabel="1" options="{'size': [40, 40]}"/>
                 <field name="product_display_name" string="Product"/>
-                <field name="product_sku" string="SKU"/>
+                <field name="product_sku" string="Product Code (SKU)"/>
                 <field name="product_barcode" string="Barcode"/>
                 <field name="price" string="Purchase Price" widget="monetary"/>
                 <field name="last_purchase_date"/>

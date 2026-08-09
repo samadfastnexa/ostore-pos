@@ -2,7 +2,8 @@ from datetime import datetime, time, timedelta
 
 import pytz
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError
 
 SALE_STATES = ('paid', 'done')
 
@@ -72,6 +73,19 @@ class PosRetailDashboard(models.AbstractModel):
     # ------------------------------------------------------------------
     @api.model
     def get_dashboard_data(self, period='month', date_from=None, date_to=None):
+        # This model is abstract: it owns no table, so ir.model.access never
+        # runs for it and the ACL layer that protects every other model here is
+        # simply absent. The menu is restricted to POS managers
+        # (pos_retail_dashboard_views.xml), but a menu only hides a button --
+        # any logged-in user, a cashier included, can still reach this method
+        # over /web/dataset/call_kw and read the whole financial picture:
+        # takings, margin, cost of goods sold, expenses, stock valuation.
+        # Re-state the menu's restriction where it is actually enforceable.
+        if not self.env.user.has_group('point_of_sale.group_pos_manager'):
+            raise AccessError(_(
+                "The Point of Sale dashboard is available to Point of Sale "
+                "managers only."
+            ))
         if period not in ('today', 'week', 'month', 'custom'):
             period = 'month'
         today_local = fields.Date.context_today(self)

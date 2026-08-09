@@ -143,10 +143,19 @@
         <field name="arch" type="xml">
             <!-- inventory_mode is what turns these rows into a count sheet:
                  it makes Counted editable and enables Apply. -->
-            <list string="Stock Count" editable="bottom" create="false"
+            <!-- create="1" is what makes this usable for OPENING stock: a
+                 product that has never had any has no row here at all, so a
+                 count-only screen could never bring one into stock. On a
+                 saved row the product and place stay locked (readonly="id",
+                 the same trick native uses); on a new row you pick them. -->
+            <list string="Stock Count" editable="bottom" create="1"
+                  js_class="inventory_report_list"
                   default_order="product_id">
-                <field name="product_id" readonly="1"/>
-                <field name="location_id" readonly="1"
+                <field name="product_id" readonly="id"
+                       options="{'no_create': True}"/>
+                <field name="location_id" readonly="id"
+                       domain="[('usage', 'in', ('internal', 'transit'))]"
+                       options="{'no_create': True}"
                        groups="stock.group_stock_multi_locations" optional="show"/>
                 <field name="lot_id" readonly="1"
                        groups="stock.group_production_lot" optional="hide"/>
@@ -196,10 +205,11 @@
         <field name="domain">[('location_id.usage', '=', 'internal')]</field>
         <!-- inventory_mode is the switch that makes Counted writable and the
              Apply action available; without it these rows are read-only. -->
-        <field name="context">{'inventory_mode': True, 'search_default_in_stock': 1}</field>
+        <field name="context">{'inventory_mode': True}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Nothing in stock to count</p>
+            <p class="o_view_nocontent_smiling_face">Nothing to count yet</p>
             <p>Count what is actually on the shelf and type it into the Counted column.
+               For something that has never been in stock, press New and pick the product first.
                The Difference column shows what you are over or short by; press the tick to
                apply a line, or use Apply from the Actions menu to post several at once.
                Nothing changes until you apply.</p>

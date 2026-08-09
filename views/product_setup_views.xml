@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================================================================
+         Finish Product Setup.
+
+         The five-column import sheet deliberately does not ask for category,
+         till section, unit or "sell at the till". Those are not per-product
+         decisions in a hardware shop, they are per-GROUP decisions: every pipe
+         is a metre, every fitting is a piece, the whole plumbing aisle is one
+         till section. Typing them 500 times in a spreadsheet is the single
+         biggest cost of filling that sheet in.
+
+         Here the shopkeeper searches "pipe", selects the rows, types the value
+         once, and Odoo's multi_edit writes it to every selected record. Forty
+         gestures instead of five hundred.
+
+         editable="bottom" as well, so this doubles as the place to add a few
+         products by hand without a spreadsheet at all.
+         ================================================================== -->
+
+    <record id="product_template_view_setup_list" model="ir.ui.view">
+        <field name="name">product.template.list.pos.retail.setup</field>
+        <field name="model">product.template</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <!-- multi_edit: tick several rows, change one cell, all of them
+                 follow. editable: type new rows straight in.
+                 Sales Price, Minimum Selling Price and MRP are DELIBERATELY
+                 ABSENT. list_price is guarded by a role check in
+                 product_template.write(), and the selling-range constraint
+                 rejects the whole multi-record write rather than the one bad
+                 row, so a single out-of-range product would silently undo an
+                 edit the user thought had applied to forty. Prices stay on the
+                 product form and in the import sheet. -->
+            <list string="Finish Product Setup" editable="bottom" multi_edit="1"
+                  default_order="create_date desc, name">
+                <field name="name" required="1"/>
+                <field name="default_code" string="Product Code (SKU)" optional="show"/>
+                <field name="barcode" optional="show"/>
+                <field name="categ_id" string="Product Category"
+                       options="{'no_quick_create': True}"/>
+                <field name="pos_categ_ids" string="Till Section"
+                       widget="many2many_tags" options="{'no_quick_create': True}"/>
+                <field name="uom_id" string="Unit" options="{'no_quick_create': True}"/>
+                <field name="pos_retail_measurement_type" string="Measured By"
+                       readonly="1" optional="show"/>
+                <field name="brand_id" optional="hide" options="{'no_quick_create': True}"/>
+                <field name="standard_price" string="Cost" optional="hide"/>
+                <field name="available_in_pos" string="Sell at the Till"/>
+                <field name="is_storable" string="Track Inventory" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="product_template_view_setup_search" model="ir.ui.view">
+        <field name="name">product.template.search.pos.retail.setup</field>
+        <field name="model">product.template</field>
+        <field name="arch" type="xml">
+            <search string="Finish Product Setup">
+                <field name="name" filter_domain="['|', ('name', 'ilike', self),
+                                                        ('default_code', 'ilike', self)]"/>
+                <field name="categ_id"/>
+                <field name="uom_id"/>
+                <!-- The three things a freshly imported product is missing.
+                     Opening on "Not On The Till Yet" is what turns this screen
+                     into a to-do list rather than another product list. -->
+                <filter string="Not On The Till Yet" name="pos_retail_not_on_till"
+                        domain="[('available_in_pos', '=', False)]"/>
+                <filter string="No Till Section" name="pos_retail_no_pos_categ"
+                        domain="[('pos_categ_ids', '=', False)]"/>
+                <filter string="Still In Units" name="pos_retail_still_units"
+                        domain="[('pos_retail_measurement_type', '=', 'piece')]"/>
+                <separator/>
+                <filter string="Added Today" name="pos_retail_added_today"
+                        domain="[('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
+                <!-- Bare <group>: Odoo 19's search RNG rejects both expand and
+                     string on it, and the whole module fails to install rather
+                     than the view being skipped. Core writes it this way too. -->
+                <group>
+                    <filter string="Product Category" name="group_categ"
+                            context="{'group_by': 'categ_id'}"/>
+                    <filter string="Till Section" name="group_pos_categ"
+                            context="{'group_by': 'pos_categ_ids'}"/>
+                    <filter string="Unit" name="group_uom" context="{'group_by': 'uom_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_product_setup" model="ir.actions.act_window">
+        <field name="name">Finish Product Setup</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="product_template_view_setup_list"/>
+        <field name="search_view_id" ref="product_template_view_setup_search"/>
+        <field name="context">{'search_default_pos_retail_not_on_till': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Every product is set up</p>
+            <p>Nothing is waiting: every product has a till section and is on the till
+               screen. Imported products land here first so you can finish them off in
+               groups rather than one at a time.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_pos_retail_product_setup"
+              name="Finish Product Setup"
+              parent="point_of_sale.pos_config_menu_catalog"
+              action="action_pos_retail_product_setup"
+              sequence="6"/>
+
+</odoo>

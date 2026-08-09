@@ -90,7 +90,8 @@ class PosConfig(models.Model):
     pos_retail_price_range_enabled = fields.Boolean(
         string="Allow Price Within Range", default=True,
         help="When a product has a selling range (Minimum Selling Price and/or "
-             "MRP), ask the cashier to confirm or adjust the price as it is added. "
+             "Maximum Retail Price), ask the cashier to confirm or adjust the "
+             "price as it is added. "
              "Products without a range are always added instantly at their "
              "standard price, so scanning stays fast.",
     )
@@ -133,7 +134,7 @@ class PosConfig(models.Model):
              "read but makes every receipt longer.",
     )
     pos_retail_receipt_show_sku = fields.Boolean(
-        string="Show SKU on Receipt Lines", default=True,
+        string="Show Product Code (SKU) on Receipt Lines", default=True,
         help="Print each product's internal reference under its line.",
     )
     pos_retail_receipt_show_qr = fields.Boolean(
@@ -155,7 +156,10 @@ class PosConfig(models.Model):
              "store name in the footer. Example: www.mystore.pk | fb.com/mystore",
     )
     pos_retail_receipt_terms = fields.Text(
-        string="Terms & Conditions",
+        # NOT "Terms & Conditions": account already owns that label via
+        # invoice_terms on res.config.settings, and a duplicate label warns at
+        # install and makes the two indistinguishable in field lists.
+        string="Receipt Terms & Conditions",
         help="Printed on PDF receipts (A4). Kept off the thermal ticket to "
              "save paper; the Return Policy block covers the essentials there.",
     )
@@ -178,6 +182,49 @@ class PosConfig(models.Model):
                         rounding=config.rounding_method.rounding,
                         max=config.pos_retail_max_roundoff_amount,
                     ))
+
+    @api.model
+    def _pos_retail_seed_pricelists(self):
+        """Offer the shipped customer-type pricelists at every unconfigured register.
+
+        Called from data/pos_retail_pricelist_data.xml on install and on every
+        upgrade, so it must stay idempotent and must never overrule a choice the
+        store already made: a register that already lists any available pricelist
+        is left exactly as it is.
+
+        Only pricelists matching the register's own currency are attached --
+        pos.config._check_currencies() rejects the write otherwise, and on a
+        multi-currency tenant the shipped set belongs to the main company.
+        """
+        pricelists = self.env['product.pricelist'].browse([
+            pricelist.id
+            for xmlid in (
+                'pos_retail.pricelist_retail',
+                'pos_retail.pricelist_wholesale',
+                'pos_retail.pricelist_dealer',
+                'pos_retail.pricelist_distributor',
+                'pos_retail.pricelist_vip',
+                'pos_retail.pricelist_corporate',
+            )
+            if (pricelist := self.env.ref(xmlid, raise_if_not_found=False))
+        ])
+        if not pricelists:
+            return
+
+        default = self.env.ref('pos_retail.pricelist_retail', raise_if_not_found=False)
+
+        for config in self.search([('available_pricelist_ids', '=', False)]):
+            usable = pricelists.filtered(
+                lambda p: p.currency_id == config.currency_id
+                and (not p.company_id or p.company_id == config.company_id)
+            )
+            if not usable:
+                continue
+            config.write({
+                'use_pricelist': True,
+                'available_pricelist_ids': [fields.Command.set(usable.ids)],
+                'pricelist_id': (default if default in usable else usable[0]).id,
+            })
 
 
 class ResConfigSettings(models.TransientModel):
@@ -291,7 +338,7 @@ class ResConfigSettings(models.TransientModel):
     pos_retail_receipt_show_sku = fields.Boolean(
         related='pos_config_id.pos_retail_receipt_show_sku',
         readonly=False,
-        string="Show SKU on Receipt Lines",
+        string="Show Product Code (SKU) on Receipt Lines",
     )
     pos_retail_receipt_show_qr = fields.Boolean(
         related='pos_config_id.pos_retail_receipt_show_qr',
@@ -316,5 +363,5 @@ class ResConfigSettings(models.TransientModel):
     pos_retail_receipt_terms = fields.Text(
         related='pos_config_id.pos_retail_receipt_terms',
         readonly=False,
-        string="Terms & Conditions",
+        string="Receipt Terms & Conditions",
     )

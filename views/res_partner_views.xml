@@ -1,6 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- Dedicated Customers / Vendors lists for the sidebar. The domain is on the
+         action rather than a default filter because these menus exist precisely to
+         answer one question each; All Contacts is still there, unfiltered, for
+         anything that is neither.
+         default_customer_rank / default_supplier_rank matter: the rank counters are
+         what put a partner in these lists, and they only rise once you actually
+         trade with someone. Without the default, a contact created here would save
+         at rank 0 and disappear from the list that created it. -->
+    <record id="action_pos_retail_customers" model="ir.actions.act_window">
+        <field name="name">Customers</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">kanban,list,form,activity</field>
+        <field name="search_view_id" ref="base.view_res_partner_filter"/>
+        <field name="domain">[('customer_rank', '&gt;', 0)]</field>
+        <field name="context">{'default_customer_rank': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add a customer</p>
+            <p>People and businesses you sell to. Anyone you invoice or ring up at
+               the till appears here automatically.</p>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_vendors" model="ir.actions.act_window">
+        <field name="name">Vendors</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">kanban,list,form,activity</field>
+        <field name="search_view_id" ref="base.view_res_partner_filter"/>
+        <field name="domain">[('supplier_rank', '&gt;', 0)]</field>
+        <field name="context">{'default_supplier_rank': 1, 'default_is_company': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add a vendor</p>
+            <p>Suppliers you buy stock from. Anyone on a purchase order or vendor
+               bill appears here automatically.</p>
+        </field>
+    </record>
+
     <record id="view_partner_form_pos_retail" model="ir.ui.view">
         <field name="name">res.partner.form.pos.retail</field>
         <field name="model">res.partner</field>
@@ -126,6 +162,23 @@
                 <separator/>
                 <filter string="Blacklisted Vendors" name="pos_retail_blacklisted"
                         domain="[('vendor_status', '=', 'blacklisted')]"/>
+            </filter>
+            <!-- res.partner is one shared table: it also holds the row behind each
+                 company, each user login and each employee work contact. Those have
+                 no reason to appear in a shop's address book, but core ships no
+                 filter to tell them apart, so add one. customer_rank/supplier_rank
+                 are the counters Odoo raises when you actually sell to or buy from
+                 someone, which is exactly the "is this a trading partner" question.
+                 Filters, not a domain on the action: clearing them still shows
+                 everyone, so nothing becomes unreachable. -->
+            <filter name="type_person" position="before">
+                <filter string="Customers &amp; Vendors" name="pos_retail_trading"
+                        domain="['|', ('customer_rank', '&gt;', 0), ('supplier_rank', '&gt;', 0)]"/>
+                <filter string="Customers" name="pos_retail_customers"
+                        domain="[('customer_rank', '&gt;', 0)]"/>
+                <filter string="Vendors" name="pos_retail_vendors"
+                        domain="[('supplier_rank', '&gt;', 0)]"/>
+                <separator/>
             </filter>
             <field name="category_id" position="before">
                 <field name="vendor_code"/>

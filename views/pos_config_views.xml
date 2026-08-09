@@ -43,7 +43,7 @@
                             <field name="pos_retail_receipt_font"/>
                         </div>
                         <div class="row mt8">
-                            <label string="Show SKU on Lines" for="pos_retail_receipt_show_sku" class="col-lg-4 o_light_label"/>
+                            <label string="Show Product Code (SKU) on Lines" for="pos_retail_receipt_show_sku" class="col-lg-4 o_light_label"/>
                             <field name="pos_retail_receipt_show_sku"/>
                         </div>
                         <div class="row mt8">

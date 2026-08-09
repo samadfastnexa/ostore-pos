@@ -21,11 +21,11 @@ On the product form, **General Information → Selling Price Range**:
 | Cost (`standard_price`) | what you pay |
 | Sales Price (`list_price`) | the **default** selling price |
 | Minimum Selling Price | floor of the allowed range |
-| MRP | ceiling of the allowed range |
+| Maximum Retail Price (`mrp`) | ceiling of the allowed range — usually the price printed on the pack |
 
 Rules enforced:
 
-- `Minimum ≤ Sales Price ≤ MRP` is validated when saving the product.
+- `Minimum ≤ Sales Price ≤ Maximum` is validated when saving the product.
 - Leave a bound at **0** to leave that side unrestricted.
 - At the till a cashier may sell **anywhere inside the range with no approval**.
 - Outside the range a **manager PIN** is required (any employee whose *POS
@@ -46,14 +46,31 @@ Reasons are managed at **Point of Sale → Configuration → Price Reasons**.
 
 ## 2. Customer-type pricing = pricelists (no code)
 
-Do **not** use the Minimum/MRP fields to model wholesale or VIP pricing. Those
+Do **not** use the Minimum/Maximum Retail Price fields to model wholesale or VIP pricing. Those
 are guard rails. Different prices for different customers are pricelists.
 
-### Create the pricelists
+### The pricelists ship with the module
 
-**Sales → Products → Pricelists** (enable *Pricelists* in Sales settings first).
-Create one per customer type: Retail, Wholesale, Dealer, Distributor, VIP,
-Corporate.
+`data/pos_retail_pricelist_data.xml` creates six on install — **Retail,
+Wholesale, Dealer, Distributor, VIP, Corporate** — in the company currency, and
+attaches them to any register that has none configured yet.
+
+They arrive **empty, with no rules**, which means every one of them currently
+resolves to the product's own Sales Price. Installing the module therefore
+changes nobody's price. Add rules per store once the commercial rates are
+agreed: **Sales → Products → Pricelists** (enable *Pricelists* in Sales settings
+first).
+
+Two deliberate choices worth knowing:
+
+- The shipped pricelists start at **sequence 11**. Core creates a `Default`
+  pricelist at sequence 10 per company, and a customer with no pricelist of
+  their own falls back to the lowest-sequence one — so `Default` stays the
+  fallback and no existing customer is re-priced.
+- The records are `noupdate="1"`, and the register wiring runs through an
+  idempotent hook that skips any register already listing a pricelist. Rename
+  them, add rules, delete the ones you do not sell to — a module upgrade will
+  not undo it.
 
 Each pricelist holds rules that can select on:
 
