@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Pack sizes to build product packages from.
+         The Packages feature needs a unit before a pack can exist, and Odoo
+         ships almost none: out of the box there is Units, Dozen and Pack of 6,
+         so a shopkeeper wanting a box of ten or a 5 kg bag has to go and
+         invent the unit first. These are the sizes a retail shop actually
+         buys and sells in.
+
+         Counted goods hang off Units; weighed goods off kg. Both stay in the
+         product's own category, which is what keeps stock honest: selling a
+         5 kg bag still draws 5 kg from the shelf. -->
+
+    <!-- ===== counted goods: hardware, sanitary, packaged items ===== -->
+
+    <record id="uom_pair" model="uom.uom">
+        <field name="name">Pair</field>
+        <field name="relative_factor">2</field>
+        <field name="relative_uom_id" ref="uom.product_uom_unit"/>
+    </record>
+
+    <record id="uom_pack_4" model="uom.uom">
+        <field name="name">Pack of 4</field>
+        <field name="relative_factor">4</field>
+        <field name="relative_uom_id" ref="uom.product_uom_unit"/>
+    </record>
+
+    <record id="uom_pack_10" model="uom.uom">
+        <field name="name">Box of 10</field>
+        <field name="relative_factor">10</field>
+        <field name="relative_uom_id" ref="uom.product_uom_unit"/>
+    </record>
+
+    <record id="uom_pack_20" model="uom.uom">
+        <field name="name">Box of 20</field>
+        <field name="relative_factor">20</field>
+        <field name="relative_uom_id" ref="uom.product_uom_unit"/>
+    </record>
+
+    <record id="uom_carton_24" model="uom.uom">
+        <field name="name">Carton of 24</field>
+        <field name="relative_factor">24</field>
+        <field name="relative_uom_id" ref="uom.product_uom_unit"/>
+    </record>
+
+    <record id="uom_carton_50" model="uom.uom">
+        <field name="name">Carton of 50</field>
+        <field name="relative_factor">50</field>
+        <field name="relative_uom_id" ref="uom.product_uom_unit"/>
+    </record>
+
+    <record id="uom_carton_100" model="uom.uom">
+        <field name="name">Carton of 100</field>
+        <field name="relative_factor">100</field>
+        <field name="relative_uom_id" ref="uom.product_uom_unit"/>
+    </record>
+
+    <!-- ===== weighed goods: anything sold loose by weight ===== -->
+
+    <record id="uom_pack_500g" model="uom.uom">
+        <field name="name">500 g Packet</field>
+        <field name="relative_factor">500</field>
+        <field name="relative_uom_id" ref="uom.product_uom_gram"/>
+    </record>
+
+    <record id="uom_bag_5kg" model="uom.uom">
+        <field name="name">5 kg Bag</field>
+        <field name="relative_factor">5</field>
+        <field name="relative_uom_id" ref="uom.product_uom_kgm"/>
+    </record>
+
+    <record id="uom_bag_10kg" model="uom.uom">
+        <field name="name">10 kg Bag</field>
+        <field name="relative_factor">10</field>
+        <field name="relative_uom_id" ref="uom.product_uom_kgm"/>
+    </record>
+
+    <record id="uom_sack_25kg" model="uom.uom">
+        <field name="name">25 kg Sack</field>
+        <field name="relative_factor">25</field>
+        <field name="relative_uom_id" ref="uom.product_uom_kgm"/>
+    </record>
+
+    <record id="uom_sack_50kg" model="uom.uom">
+        <field name="name">50 kg Sack</field>
+        <field name="relative_factor">50</field>
+        <field name="relative_uom_id" ref="uom.product_uom_kgm"/>
+    </record>
+
+</odoo>

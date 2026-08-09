@@ -1,0 +1,58 @@
+// Receipt Studio: paper width, font scale and template styles.
+//
+// The modifier classes are set on the receipt ROOT (div.pos-receipt) by
+// receipt.xml, and they reach every output path:
+// - raster printing (IoT box / Epson ePOS): the renderer adds
+//   `pos-receipt-print` to that same root (native base width 512px = 80mm
+//   class printers, base font 22px in point_of_sale/static/src/css/pos_receipts.css);
+// - browser printing: the root is cloned into `.render-container` and the
+//   native @media print rules force 266px/14px (receipt_screen.scss);
+// - email: the JPEG is rasterized from the same DOM.
+
+// ---- paper width: raster path. 58mm heads are 384 dots at 8 dots/mm.
+.pos-receipt-print.pos-retail-w58 {
+    width: 384px;
+}
+
+// ---- font scale: raster path (native base 22px).
+.pos-receipt-print.pos-retail-font-small { font-size: 18px; }
+.pos-receipt-print.pos-retail-font-large { font-size: 26px; }
+
+// ---- browser print path. Native forces 266px/14px with !important, so these
+// must out-specify it. 177px = 266 x 48/72 printable-width ratio.
+@media print {
+    .render-container .pos-receipt.pos-retail-w58 {
+        width: 177px !important;
+        font-size: 12px !important;
+    }
+    .render-container .pos-receipt.pos-retail-font-small { font-size: 12px !important; }
+    .render-container .pos-receipt.pos-retail-font-large { font-size: 16px !important; }
+    .render-container .pos-receipt.pos-retail-w58.pos-retail-font-large { font-size: 14px !important; }
+}
+
+// ---- template styles ------------------------------------------------------
+
+// Modern: bolder headings, framed totals.
+.pos-receipt.pos-retail-style-modern {
+    .pos-receipt-header {
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+    .receipt-total {
+        border-top: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        padding: 2px 0;
+    }
+    .pos-receipt-contact,
+    .pos-receipt-customer {
+        font-size: 80%;
+    }
+}
+
+// Minimal: shortest possible ticket. Keeps QR (gated separately), drops the
+// logo and the per-line detail list (unit price breakdown, SKU line included).
+.pos-receipt.pos-retail-style-minimal {
+    .pos-receipt-logo { display: none; }
+    .info-list { display: none !important; }
+    .pos-retail-receipt-qr div { display: none; }
+}

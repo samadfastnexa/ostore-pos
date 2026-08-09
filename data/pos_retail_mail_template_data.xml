@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Backend "Email Receipt": the A4 PDF rides along automatically via
+         report_template_ids. Kept separate from the native POS template
+         (point_of_sale.email_template_pos_receipt), which sends the on-screen
+         receipt as a JPEG from the till; both flows coexist. -->
+    <record id="mail_template_pos_receipt_pdf" model="mail.template">
+        <field name="name">POS: Sales Receipt (PDF)</field>
+        <field name="model_id" ref="point_of_sale.model_pos_order"/>
+        <field name="subject">Your receipt {{ object.pos_reference or object.name }}</field>
+        <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+        <field name="partner_to">{{ object.partner_id.id or '' }}</field>
+        <field name="lang">{{ object.partner_id.lang or user.lang }}</field>
+        <field name="auto_delete" eval="False"/>
+        <field name="report_template_ids" eval="[(6, 0, [ref('pos_retail.action_report_pos_receipt_a4')])]"/>
+        <field name="body_html" type="html">
+            <div style="margin:0px;padding:0px;font-size:13px;">
+                <p>
+                    Hello<t t-if="object.partner_id"> <t t-out="object.partner_id.name"/></t>,
+                </p>
+                <p>
+                    Thank you for shopping with us. Your receipt
+                    <strong t-out="object.pos_reference or object.name"/> is attached as a PDF.
+                </p>
+                <p t-if="object.config_id.return_policy" style="white-space:pre-line;">
+                    <t t-out="object.config_id.return_policy"/>
+                </p>
+                <p><strong t-out="object.company_id.name"/></p>
+            </div>
+        </field>
+    </record>
+
+</odoo>

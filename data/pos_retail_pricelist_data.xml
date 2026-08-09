@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Customer-type pricelists, one per segment (see docs/PRICING_AND_TAX.md §2).
+         Deliberately shipped EMPTY: a pricelist with no rules falls through to the
+         product's own Sales Price (product_pricelist_item.py: `rule_base = self.base
+         or 'list_price'`), so installing this file cannot re-price anything. Add the
+         rules per store once the commercial rates are agreed.
+
+         sequence starts at 11 on purpose. Core creates a "Default" pricelist at
+         sequence 10 per company, and a partner with no pricelist of their own falls
+         back to `search([('country_group_ids','=',False)], limit=1)` ordered by
+         sequence — so leaving 10 to "Default" keeps every existing customer on
+         exactly the price they had before this file existed.
+
+         currency_id and company_id are omitted so the field defaults apply
+         (env.company + its currency). Hardcoding either would break the second
+         tenant. -->
+    <data noupdate="1">
+
+        <record id="pricelist_retail" model="product.pricelist">
+            <field name="name">Retail</field>
+            <field name="sequence">11</field>
+        </record>
+
+        <record id="pricelist_wholesale" model="product.pricelist">
+            <field name="name">Wholesale</field>
+            <field name="sequence">12</field>
+        </record>
+
+        <record id="pricelist_dealer" model="product.pricelist">
+            <field name="name">Dealer</field>
+            <field name="sequence">13</field>
+        </record>
+
+        <record id="pricelist_distributor" model="product.pricelist">
+            <field name="name">Distributor</field>
+            <field name="sequence">14</field>
+        </record>
+
+        <record id="pricelist_vip" model="product.pricelist">
+            <field name="name">VIP</field>
+            <field name="sequence">15</field>
+        </record>
+
+        <record id="pricelist_corporate" model="product.pricelist">
+            <field name="name">Corporate</field>
+            <field name="sequence">16</field>
+        </record>
+
+    </data>
+
+    <!-- Outside the noupdate block on purpose. convert.py skips <function> when
+         noupdate is set and the module is merely being upgraded, which would mean
+         registers in already-installed databases never got wired. The method is
+         idempotent and refuses to touch a register that has any pricelist set, so
+         re-running it on every upgrade is safe. -->
+    <function model="pos.config" name="_pos_retail_seed_pricelists"/>
+
+</odoo>

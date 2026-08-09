@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Core's empty-catalogue placeholder offers the cashier two buttons:
+         "Load Sample", which injects Odoo's own demo catalogue (Desks, Chairs,
+         Office Lamps...) straight into a live retail database, and "Create
+         Manually", which opens the product editor at the till. Neither belongs
+         in the hands of a cashier mid-shift: a mis-click on the first one
+         pollutes the real product list, and products should be created in the
+         back office where cost, vendor, tax and the selling range are set.
+
+         The surrounding block only renders when the product grid is empty AND
+         no category is selected, so replacing its body costs nothing in normal
+         operation; it just turns a dangerous dead end into an instruction. -->
+    <t t-name="pos_retail.EmptyProductScreen"
+       t-inherit="point_of_sale.ProductScreen"
+       t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('o_nocontent_help')]" position="replace">
+            <div class="o_nocontent_help">
+                <p class="o_view_nocontent_smiling_face">No products to sell here</p>
+                <p>
+                    Nothing in this register's catalogue yet. Add products in the back
+                    office under <b>Point of Sale &gt; Products</b>, tick
+                    <b>Point of Sale</b> on each one, then close and reopen this session.
+                </p>
+                <p class="text-muted">
+                    If products do exist, check <b>Restrict Categories</b> on this
+                    register &#8212; it hides everything outside the categories listed there.
+                </p>
+            </div>
+        </xpath>
+    </t>
+
+</templates>

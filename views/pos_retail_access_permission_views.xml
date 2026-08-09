@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_retail_access_permission_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.access.permission.list</field>
+        <field name="model">pos.retail.access.permission</field>
+        <field name="arch" type="xml">
+            <list string="Permissions Catalog" default_order="category, sequence, id">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="category"/>
+                <field name="grants_price_edit" optional="hide"/>
+                <field name="grants_cost_edit" optional="hide"/>
+                <field name="role_ids" widget="many2many_tags" string="Used by Roles"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_access_permission_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.access.permission.form</field>
+        <field name="model">pos.retail.access.permission</field>
+        <field name="arch" type="xml">
+            <form string="Permission">
+                <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-key mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> one entry in the permission catalog that roles are composed from.<br/>
+                            <strong>How it works:</strong> a permission grants through the access rules below, through the
+                            included native access, or through the two price flags; assign it to users via
+                            <strong>Roles &amp; Permissions</strong>, not directly.
+                        </div>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="e.g. Create Products"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="category"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group>
+                            <field name="role_ids" widget="many2many_tags" readonly="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="description" nolabel="1" colspan="2"
+                               placeholder="What exactly does this permission unlock? Shown to the admin composing roles."/>
+                    </group>
+                    <notebook>
+                        <page string="Grants" name="grants">
+                            <group>
+                                <group string="Product Price Flags">
+                                    <field name="grants_price_edit"/>
+                                    <field name="grants_cost_edit"/>
+                                </group>
+                                <group string="Includes Native Access">
+                                    <field name="implied_ids" widget="many2many_tags" nolabel="1" colspan="2"/>
+                                </group>
+                            </group>
+                            <separator string="Access Rules"/>
+                            <p class="text-muted">
+                                Direct model access this permission grants. Read is always included on a listed model.
+                            </p>
+                            <field name="model_access"
+                                   context="{'default_name': name, 'default_perm_read': True, 'default_perm_write': False, 'default_perm_create': False, 'default_perm_unlink': False}">
+                                <list editable="bottom">
+                                    <field name="model_id" string="Model"/>
+                                    <field name="perm_read" column_invisible="1"/>
+                                    <field name="perm_create" string="Create"/>
+                                    <field name="perm_write" string="Edit"/>
+                                    <field name="perm_unlink" string="Delete"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_access_permission_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.access.permission.search</field>
+        <field name="model">pos.retail.access.permission</field>
+        <field name="arch" type="xml">
+            <search string="Permissions">
+                <field name="name"/>
+                <field name="role_ids"/>
+                <group>
+                    <filter string="Category" name="group_category" context="{'group_by': 'category'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_access_permission_action" model="ir.actions.act_window">
+        <field name="name">Permissions Catalog</field>
+        <field name="res_model">pos.retail.access.permission</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="pos_retail_access_permission_view_search"/>
+        <field name="context">{'search_default_group_category': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No permissions defined</p>
+            <p>The predefined catalog is installed with the module. You can add custom permissions here
+               and assign them to roles under Roles &amp; Permissions.</p>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The Archived filter that pairs with the new active flag on
+         res.country, so archived countries can be found and re-enabled from
+         the UI (select them, then Action > Unarchive). -->
+    <record id="view_country_search_pos_retail" model="ir.ui.view">
+        <field name="name">res.country.search.pos.retail</field>
+        <field name="model">res.country</field>
+        <field name="inherit_id" ref="base.view_country_search"/>
+        <field name="arch" type="xml">
+            <field name="phone_code" position="after">
+                <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

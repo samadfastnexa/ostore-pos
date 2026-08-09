@@ -7,9 +7,24 @@ class PosRetailDiscountRole(models.Model):
     _description = "POS Discount Role (cashier discount limits)"
     _order = 'sequence, id'
 
-    name = fields.Char(required=True, translate=True)
-    sequence = fields.Integer(default=10)
-    active = fields.Boolean(default=True)
+    name = fields.Char(
+        required=True, translate=True,
+        help="Name of the group of staff these discount limits apply to, for "
+             "example Cashier, Supervisor or Store Manager. You then give each "
+             "employee one of these roles.",
+    )
+    sequence = fields.Integer(
+        default=10,
+        help="Controls the order the roles appear in lists; the lowest number "
+             "comes first. Number them from least to most authority so the list "
+             "is easy to read.",
+    )
+    active = fields.Boolean(
+        default=True,
+        help="Untick to retire this role so it can no longer be given to anyone "
+             "new. Employees currently on it keep it until you move them to a "
+             "different role.",
+    )
     max_fixed_discount = fields.Monetary(
         string="Maximum Fixed Discount",
         currency_field='currency_id',
@@ -33,6 +48,8 @@ class PosRetailDiscountRole(models.Model):
     )
     currency_id = fields.Many2one(
         'res.currency', default=lambda self: self.env.company.currency_id, required=True,
+        help="Currency the maximum fixed discount above is measured in. It "
+             "defaults to your company currency and rarely needs changing.",
     )
 
     _name_uniq = models.Constraint(

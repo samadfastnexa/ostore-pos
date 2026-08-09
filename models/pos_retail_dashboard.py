@@ -2,7 +2,8 @@ from datetime import datetime, time, timedelta
 
 import pytz
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError
 
 SALE_STATES = ('paid', 'done')
 
@@ -44,11 +45,47 @@ class PosRetailDashboard(models.AbstractModel):
             domain.append((field, '<', end))
         return domain
 
+    def _previous_comparable_bounds(self, period, start, end, today_local):
+        """An honest baseline for the trend indicator: the same elapsed
+        duration, one period back — not the full previous period (which would
+        make an in-progress "Today"/"This Month" look artificially down)."""
+        if end:
+            length = end - start
+            return start - length, start
+        now_utc = fields.Datetime.now()
+        elapsed = max(now_utc - start, timedelta(seconds=1))
+        if period == 'today':
+            prev_start = start - timedelta(days=1)
+        elif period == 'week':
+            prev_start = start - timedelta(days=7)
+        else:  # month
+            prev_month_date = (today_local.replace(day=1) - timedelta(days=1)).replace(day=1)
+            prev_start = self._local_midnight_utc(prev_month_date)
+        return prev_start, prev_start + elapsed
+
+    def _pct_change(self, current, previous):
+        if not previous:
+            return None  # no baseline to compare against -- don't show a misleading 0%/inf swing
+        return (current - previous) / abs(previous) * 100
+
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
     @api.model
     def get_dashboard_data(self, period='month', date_from=None, date_to=None):
+        # This model is abstract: it owns no table, so ir.model.access never
+        # runs for it and the ACL layer that protects every other model here is
+        # simply absent. The menu is restricted to POS managers
+        # (pos_retail_dashboard_views.xml), but a menu only hides a button --
+        # any logged-in user, a cashier included, can still reach this method
+        # over /web/dataset/call_kw and read the whole financial picture:
+        # takings, margin, cost of goods sold, expenses, stock valuation.
+        # Re-state the menu's restriction where it is actually enforceable.
+        if not self.env.user.has_group('point_of_sale.group_pos_manager'):
+            raise AccessError(_(
+                "The Point of Sale dashboard is available to Point of Sale "
+                "managers only."
+            ))
         if period not in ('today', 'week', 'month', 'custom'):
             period = 'month'
         today_local = fields.Date.context_today(self)
@@ -58,12 +95,26 @@ class PosRetailDashboard(models.AbstractModel):
         kpis = self._get_kpis(start, end)
         kpis.update(self._get_inventory_kpis())
         kpis.update(self._get_expense_kpis())
+        kpis.update(self._get_stock_flow_today())
+        kpis.update(self._get_damaged_expired_kpis(start, end))
+        kpis.update(self._get_turnover_kpis(start, end))
+        kpis.update(self._get_reorder_cost())
+        movement = self._get_movement_analysis(start, end)
+        kpis['dead_stock_count'] = movement['dead_stock_count']
+        kpis['dead_stock_value'] = movement['dead_stock_value']
 
         return {
             'period': period,
+            # The resolved window, so a card's drill-through opens exactly the
+            # records that produced the figure rather than re-deriving dates
+            # client-side and drifting from them.
+            'period_start': fields.Datetime.to_string(start) if start else False,
+            'period_end': fields.Datetime.to_string(end) if end else False,
+            'drill': self._get_drill_targets(start, end, movement),
             'currency_id': self.env.company.currency_id.id,
             'company_name': self.env.company.name,
             'kpis': kpis,
+            'trend': self._get_trend(period, start, end, today_local, kpis),
             'sales_trend': self._get_sales_trend(trend_start),
             'payment_breakdown': self._get_payment_breakdown(start, end),
             'top_products': self._get_top_products(start, end),
@@ -71,6 +122,9 @@ class PosRetailDashboard(models.AbstractModel):
             'top_customers': self._get_top_customers(start, end),
             'low_stock': self._get_low_stock(),
             'expiring_soon': self._get_expiring_soon(),
+            'fast_movers': movement['fast_movers'],
+            'slow_movers': movement['slow_movers'],
+            'dead_stock': movement['dead_stock'],
             'refunds': self._get_refund_stats(start, end),
         }
 
@@ -128,6 +182,19 @@ class PosRetailDashboard(models.AbstractModel):
             'customers': customers,
             'cash_in_drawer': cash_in_drawer,
             'open_sessions': len(open_sessions),
+        }
+
+    # ------------------------------------------------------------------
+    # Trend (small up/down indicator on the headline KPI tiles)
+    # ------------------------------------------------------------------
+    def _get_trend(self, period, start, end, today_local, kpis):
+        prev_start, prev_end = self._previous_comparable_bounds(period, start, end, today_local)
+        prev_kpis = self._get_kpis(prev_start, prev_end)
+        return {
+            'sales_pct': self._pct_change(kpis['sales'], prev_kpis['sales']),
+            'transactions_pct': self._pct_change(kpis['transactions'], prev_kpis['transactions']),
+            'gross_profit_pct': self._pct_change(kpis['gross_profit'], prev_kpis['gross_profit']),
+            'net_sales_pct': self._pct_change(kpis['net_sales'], prev_kpis['net_sales']),
         }
 
     # ------------------------------------------------------------------
@@ -295,6 +362,249 @@ class PosRetailDashboard(models.AbstractModel):
                 })
         rows.sort(key=lambda r: r['days_left'])
         return rows[:limit]
+
+    # ------------------------------------------------------------------
+    # Record ids behind each figure, so every card can be opened
+    # ------------------------------------------------------------------
+    def _get_drill_targets(self, start, end, movement):
+        """Ids the dashboard cards drill into.
+
+        Sent as explicit id lists rather than domains the client rebuilds:
+        several figures (dead stock, expired lots, products in POS) come from
+        python-side filtering that no simple domain reproduces, and a card
+        that opened a *slightly* different set than the number it sits under
+        would quietly undermine trust in the whole dashboard.
+        """
+        Product = self.env['product.product']
+        storable = Product.search([('is_storable', '=', True), ('available_in_pos', '=', True)])
+        quants = self.env['stock.quant']._read_group(
+            [('product_id', 'in', storable.ids), ('location_id.usage', '=', 'internal')],
+            groupby=['product_id'], aggregates=['quantity:sum'],
+        )
+        qty_by_product = {product: qty or 0.0 for product, qty in quants}
+
+        expired_lot_ids = []
+        Lot = self.env['stock.lot']
+        if 'expiration_date' in Lot._fields:
+            now = fields.Datetime.now()
+            expired_lot_ids = [
+                lot.id for lot in Lot.search(
+                    [('expiration_date', '!=', False), ('expiration_date', '<', now)])
+                if (lot.product_qty or 0.0) > 0
+            ]
+
+        reorder_ids = [
+            op.id for op in self.env['stock.warehouse.orderpoint'].search([])
+            if op.qty_on_hand <= op.product_min_qty
+            and (op.product_max_qty or op.product_min_qty) - op.qty_on_hand > 0
+        ]
+
+        today_start = self._local_midnight_utc(fields.Date.context_today(self))
+        return {
+            'pos_product_ids': storable.ids,
+            'out_of_stock_ids': [p.id for p in storable if qty_by_product.get(p, 0.0) <= 0],
+            'in_stock_ids': [p.id for p in storable if qty_by_product.get(p, 0.0) > 0],
+            'negative_stock_ids': [p.id for p in storable if qty_by_product.get(p, 0.0) < 0],
+            'dead_stock_ids': movement['dead_stock_all_ids'],
+            'fast_mover_ids': movement['fast_mover_all_ids'],
+            'slow_mover_ids': movement['slow_mover_all_ids'],
+            'expired_lot_ids': expired_lot_ids,
+            'reorder_ids': reorder_ids,
+            'today_start': fields.Datetime.to_string(today_start),
+        }
+
+    # ------------------------------------------------------------------
+    # Stock movement today (goods physically received vs shipped out)
+    # ------------------------------------------------------------------
+    def _get_stock_flow_today(self):
+        """Quantity and value moved in and out of internal stock today.
+
+        Measured on stock.move.line (what actually moved) rather than on
+        pickings, so a partially received delivery counts what arrived rather
+        than the whole order. Internal transfers are excluded on purpose: a
+        move between two of the shop's own locations is not stock coming in
+        or going out.
+        """
+        Move = self.env['stock.move.line']
+        today_start = self._local_midnight_utc(fields.Date.context_today(self))
+        base = [('state', '=', 'done'), ('date', '>=', today_start)]
+
+        def flow(domain):
+            qty = value = 0.0
+            for line in Move.search(domain):
+                moved = line.quantity or 0.0
+                qty += moved
+                value += moved * (line.product_id.standard_price or 0.0)
+            return {'qty': qty, 'value': value}
+
+        stock_in = flow(base + [
+            ('location_id.usage', 'not in', ('internal', 'transit')),
+            ('location_dest_id.usage', '=', 'internal'),
+        ])
+        stock_out = flow(base + [
+            ('location_id.usage', '=', 'internal'),
+            ('location_dest_id.usage', 'not in', ('internal', 'transit')),
+        ])
+        return {
+            'stock_in_qty_today': stock_in['qty'],
+            'stock_in_value_today': stock_in['value'],
+            'stock_out_qty_today': stock_out['qty'],
+            'stock_out_value_today': stock_out['value'],
+        }
+
+    # ------------------------------------------------------------------
+    # Damaged (scrapped) and expired stock
+    # ------------------------------------------------------------------
+    def _get_damaged_expired_kpis(self, start, end=None):
+        """Damaged = stock scrapped in the period. Expired = what is sitting
+        in stock today past its expiry date, which is a standing loss rather
+        than a period figure."""
+        damaged_qty = damaged_value = 0.0
+        Scrap = self.env['stock.scrap']
+        domain = [('state', '=', 'done')] + self._date_domain('date_done', start, end)
+        for scrap in Scrap.search(domain):
+            qty = scrap.scrap_qty or 0.0
+            damaged_qty += qty
+            damaged_value += qty * (scrap.product_id.standard_price or 0.0)
+
+        expired_qty = expired_value = 0.0
+        expired_lots = 0
+        Lot = self.env['stock.lot']
+        if 'expiration_date' in Lot._fields:
+            now = fields.Datetime.now()
+            for lot in Lot.search([('expiration_date', '!=', False),
+                                   ('expiration_date', '<', now)]):
+                qty = lot.product_qty or 0.0
+                if qty > 0:
+                    expired_lots += 1
+                    expired_qty += qty
+                    expired_value += qty * (lot.product_id.standard_price or 0.0)
+
+        return {
+            'damaged_qty': damaged_qty,
+            'damaged_value': damaged_value,
+            'expired_qty': expired_qty,
+            'expired_value': expired_value,
+            'expired_lot_count': expired_lots,
+        }
+
+    # ------------------------------------------------------------------
+    # Stock turnover and the cost of restocking what is low
+    # ------------------------------------------------------------------
+    def _get_turnover_kpis(self, start, end=None):
+        """Turnover = cost of goods sold in the period / stock value at cost.
+
+        The textbook denominator is AVERAGE inventory over the period; the
+        value here is today's closing stock, because Odoo does not keep a
+        cheap historical valuation series and reconstructing one would make
+        the dashboard slow. Stated plainly rather than passed off as the
+        classic ratio: it answers "how many times over did I sell my current
+        shelf" which is the question a shopkeeper actually asks.
+        """
+        lines = self.env['pos.order.line'].search([
+            ('order_id.state', 'in', ('paid', 'done', 'invoiced')),
+        ] + self._date_domain('order_id.date_order', start, end))
+        cogs = sum(
+            (line.qty or 0.0) * (line.product_id.standard_price or 0.0)
+            for line in lines if (line.qty or 0.0) > 0
+        )
+        stock_value = sum(
+            quant.quantity * (quant.product_id.standard_price or 0.0)
+            for quant in self.env['stock.quant'].search(
+                [('location_id.usage', '=', 'internal')])
+        )
+        return {
+            'cogs_period': cogs,
+            'stock_turnover': (cogs / stock_value) if stock_value else 0.0,
+        }
+
+    def _get_reorder_cost(self):
+        """What it would cost to bring every low product back to its maximum.
+
+        Uses the reordering rules the shop has already set, so the figure is
+        grounded in its own policy rather than a guess.
+        """
+        total = 0.0
+        products = 0
+        for op in self.env['stock.warehouse.orderpoint'].search([]):
+            on_hand = op.qty_on_hand
+            if on_hand > op.product_min_qty:
+                continue
+            target = op.product_max_qty or op.product_min_qty
+            missing = target - on_hand
+            if missing <= 0:
+                continue
+            products += 1
+            total += missing * (op.product_id.standard_price or 0.0)
+        return {'reorder_cost': total, 'reorder_product_count': products}
+
+    # ------------------------------------------------------------------
+    # Movement analysis: what sells fast, what sells slowly, what never sells
+    # ------------------------------------------------------------------
+    def _get_movement_analysis(self, start, end=None, limit=8):
+        """Rank products by how much stock they turned over in the period.
+
+        Dead stock is the important one: products holding money on the shelf
+        with NO sales at all in the period. Slow movers did sell, just barely,
+        so they are a different problem and kept separate.
+        """
+        sold = {}
+        lines = self.env['pos.order.line'].search([
+            ('order_id.state', 'in', ('paid', 'done', 'invoiced')),
+        ] + self._date_domain('order_id.date_order', start, end))
+        for line in lines:
+            qty = line.qty or 0.0
+            if qty <= 0 or not line.product_id:
+                continue
+            stat = sold.setdefault(line.product_id, {'qty': 0.0, 'revenue': 0.0})
+            stat['qty'] += qty
+            stat['revenue'] += line.price_subtotal_incl or 0.0
+
+        stocked = self.env['product.product'].search([
+            ('is_storable', '=', True), ('available_in_pos', '=', True),
+        ])
+        quants = self.env['stock.quant']._read_group(
+            [('product_id', 'in', stocked.ids), ('location_id.usage', '=', 'internal')],
+            groupby=['product_id'], aggregates=['quantity:sum'],
+        )
+        on_hand = {product: qty or 0.0 for product, qty in quants}
+
+        def row(product, stat, qty_on_hand):
+            return {
+                'product_id': product.id,
+                'name': product.display_name,
+                'qty_sold': stat['qty'],
+                'revenue': stat['revenue'],
+                'on_hand': qty_on_hand,
+                'stock_value': qty_on_hand * (product.standard_price or 0.0),
+            }
+
+        movers = [row(p, s, on_hand.get(p, 0.0)) for p, s in sold.items()]
+        movers.sort(key=lambda r: (-r['qty_sold'], -r['revenue']))
+
+        dead = [
+            row(p, {'qty': 0.0, 'revenue': 0.0}, on_hand.get(p, 0.0))
+            for p in stocked
+            if p not in sold and on_hand.get(p, 0.0) > 0
+        ]
+        dead.sort(key=lambda r: -r['stock_value'])
+
+        # Slow movers must still be products that SOLD; anything with no
+        # sales belongs in dead stock, not at the bottom of this list.
+        slow = [r for r in reversed(movers) if r['qty_sold'] > 0]
+        return {
+            'fast_movers': movers[:limit],
+            'slow_movers': slow[:limit],
+            'dead_stock': dead[:limit],
+            'dead_stock_count': len(dead),
+            'dead_stock_value': sum(r['stock_value'] for r in dead),
+            # Full id lists for the drill-throughs: the panels show the worst
+            # few, but clicking the headline figure must open everything it
+            # counted, not just the visible rows.
+            'dead_stock_all_ids': [r['product_id'] for r in dead],
+            'fast_mover_all_ids': [r['product_id'] for r in movers],
+            'slow_mover_all_ids': [r['product_id'] for r in slow],
+        }
 
     # ------------------------------------------------------------------
     # Refund stats

@@ -1,0 +1,309 @@
+// Brand-colour left navigation for the back office.
+//
+// Odoo has no sidebar, so the layout shift is done here rather than by
+// restructuring the web client: the sidebar is fixed to the left edge and
+// .o_web_client is padded by the same width. That keeps core's flex layout
+// (column: navbar + action manager) completely untouched.
+
+$pos-retail-side-width: 232px;
+$pos-retail-side-width-collapsed: 62px;
+
+// A visible three-stop gradient: bright violet at the top, deep indigo at the
+// bottom. The deeper lower half also buys back contrast for the menu items,
+// which sit further down the panel.
+$pos-retail-side-top: #8b5cf6;
+$pos-retail-side-mid: #6d28d9;
+$pos-retail-side-deep: #4c1d95;
+$pos-retail-side-accent: $pos-retail-side-mid;
+
+.pos-retail-side {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: $pos-retail-side-width;
+    z-index: 900;              // above the content, below Odoo's dialogs
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(
+        165deg,
+        $pos-retail-side-top 0%,
+        $pos-retail-side-mid 45%,
+        $pos-retail-side-deep 100%
+    );
+    color: #fff;
+    box-shadow: 2px 0 14px -6px rgba(40, 20, 90, .55);
+    transition: width .16s ease;
+
+    &--collapsed { width: $pos-retail-side-width-collapsed; }
+
+    // ---- brand ----
+    &__brand {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        height: 46px;
+        flex: none;
+        padding: 0 .55rem 0 .7rem;
+        border-bottom: 1px solid rgba(255, 255, 255, .14);
+    }
+
+    &__mark {
+        width: 30px;
+        height: 30px;
+        flex: none;
+        border-radius: .5rem;
+        background: rgba(255, 255, 255, .22);
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        font-size: .95rem;
+    }
+
+    &__brandname {
+        font-weight: 750;
+        font-size: 1rem;
+        letter-spacing: -.01em;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    &__toggle {
+        margin-left: auto;
+        width: 26px;
+        height: 26px;
+        flex: none;
+        border: 0;
+        border-radius: .4rem;
+        background: rgba(255, 255, 255, .14);
+        color: #fff;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        font-size: .78rem;
+
+        &:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+    }
+
+    // ---- scrolling menu ----
+    &__nav {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: .5rem .5rem 1rem;
+
+        // Keep the scrollbar from breaking the flat colour block.
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, .3) transparent;
+        &::-webkit-scrollbar { width: 6px; }
+        &::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .28);
+            border-radius: 3px;
+        }
+    }
+
+    &__app,
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        // Full white: at 84% over this violet the contrast ratio fell below the
+        // readable threshold. The soft shadow keeps it crisp over the gradient.
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(28, 10, 70, .35);
+        text-align: left;
+        border-radius: .5rem;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: background-color .12s ease, color .12s ease;
+
+        &:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+        &:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, .85);
+            outline-offset: -2px;
+        }
+    }
+
+    // One block per app; the block of the app you are IN becomes an inset
+    // panel, so its sections and items visibly belong to it and the other
+    // app rows (the "main headings") stand apart.
+    &__block {
+        border-radius: .6rem;
+
+        &.is-open {
+            background: rgba(18, 7, 55, .28);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .09);
+            padding: .2rem .3rem .5rem;
+            margin: .3rem 0 .55rem;
+        }
+    }
+
+    &__app {
+        padding: .55rem .6rem;
+        font-weight: 750;
+        font-size: .92rem;
+        letter-spacing: .01em;
+        margin-bottom: 1px;
+
+        &.is-active {
+            background: rgba(255, 255, 255, .26);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28);
+            color: #fff;
+        }
+    }
+
+    &__icon {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        object-fit: contain;
+        border-radius: .25rem;
+
+        &--fallback {
+            display: grid;
+            place-items: center;
+            font-size: .78rem;
+            opacity: .85;
+        }
+    }
+
+    &__text { overflow: hidden; text-overflow: ellipsis; }
+
+    // Collapsible section header. Deliberately styled as a REAL nav row
+    // (title case, bold, same size as a standalone page like Dashboard), not
+    // a mini small-caps label: the small-caps look made headers read as less
+    // important than their own child items. Small caps are reserved for the
+    // deeper sub-group labels, giving three visibly distinct levels.
+    &__group {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        width: 100%;
+        border: 0;
+        // Openable groups carry their own background pill at ALL times, so
+        // they are visually distinct from plain page links (Dashboard,
+        // Expenses), which stay flat until hovered: "has a background" means
+        // "this one expands".
+        background: rgba(255, 255, 255, .09);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
+        text-align: left;
+        cursor: pointer;
+        font-size: .87rem;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(28, 10, 70, .35);
+        padding: .45rem .6rem;
+        margin-top: .28rem;
+        border-radius: .5rem;
+        white-space: nowrap;
+        overflow: hidden;
+
+        &:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+
+        // Currently expanded: clearly stronger fill than a closed group.
+        &.is-open {
+            background: rgba(255, 255, 255, .2);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+        }
+
+        &:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, .85);
+            outline-offset: -2px;
+        }
+    }
+
+    &__chev {
+        width: 12px;
+        flex: none;
+        font-size: .58rem;
+        opacity: .8;
+        text-align: center;
+    }
+
+    // The open section's contents: one indented block with a vertical guide
+    // rail, so items are visibly INSIDE their section instead of free-floating
+    // rows that compete with the headers.
+    &__items {
+        margin: .05rem 0 .4rem 1.18rem;   // rail starts under the header text
+        padding-left: .5rem;
+        border-left: 1px solid rgba(255, 255, 255, .3);
+    }
+
+    // Grouping menu inside a section (third menu level exists below it):
+    // a quieter small-caps label between the section header and its items.
+    &__subgroup {
+        font-size: .62rem;
+        font-weight: 750;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, .62);
+        text-shadow: 0 1px 2px rgba(28, 10, 70, .3);
+        padding: .5rem .55rem .15rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__item {
+        padding: .34rem .55rem;
+        font-size: .82rem;
+        font-weight: 400;   // clearly lighter than the 700 headers
+
+        // The menu currently open (as clicked in this sidebar): a filled row
+        // with a left accent bar, clearly heavier than the hover wash.
+        &.is-active {
+            background: rgba(255, 255, 255, .2);
+            box-shadow: inset 3px 0 0 0 rgba(255, 255, 255, .9);
+            font-weight: 700;
+        }
+    }
+
+    // Item under a sub-group label: one step deeper again.
+    &__item--sub { padding-left: 1.5rem; }
+
+    // A section that is a single page (Dashboard, Expenses): dressed exactly
+    // like a section header (same size/weight, text aligned with header
+    // text), so all top-level entries of the app read as siblings.
+    &__item--top {
+        font-size: .87rem;
+        font-weight: 700;
+        padding: .45rem .6rem .45rem 1.85rem;
+        margin-top: .15rem;
+    }
+
+    // ---- collapsed: icons only ----
+    &--collapsed {
+        .pos-retail-side__brandname,
+        .pos-retail-side__text,
+        .pos-retail-side__group,
+        .pos-retail-side__subgroup,
+        .pos-retail-side__items,
+        .pos-retail-side__item { display: none; }
+
+        .pos-retail-side__brand { justify-content: center; padding: 0 .3rem; }
+        .pos-retail-side__toggle { margin-left: 0; }
+        .pos-retail-side__app { justify-content: center; padding: .55rem .3rem; }
+    }
+}
+
+// ---- make room for it -------------------------------------------------------
+.o_web_client { padding-left: $pos-retail-side-width; }
+body.pos-retail-side-collapsed .o_web_client { padding-left: $pos-retail-side-width-collapsed; }
+
+// The app's own sections now live in the sidebar, so drop them from the top bar
+// rather than showing the same menu twice. The apps launcher, breadcrumb and
+// systray are all left alone.
+.o_navbar .o_menu_sections { display: none !important; }
+
+// ---- small screens: fall back to stock Odoo navigation ---------------------
+@media (max-width: 991.98px) {
+    .pos-retail-side { display: none; }
+    .o_web_client,
+    body.pos-retail-side-collapsed .o_web_client { padding-left: 0; }
+    .o_navbar .o_menu_sections { display: flex !important; }
+}

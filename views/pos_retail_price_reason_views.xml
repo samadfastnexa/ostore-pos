@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_retail_price_reason_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.price.reason.list</field>
+        <field name="model">pos.retail.price.reason</field>
+        <field name="arch" type="xml">
+            <list string="Price Reasons">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_price_reason_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.price.reason.form</field>
+        <field name="model">pos.retail.price.reason</field>
+        <field name="arch" type="xml">
+            <form string="Price Reason">
+                <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> the list of reasons a manager picks from when approving a
+                            selling price outside the product's allowed range.<br/>
+                            <strong>How to use:</strong> type a name and save; it appears automatically in the POS
+                            price approval popup. The chosen reason is stored on the order line for auditing.
+                        </div>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Wholesale Customer"/></h1>
+                    </div>
+                    <field name="active" invisible="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_price_reason_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.price.reason.search</field>
+        <field name="model">pos.retail.price.reason</field>
+        <field name="arch" type="xml">
+            <search string="Price Reasons">
+                <field name="name"/>
+                <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_price_reason_action" model="ir.actions.act_window">
+        <field name="name">Price Reasons</field>
+        <field name="res_model">pos.retail.price.reason</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first price reason</p>
+            <p>Managers pick one of these when approving a price outside a product's allowed range.</p>
+        </field>
+    </record>
+
+</odoo>

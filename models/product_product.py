@@ -1,18 +1,43 @@
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessError, ValidationError
 from odoo.tools import groupby
 
 
 class ProductProduct(models.Model):
     _inherit = 'product.product'
 
+    def write(self, vals):
+        # standard_price is the real, stored, company-dependent field here;
+        # product.template's own standard_price is only compute+inverse, and
+        # its inverse performs a plain (non-sudo) write() on the variant, so
+        # guarding here also catches that path -- not just direct variant
+        # edits. See product_template.py for the matching list_price guard
+        # and the full reasoning (both mirror account.move.write()'s own
+        # "posted move" field lock, the closest core precedent for this).
+        if ('standard_price' in vals
+                and not self.env.su
+                and not self.env.user._is_system()
+                and not self.env.user._pos_retail_can_edit_price_field('standard_price')
+                # No-op tolerance: only raise when the value actually changes.
+                # The web client and load()/imports re-send unchanged fields;
+                # blocking those would break e.g. re-importing a product CSV
+                # whose Cost column is untouched.
+                and any(p.standard_price != vals['standard_price'] for p in self)):
+            raise AccessError(_(
+                "You are not allowed to change the Cost on a product that "
+                "already exists. Ask your administrator for the "
+                "\"Can Edit Cost\" permission."
+            ))
+        return super().write(vals)
+
     @api.model
     def _load_pos_data_fields(self, config):
         result = super()._load_pos_data_fields(config)
-        if 'brand_id' not in result:
-            result.append('brand_id')
-        if 'qty_available' not in result:
-            result.append('qty_available')
+        # Mirror of the template loader: the variant path needs the same selling
+        # range so a price entered against a specific variant is validated too.
+        for field in ('brand_id', 'qty_available', 'minimum_selling_price', 'mrp'):
+            if field not in result:
+                result.append(field)
         return result
 
     def _select_seller(self, partner_id=False, quantity=0.0, date=None, uom_id=False,

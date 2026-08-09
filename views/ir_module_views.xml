@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Keep Enterprise-only apps (Knowledge, Helpdesk, Appraisal, ... flagged
+         to_buy) out of the Apps menu: on Community they only render an
+         "Upgrade" upsell button, which has no place in a white-labeled product.
+         Overrides just the domain of the native action; a base module upgrade
+         would reset it, but upgrading pos_retail reasserts it. -->
+    <record id="base.open_module_tree" model="ir.actions.act_window">
+        <field name="domain">[('to_buy', '=', False)]</field>
+    </record>
+
+</odoo>

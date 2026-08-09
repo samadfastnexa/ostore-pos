@@ -1,0 +1,218 @@
+// Global backend touch: make the Save button impossible to miss, everywhere.
+//
+// `.o_form_button_save` is a single component (web/FormStatusIndicator) reused
+// identically on every form view across the entire backend — this is a narrow,
+// well-defined target, not a broad theme override of lists/forms/colors.
+// Matches the color language established for the POS checkout screen: green =
+// confirm / save.
+
+// Sized like the New button (btn btn-primary), with a text label added by
+// form_save_button.xml -- core ships Save/Discard as tiny icon-only buttons.
+.o_form_button_save {
+    background-color: #16a34a !important;
+    border-color: #16a34a !important;
+    padding: .375rem .9rem !important;
+    border-radius: .375rem !important;
+    box-shadow: 0 1px 4px rgba(22, 163, 74, .5);
+    font-weight: 600;
+
+    i, .pos-retail-save-label {
+        color: #fff !important;
+        font-size: .9rem;
+    }
+
+    &:hover, &:focus {
+        background-color: #15803d !important;
+        border-color: #15803d !important;
+        box-shadow: 0 2px 6px rgba(21, 128, 61, .6);
+    }
+}
+
+.o_form_button_cancel {
+    padding: .375rem .9rem !important;
+    border-radius: .375rem !important;
+    border: 1px solid #d7dce4 !important;
+    margin-left: .4rem;
+    font-weight: 600;
+
+    .pos-retail-discard-label { font-size: .9rem; }
+
+    &:hover {
+        border-color: #dc2626 !important;
+        color: #b91c1c;
+    }
+}
+
+// ============================================================================
+// Content area: the rest of the design picked in the admin showroom — rounded
+// list cards, soft uppercase headers, hover rows, pills, carded form sheets,
+// and one brand primary everywhere. Light-only: Community 19 ships no backend
+// dark mode. Every selector below is verified against the 19.0 source.
+// ============================================================================
+
+$zx-accent: #7c3aed;
+$zx-accent-deep: #5b21b6;
+$zx-line: #e6e2f2;
+$zx-canvas: #f3f2f8;
+$zx-muted: #6b6790;
+
+// ---- one brand primary (Odoo blanks Bootstrap's var prefix, so buttons run
+// on --btn-*; the green Save keeps winning via its own !important rules) -----
+.o_web_client .btn-primary {
+    --btn-bg: #{$zx-accent};
+    --btn-border-color: #{$zx-accent};
+    --btn-hover-bg: #{$zx-accent-deep};
+    --btn-hover-border-color: #{$zx-accent-deep};
+    --btn-active-bg: #{$zx-accent-deep};
+    --btn-active-border-color: #{$zx-accent-deep};
+}
+
+// ---- control panel ---------------------------------------------------------
+.o_web_client {
+    .o_control_panel {
+        background-color: #fff;
+        border-bottom: 1px solid $zx-line;
+    }
+
+    .o_control_panel .o_searchview {
+        border-radius: .55rem;
+        border-color: $zx-line;
+
+        &:focus-within {
+            border-color: $zx-accent;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, .12);
+        }
+    }
+
+    .o_searchview_facet {
+        border-radius: .45rem;
+        background-color: color-mix(in srgb, #{$zx-accent} 8%, #fff);
+    }
+
+    .o_cp_switch_buttons .o_switch_view { border-color: $zx-line; }
+}
+
+// ---- list views: the rounded table card ------------------------------------
+.o_web_client {
+    .o_list_renderer {
+        background-color: #fff;
+        border: 1px solid $zx-line;
+        border-radius: .8rem;
+        box-shadow: 0 4px 16px -12px rgba(40, 20, 90, .25);
+        overflow: hidden;
+    }
+
+    .o_list_table {
+        // stripes become a whisper of the accent (both var names covered; if
+        // a Bootstrap bump renames them the stock stripe simply remains)
+        --table-striped-bg: rgba(124, 58, 237, .025);
+        --table-accent-bg: rgba(124, 58, 237, .025);
+
+        > thead > tr > th {
+            text-transform: uppercase;
+            font-size: .72rem;
+            letter-spacing: .06em;
+            color: $zx-muted;
+            background-color: #faf9fd;
+            border-bottom: 1px solid $zx-line;
+            padding-top: .55rem;
+            padding-bottom: .55rem;
+        }
+
+        > tbody .o_data_row:hover > td {
+            background-color: color-mix(in srgb, #{$zx-accent} 5%, #fff);
+        }
+        > tbody .o_data_row.o_data_row_selected > td {
+            background-color: color-mix(in srgb, #{$zx-accent} 10%, #fff);
+        }
+        > tbody td.o_data_cell {
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+        }
+
+        .o_group_header { background-color: #f6f4fc; }
+
+        > tfoot.o_list_footer {
+            background-color: #faf9fd;
+            border-top: 1px solid $zx-line;
+            font-weight: 650;
+        }
+    }
+
+    // status pills (widget="badge" renders .badge.rounded-pill + text-bg-*)
+    .badge.rounded-pill {
+        font-weight: 650;
+        padding: .32em .72em;
+    }
+}
+
+// ---- form views: the sheet as a card ---------------------------------------
+.o_web_client {
+    .o_form_sheet_bg { background-color: $zx-canvas; }
+
+    .o_form_sheet {
+        background-color: #fff;
+        border: 1px solid $zx-line;
+        border-radius: .8rem;
+        box-shadow: 0 4px 18px -14px rgba(40, 20, 90, .3);
+    }
+
+    .o_form_label { font-weight: 600; }
+
+    .o_notebook .nav-tabs .nav-link {
+        font-weight: 600;
+        color: $zx-muted;
+
+        &.active { color: $zx-accent; }
+    }
+}
+
+// ---- kanban cards -----------------------------------------------------------
+.o_web_client .o_kanban_renderer .o_kanban_record {
+    border: 1px solid $zx-line;
+    border-radius: .7rem;
+    box-shadow: 0 3px 12px -10px rgba(40, 20, 90, .3);
+    transition: transform .1s ease, box-shadow .12s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -12px rgba(40, 20, 90, .4);
+    }
+}
+
+// Hide Enterprise-only upsells across every Settings screen (Accounting >
+// Vendor Payments/Digitization, Expenses > OCR, etc). Every such field renders
+// the same ".o_enterprise_label" badge core-side (FormLabelHighlightText)
+// regardless of which app owns it, so a handful of selectors cover all apps at
+// once instead of enumerating each <setting id="...">.
+//
+// A settings block renders as SIBLINGS -- <h2>, optional <h3 class=
+// "o_setting_tip">, then <div class="o_settings_container"> holding the
+// .o_setting_box items (web.SettingsBlock) -- so the heading of an
+// all-Enterprise section has to be matched separately via :has(+ ...).
+
+// All three rule groups are prefixed with .app_settings_block (the Settings
+// screen root) so the :has() anchors only exist there. Unprefixed, the bare
+// `h2:has(+ ...)` variant made EVERY h2 across the whole backend a :has
+// anchor with sibling-invalidation, taxing style recalc on every screen
+// transition -- for a rule that only ever matters inside Settings.
+
+// 1. Any single Enterprise-badged setting.
+.app_settings_block .o_setting_box:has(.o_enterprise_label) {
+    display: none !important;
+}
+
+// 2. A section whose EVERY setting is Enterprise: hide the whole container.
+//    Guarded by :has(.o_enterprise_label) so containers holding custom,
+//    box-free markup are never touched.
+.app_settings_block .o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label)))) {
+    display: none !important;
+}
+
+// 3. ...and its now-orphaned heading + tip line, matched as the siblings
+//    directly before such a container.
+.app_settings_block h2:has(+ .o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label))))),
+.app_settings_block h2:has(+ h3.o_setting_tip + .o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label))))),
+.app_settings_block h3.o_setting_tip:has(+ .o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label))))) {
+    display: none !important;
+}

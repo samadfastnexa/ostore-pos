@@ -7,6 +7,18 @@ DEFAULT_RETURN_POLICY = (
     "Refunds are issued to the original payment method."
 )
 
+# Shop colour choices for the POS look. The value is used verbatim as a data
+# attribute on the POS root element; the matching hex lives in pos_theme.scss
+# so there is a single source of truth for the palette.
+POS_RETAIL_THEME_COLORS = [
+    ('purple', 'Purple'),
+    ('blue', 'Blue'),
+    ('green', 'Green'),
+    ('teal', 'Teal'),
+    ('orange', 'Orange'),
+    ('pink', 'Pink'),
+]
+
 
 class PosConfig(models.Model):
     _inherit = 'pos.config'
@@ -60,6 +72,104 @@ class PosConfig(models.Model):
         help="Print the manager name (if approval was required) and the "
              "discount reason on the receipt.",
     )
+    # --- Returns & Refunds (#12) ---
+    pos_retail_require_return_reason = fields.Boolean(
+        string="Require Return Reason", default=True,
+        help="Cashiers must pick a return reason whenever a refund is processed.",
+    )
+    pos_retail_allow_no_receipt_return = fields.Boolean(
+        string="Allow Returns Without Receipt", default=True,
+        help="Show a 'Return (No Receipt)' action in the POS so a product can be "
+             "refunded without looking up the original order.",
+    )
+    pos_retail_return_requires_manager = fields.Boolean(
+        string="Return Needs Manager Approval", default=True,
+        help="Require a manager PIN for a return without a receipt.",
+    )
+    # --- Flexible pricing ---
+    pos_retail_price_range_enabled = fields.Boolean(
+        string="Allow Price Within Range", default=True,
+        help="When a product has a selling range (Minimum Selling Price and/or "
+             "Maximum Retail Price), ask the cashier to confirm or adjust the "
+             "price as it is added. "
+             "Products without a range are always added instantly at their "
+             "standard price, so scanning stays fast.",
+    )
+    pos_retail_price_override_requires_reason = fields.Boolean(
+        string="Require Reason for Price Override", default=True,
+        help="Ask for a reason whenever a manager approves a price outside the "
+             "allowed range. The reason is stored on the order line for auditing.",
+    )
+    # --- Appearance ---
+    pos_retail_theme_color = fields.Selection(
+        POS_RETAIL_THEME_COLORS, string="Shop Colour", default='purple', required=True,
+        help="Colours the POS top bar, the selected category and other highlights. "
+             "Pay stays green, discounts orange, returns red and customer blue so "
+             "cashiers always recognise those actions whatever colour is chosen.",
+    )
+    # --- Receipt Studio ---
+    # Layout, paper width and content of the printed receipt. Native fields
+    # already cover: logo (company logo), header/footer messages
+    # (receipt_header/receipt_footer), the company address/VAT/contact block,
+    # cashier, receipt number, tax detail, auto-print. These add what native
+    # has no concept of.
+    pos_retail_receipt_style = fields.Selection(
+        [('standard', "Standard"), ('modern', "Modern"), ('minimal', "Minimal")],
+        string="Receipt Template Style", default='standard', required=True,
+        help="Standard: the classic layout. Modern: bolder headings and framed "
+             "totals. Minimal: hides the logo and per-line detail for the "
+             "shortest possible ticket.",
+    )
+    pos_retail_receipt_width = fields.Selection(
+        [('80', "80 mm (Standard Thermal)"), ('58', "58 mm (Compact Thermal)")],
+        string="Receipt Paper Width", default='80', required=True,
+        help="Match your thermal printer's paper roll. Affects both printer "
+             "output and the browser print preview.",
+    )
+    pos_retail_receipt_font = fields.Selection(
+        [('small', "Small"), ('normal', "Normal"), ('large', "Large")],
+        string="Receipt Font Size", default='normal', required=True,
+        help="How big the printed text is on the ticket. Small fits more lines "
+             "per receipt and saves paper; Large is easier for customers to "
+             "read but makes every receipt longer.",
+    )
+    pos_retail_receipt_show_sku = fields.Boolean(
+        string="Show Product Code (SKU) on Receipt Lines", default=True,
+        help="Print each product's internal reference under its line.",
+    )
+    pos_retail_receipt_show_qr = fields.Boolean(
+        string="Show Receipt QR Code", default=True,
+        help="Print a QR code of the receipt reference for quick lookup.",
+    )
+    pos_retail_receipt_show_ref_barcode = fields.Boolean(
+        string="Show Reference Barcode", default=False,
+        help="Print the receipt reference as a scannable Code128 barcode in "
+             "the footer. Needs a network connection at print time.",
+    )
+    pos_retail_receipt_thankyou = fields.Char(
+        string="Thank-You Message", default="Thank you for shopping with us!",
+        help="Printed prominently above the receipt footer. Leave empty to skip.",
+    )
+    pos_retail_receipt_social = fields.Char(
+        string="Website & Social Line",
+        help="One line for your website and social handles, printed under the "
+             "store name in the footer. Example: www.mystore.pk | fb.com/mystore",
+    )
+    pos_retail_receipt_terms = fields.Text(
+        # NOT "Terms & Conditions": account already owns that label via
+        # invoice_terms on res.config.settings, and a duplicate label warns at
+        # install and makes the two indistinguishable in field lists.
+        string="Receipt Terms & Conditions",
+        help="Printed on PDF receipts (A4). Kept off the thermal ticket to "
+             "save paper; the Return Policy block covers the essentials there.",
+    )
+    # --- Quotations (#11) ---
+    pos_retail_allow_quotation = fields.Boolean(
+        string="Allow Quotations", default=True,
+        help="Show a 'Save as Quotation' action in the POS so a cart can be saved "
+             "as a Sales quotation (sale.order) instead of being paid at the till. "
+             "The quotation can later be settled back into the POS for payment.",
+    )
 
     @api.constrains('cash_rounding', 'rounding_method', 'pos_retail_max_roundoff_amount')
     def _check_max_roundoff_amount(self):
@@ -72,6 +182,49 @@ class PosConfig(models.Model):
                         rounding=config.rounding_method.rounding,
                         max=config.pos_retail_max_roundoff_amount,
                     ))
+
+    @api.model
+    def _pos_retail_seed_pricelists(self):
+        """Offer the shipped customer-type pricelists at every unconfigured register.
+
+        Called from data/pos_retail_pricelist_data.xml on install and on every
+        upgrade, so it must stay idempotent and must never overrule a choice the
+        store already made: a register that already lists any available pricelist
+        is left exactly as it is.
+
+        Only pricelists matching the register's own currency are attached --
+        pos.config._check_currencies() rejects the write otherwise, and on a
+        multi-currency tenant the shipped set belongs to the main company.
+        """
+        pricelists = self.env['product.pricelist'].browse([
+            pricelist.id
+            for xmlid in (
+                'pos_retail.pricelist_retail',
+                'pos_retail.pricelist_wholesale',
+                'pos_retail.pricelist_dealer',
+                'pos_retail.pricelist_distributor',
+                'pos_retail.pricelist_vip',
+                'pos_retail.pricelist_corporate',
+            )
+            if (pricelist := self.env.ref(xmlid, raise_if_not_found=False))
+        ])
+        if not pricelists:
+            return
+
+        default = self.env.ref('pos_retail.pricelist_retail', raise_if_not_found=False)
+
+        for config in self.search([('available_pricelist_ids', '=', False)]):
+            usable = pricelists.filtered(
+                lambda p: p.currency_id == config.currency_id
+                and (not p.company_id or p.company_id == config.company_id)
+            )
+            if not usable:
+                continue
+            config.write({
+                'use_pricelist': True,
+                'available_pricelist_ids': [fields.Command.set(usable.ids)],
+                'pricelist_id': (default if default in usable else usable[0]).id,
+            })
 
 
 class ResConfigSettings(models.TransientModel):
@@ -112,6 +265,51 @@ class ResConfigSettings(models.TransientModel):
         readonly=False,
         string="Require Manager Approval",
     )
+    pos_retail_require_return_reason = fields.Boolean(
+        related='pos_config_id.pos_retail_require_return_reason',
+        readonly=False,
+        string="Require Return Reason",
+    )
+    pos_retail_allow_no_receipt_return = fields.Boolean(
+        related='pos_config_id.pos_retail_allow_no_receipt_return',
+        readonly=False,
+        string="Allow Returns Without Receipt",
+    )
+    pos_retail_return_requires_manager = fields.Boolean(
+        related='pos_config_id.pos_retail_return_requires_manager',
+        readonly=False,
+        string="Return Needs Manager Approval",
+    )
+    pos_retail_quote_show_images = fields.Boolean(
+        related='company_id.pos_retail_quote_show_images',
+        readonly=False,
+        string="Show Product Images on Quotations",
+    )
+    pos_retail_quote_show_qr = fields.Boolean(
+        related='company_id.pos_retail_quote_show_qr',
+        readonly=False,
+        string="Show QR Code on Quotations",
+    )
+    pos_retail_allow_quotation = fields.Boolean(
+        related='pos_config_id.pos_retail_allow_quotation',
+        readonly=False,
+        string="Allow Quotations",
+    )
+    pos_retail_theme_color = fields.Selection(
+        related='pos_config_id.pos_retail_theme_color',
+        readonly=False,
+        string="Shop Colour",
+    )
+    pos_retail_price_range_enabled = fields.Boolean(
+        related='pos_config_id.pos_retail_price_range_enabled',
+        readonly=False,
+        string="Allow Price Within Range",
+    )
+    pos_retail_price_override_requires_reason = fields.Boolean(
+        related='pos_config_id.pos_retail_price_override_requires_reason',
+        readonly=False,
+        string="Require Reason for Price Override",
+    )
     pos_retail_allow_manager_override = fields.Boolean(
         related='pos_config_id.pos_retail_allow_manager_override',
         readonly=False,
@@ -121,4 +319,49 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.pos_retail_receipt_show_discount_details',
         readonly=False,
         string="Show Discount Details on Receipt",
+    )
+    pos_retail_receipt_style = fields.Selection(
+        related='pos_config_id.pos_retail_receipt_style',
+        readonly=False,
+        string="Receipt Template Style",
+    )
+    pos_retail_receipt_width = fields.Selection(
+        related='pos_config_id.pos_retail_receipt_width',
+        readonly=False,
+        string="Receipt Paper Width",
+    )
+    pos_retail_receipt_font = fields.Selection(
+        related='pos_config_id.pos_retail_receipt_font',
+        readonly=False,
+        string="Receipt Font Size",
+    )
+    pos_retail_receipt_show_sku = fields.Boolean(
+        related='pos_config_id.pos_retail_receipt_show_sku',
+        readonly=False,
+        string="Show Product Code (SKU) on Receipt Lines",
+    )
+    pos_retail_receipt_show_qr = fields.Boolean(
+        related='pos_config_id.pos_retail_receipt_show_qr',
+        readonly=False,
+        string="Show Receipt QR Code",
+    )
+    pos_retail_receipt_show_ref_barcode = fields.Boolean(
+        related='pos_config_id.pos_retail_receipt_show_ref_barcode',
+        readonly=False,
+        string="Show Reference Barcode",
+    )
+    pos_retail_receipt_thankyou = fields.Char(
+        related='pos_config_id.pos_retail_receipt_thankyou',
+        readonly=False,
+        string="Thank-You Message",
+    )
+    pos_retail_receipt_social = fields.Char(
+        related='pos_config_id.pos_retail_receipt_social',
+        readonly=False,
+        string="Website & Social Line",
+    )
+    pos_retail_receipt_terms = fields.Text(
+        related='pos_config_id.pos_retail_receipt_terms',
+        readonly=False,
+        string="Receipt Terms & Conditions",
     )

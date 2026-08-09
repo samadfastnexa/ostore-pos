@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.PriceSelectionPopup">
+        <Dialog title="props.product.display_name" size="'md'">
+            <div class="pos-retail-price-popup d-flex flex-column gap-3">
+
+                <div class="pos-retail-price-range-banner">
+                    <span class="label">Allowed range</span>
+                    <span class="value"><t t-esc="formattedRange"/></span>
+                </div>
+
+                <div class="pos-retail-price-choices">
+                    <button t-if="minPrice" class="pos-retail-price-choice"
+                            t-on-click="() => this.setPrice(minPrice)">
+                        <span class="tag">Minimum</span>
+                        <span class="amount"><t t-esc="formatPrice(minPrice)"/></span>
+                    </button>
+                    <button class="pos-retail-price-choice pos-retail-price-choice--default"
+                            t-on-click="() => this.setPrice(defaultPrice)">
+                        <span class="tag">Default</span>
+                        <span class="amount"><t t-esc="formatPrice(defaultPrice)"/></span>
+                    </button>
+                    <button t-if="maxPrice" class="pos-retail-price-choice"
+                            t-on-click="() => this.setPrice(maxPrice)">
+                        <span class="tag">Maximum</span>
+                        <span class="amount"><t t-esc="formatPrice(maxPrice)"/></span>
+                    </button>
+                </div>
+
+                <div>
+                    <label class="form-label mb-1" for="pos_retail_price_input">Selling price</label>
+                    <input id="pos_retail_price_input" type="number" step="0.01" min="0"
+                           class="form-control form-control-lg pos-retail-price-input"
+                           t-att-class="statusClass"
+                           t-model="state.price" autofocus="autofocus"/>
+                </div>
+
+                <div class="pos-retail-price-message" t-att-class="statusClass">
+                    <i class="fa me-1"
+                       t-att-class="{
+                           'fa-check-circle': status === 'default' or status === 'adjusted',
+                           'fa-exclamation-triangle': isOutOfRange or status === 'invalid'
+                       }"/>
+                    <t t-esc="message"/>
+                </div>
+
+                <div t-if="isOutOfRange" class="pos-retail-price-approval">
+                    <i class="fa fa-lock me-1"/>A manager PIN is required to sell at this price.
+                </div>
+
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-lg" t-att-class="isOutOfRange ? 'btn-warning' : 'btn-primary'"
+                        t-att-disabled="!canConfirm"
+                        t-on-click="() => this.confirm()">
+                    <t t-esc="confirmLabel"/>
+                </button>
+                <button class="btn btn-lg btn-secondary" t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Customer Ledger, built on the real account.move.line; no new model.
+         Every row here is a genuine posted journal item on the customer's
+         receivable account: an invoiced sale, a refund, or a payment they've
+         made. Nothing is computed or guessed; this is the same data (and the
+         same account_type = 'asset_receivable' domain) behind Odoo's own
+         Partner Ledger and the res.partner.credit ("Outstanding Balance")
+         figure already shown on the POS History tab; this view is just a
+         friendlier, single-purpose way to read it.
+
+         Two list views on purpose:
+         - the "single" one (below) is used ONLY when the domain is already
+           locked to one partner_id (the customer-form smart button). It shows
+           cumulated_balance, account.move.line's own running-total field,
+           which is auto-computed from whatever domain/order the current
+           search actually used (see account.move.line's search_fetch
+           override), so it is only ever meaningful when the list is scoped to
+           a single customer; mixing several customers' lines together would
+           produce a running total that means nothing.
+         - the "report" one is for browsing many customers at once (the
+           Reporting menu below) and deliberately leaves cumulated_balance out
+           for that reason, using plain summable Debit/Credit columns instead.
+
+         NEWEST FIRST IS LOAD-BEARING, not a display preference.
+         _compute_cumulated_balance sums with the view's order REVERSED
+         (_order_to_sql(..., reverse=True)), so each row's value is that row
+         plus everything BELOW it in the list. That reads as a real running
+         balance only when the newest row is on top: the top row then shows
+         what the customer owes right now, and each row down shows the balance
+         as it stood just after that transaction. Sorted oldest-first the same
+         column runs backwards and ends at a single transaction instead of the
+         current balance, which is simply wrong. Verified against core's own
+         test_cumulated_balance. If this order is ever changed, drop the
+         Balance column with it. -->
+
+    <record id="pos_retail_customer_ledger_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.customer.ledger.list</field>
+        <field name="model">account.move.line</field>
+        <field name="arch" type="xml">
+            <!-- Every column optional: the gear icon at the right of the
+                 header row lets the user show/hide any of them. History rows
+                 themselves stay read-only on purpose (core protects posted
+                 entries); the balance is changed through the Receive Payment
+                 and Khata Adjustment buttons on the customer form. -->
+            <list string="Customer Ledger" create="false" edit="false" delete="false"
+                  default_order="date desc, id desc">
+                <!-- company_currency_id: debit/credit/cumulated_balance are
+                     Monetary fields whose currency_field points at it; without
+                     it in the arch the web client renders bare numbers with no
+                     symbol and default digits. -->
+                <field name="company_currency_id" column_invisible="1"/>
+                <field name="date" string="Date" optional="show"/>
+                <field name="move_id" string="Reference" optional="show"/>
+                <field name="name" string="Description" optional="show"/>
+                <field name="journal_id" string="Journal" optional="hide"/>
+                <field name="date_maturity" string="Due Date" optional="hide"/>
+                <field name="debit" string="Charged" sum="Total Charged" optional="show"/>
+                <field name="credit" string="Paid" sum="Total Paid" optional="show"/>
+                <field name="amount_residual" string="Left Unpaid" optional="hide"/>
+                <field name="cumulated_balance" string="Balance" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_customer_ledger_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.customer.ledger.search</field>
+        <field name="model">account.move.line</field>
+        <field name="arch" type="xml">
+            <search string="Customer Ledger">
+                <field name="move_id" string="Reference"/>
+                <field name="name" string="Description"/>
+                <filter name="charges" string="Charges (owes more)" domain="[('debit', '&gt;', 0)]"/>
+                <filter name="payments" string="Payments (paid back)" domain="[('credit', '&gt;', 0)]"/>
+                <separator/>
+                <filter name="unreconciled" string="Still Unpaid" domain="[('amount_residual', '!=', 0)]"/>
+                <separator/>
+                <filter name="filter_date" date="date" string="Date"/>
+                <group>
+                    <filter name="group_month" string="Month" context="{'group_by': 'date:month'}"/>
+                    <filter name="group_journal" string="Journal" context="{'group_by': 'journal_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Khata Adjustment dialog (see models/pos_retail_ledger_adjustment.py). -->
+    <record id="pos_retail_ledger_adjustment_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.ledger.adjustment.form</field>
+        <field name="model">pos.retail.ledger.adjustment</field>
+        <field name="arch" type="xml">
+            <form string="Khata Adjustment">
+                <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                    <i class="fa fa-balance-scale mt-1" role="img" aria-label="Info" title="Info"/>
+                    <div>Changes what this customer owes by posting a new, visible ledger entry
+                         with your reason on it. Use it for old khata balances brought forward,
+                         waived amounts or corrections. Past entries are never rewritten.</div>
+                </div>
+                <group>
+                    <group>
+                        <field name="partner_id" readonly="context.get('default_partner_id')"/>
+                        <field name="direction" widget="radio"/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="amount"/>
+                    </group>
+                    <group>
+                        <field name="date"/>
+                        <field name="reason" placeholder="e.g. Old khata balance brought forward"/>
+                        <field name="counterpart_account_id"/>
+                        <field name="journal_id"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Post Adjustment" class="btn-primary"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_customer_ledger_report_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.customer.ledger.report.list</field>
+        <field name="model">account.move.line</field>
+        <field name="arch" type="xml">
+            <list string="Customer Ledgers" create="false" edit="false" delete="false"
+                  default_order="partner_id, date desc, id desc">
+                <field name="company_currency_id" column_invisible="1"/>
+                <field name="partner_id" string="Customer" optional="show"/>
+                <field name="date" string="Date" optional="show"/>
+                <field name="move_id" string="Reference" optional="show"/>
+                <field name="name" string="Description" optional="hide"/>
+                <field name="journal_id" string="Journal" optional="hide"/>
+                <field name="date_maturity" string="Due Date" optional="hide"/>
+                <field name="debit" string="Charged" sum="Total Charged" optional="show"/>
+                <field name="credit" string="Paid" sum="Total Paid" optional="show"/>
+                <field name="amount_residual" string="Left Unpaid" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_customer_ledger_report_search" model="ir.ui.view">
+        <field name="name">pos.retail.customer.ledger.report.search</field>
+        <field name="model">account.move.line</field>
+        <field name="arch" type="xml">
+            <search string="Customer Ledgers">
+                <field name="partner_id"/>
+                <field name="move_id"/>
+                <filter name="charges" string="Charges (owes more)" domain="[('debit', '&gt;', 0)]"/>
+                <filter name="payments" string="Payments (paid back)" domain="[('credit', '&gt;', 0)]"/>
+                <separator/>
+                <filter name="unreconciled" string="Still Unpaid" domain="[('amount_residual', '!=', 0)]"/>
+                <separator/>
+                <filter name="filter_date" date="date" string="Date"/>
+                <group>
+                    <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Month" name="group_month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Reporting menu version: "who owes me money, across everyone";
+         the multi-customer counterpart to the smart button's single-customer
+         drill-down. Grouped by customer by default; each group's Debit/Credit
+         subtotal is a correct running total for that customer even though the
+         list as a whole is not (see the note above on cumulated_balance). -->
+    <record id="action_pos_retail_customer_ledger" model="ir.actions.act_window">
+        <field name="name">Customer Ledger</field>
+        <field name="res_model">account.move.line</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="pos_retail_customer_ledger_report_view_list"/>
+        <field name="search_view_id" ref="pos_retail_customer_ledger_report_search"/>
+        <field name="domain">[('account_id.account_type', '=', 'asset_receivable'), ('parent_state', '=', 'posted'), ('company_id', 'in', allowed_company_ids)]</field>
+        <field name="context">{'search_default_group_partner': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No customer transactions yet</p>
+            <p>Every invoiced sale, refund and payment that affects what a customer owes, grouped by customer.
+               Open one customer's ledger with a running balance from their contact page instead.</p>
+        </field>
+    </record>
+
+</odoo>

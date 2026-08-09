@@ -1,6 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- Dedicated Customers / Vendors lists for the sidebar. The domain is on the
+         action rather than a default filter because these menus exist precisely to
+         answer one question each; All Contacts is still there, unfiltered, for
+         anything that is neither.
+         default_customer_rank / default_supplier_rank matter: the rank counters are
+         what put a partner in these lists, and they only rise once you actually
+         trade with someone. Without the default, a contact created here would save
+         at rank 0 and disappear from the list that created it. -->
+    <record id="action_pos_retail_customers" model="ir.actions.act_window">
+        <field name="name">Customers</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">kanban,list,form,activity</field>
+        <field name="search_view_id" ref="base.view_res_partner_filter"/>
+        <field name="domain">[('customer_rank', '&gt;', 0)]</field>
+        <field name="context">{'default_customer_rank': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add a customer</p>
+            <p>People and businesses you sell to. Anyone you invoice or ring up at
+               the till appears here automatically.</p>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_vendors" model="ir.actions.act_window">
+        <field name="name">Vendors</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">kanban,list,form,activity</field>
+        <field name="search_view_id" ref="base.view_res_partner_filter"/>
+        <field name="domain">[('supplier_rank', '&gt;', 0)]</field>
+        <field name="context">{'default_supplier_rank': 1, 'default_is_company': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add a vendor</p>
+            <p>Suppliers you buy stock from. Anyone on a purchase order or vendor
+               bill appears here automatically.</p>
+        </field>
+    </record>
+
     <record id="view_partner_form_pos_retail" model="ir.ui.view">
         <field name="name">res.partner.form.pos.retail</field>
         <field name="model">res.partner</field>
@@ -10,6 +46,21 @@
                 <field name="membership_level_id"/>
                 <field name="birthday"/>
             </field>
+
+            <!-- "Misc" is Odoo's catch-all heading for the identification
+                 fields. Shop staff read this form daily; naming the section
+                 after what it holds saves them opening it to find out. -->
+            <group name="misc" position="attributes">
+                <attribute name="string">Identification</attribute>
+            </group>
+
+            <!-- The Reference is what the POS receipt and the customer card
+                 print as "Customer ID"; say so, so nobody fills it with
+                 something else. -->
+            <xpath expr="//group[@name='misc']/field[@name='ref']" position="attributes">
+                <attribute name="string">Reference / Customer ID</attribute>
+                <attribute name="placeholder">Printed on receipts as Customer ID</attribute>
+            </xpath>
         </field>
     </record>
 
@@ -33,6 +84,50 @@
             <group name="purchase" position="inside">
                 <field name="mobile" widget="phone"/>
                 <field name="vendor_contact_person"/>
+            </group>
+
+            <!-- Tidy the smart buttons.
+                 Several core buttons carry no visibility condition at all, so
+                 a vendor record shows "Invoiced 0.00" (a customer figure that
+                 is structurally always zero for them) and every contact shows
+                 Purchases and Lots/Serial Numbers whether or not either has
+                 ever happened. A row of buttons that are mostly zero teaches
+                 people to stop reading the row. -->
+            <xpath expr="//button[@name='action_view_partner_invoices'][.//field[@name='total_invoiced']]"
+                   position="attributes">
+                <attribute name="invisible">not total_invoiced</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_view_stock_serial']" position="attributes">
+                <attribute name="invisible">supplier_rank == 0 and customer_rank == 0</attribute>
+            </xpath>
+            <xpath expr="//button[field[@name='purchase_order_count']]" position="attributes">
+                <attribute name="invisible">not purchase_order_count</attribute>
+            </xpath>
+
+            <!-- Vendor detail. Sits in the Sales & Purchase tab beside the
+                 native purchase settings (payment terms, currency), and only
+                 appears once the contact is actually a vendor, so it stays
+                 out of the way on ordinary customer records. -->
+            <group name="purchase" position="after">
+                <group string="Vendor Details" name="pos_retail_vendor"
+                       invisible="supplier_rank == 0">
+                    <label for="vendor_code"/>
+                    <div class="d-flex gap-2 align-items-center">
+                        <field name="vendor_code" nolabel="1" class="oe_inline"
+                               placeholder="e.g. VND00001"/>
+                        <button name="action_generate_vendor_code" type="object"
+                                string="Generate" class="btn-link"
+                                invisible="vendor_code"/>
+                    </div>
+                    <field name="vendor_status" widget="badge"
+                           decoration-success="vendor_status == 'active'"
+                           decoration-warning="vendor_status == 'inactive'"
+                           decoration-danger="vendor_status == 'blacklisted'"/>
+                    <field name="vendor_licence_no"/>
+                    <field name="vendor_payment_method"/>
+                    <field name="vendor_lead_time"/>
+                    <field name="vendor_delivery_method"/>
+                </group>
             </group>
         </field>
     </record>
@@ -64,7 +159,163 @@
             </field>
             <filter name="inactive" position="after">
                 <filter string="Outstanding Balance" name="pos_retail_outstanding_balance" domain="[('debit', '&gt;', 0)]"/>
+                <separator/>
+                <filter string="Blacklisted Vendors" name="pos_retail_blacklisted"
+                        domain="[('vendor_status', '=', 'blacklisted')]"/>
             </filter>
+            <!-- res.partner is one shared table: it also holds the row behind each
+                 company, each user login and each employee work contact. Those have
+                 no reason to appear in a shop's address book, but core ships no
+                 filter to tell them apart, so add one. customer_rank/supplier_rank
+                 are the counters Odoo raises when you actually sell to or buy from
+                 someone, which is exactly the "is this a trading partner" question.
+                 Filters, not a domain on the action: clearing them still shows
+                 everyone, so nothing becomes unreachable. -->
+            <filter name="type_person" position="before">
+                <filter string="Customers &amp; Vendors" name="pos_retail_trading"
+                        domain="['|', ('customer_rank', '&gt;', 0), ('supplier_rank', '&gt;', 0)]"/>
+                <filter string="Customers" name="pos_retail_customers"
+                        domain="[('customer_rank', '&gt;', 0)]"/>
+                <filter string="Vendors" name="pos_retail_vendors"
+                        domain="[('supplier_rank', '&gt;', 0)]"/>
+                <separator/>
+            </filter>
+            <field name="category_id" position="before">
+                <field name="vendor_code"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Quick "add customer" form used by the POS Customer button. Just name +
+         phone (+ email), neither individually required: enter a name, a phone,
+         or both. Phone-only is allowed (the create override names the partner
+         after the phone). Replaces the heavy full backend partner form that the
+         POS edit action used by default. -->
+    <record id="view_partner_pos_quick_form" model="ir.ui.view">
+        <field name="name">res.partner.pos.quick.form</field>
+        <field name="model">res.partner</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <form string="Customer">
+                <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-user-plus mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>Enter a <strong>name</strong> or a <strong>phone number</strong> (or both). Both appear on the receipt.</div>
+                    </div>
+                    <group>
+                        <field name="name" required="0" placeholder="Customer name"/>
+                        <field name="phone" placeholder="Phone number"/>
+                        <field name="email" placeholder="Email (optional)"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Point the POS "Edit Partner" action at the quick form, and tag its
+         context so the create override knows to allow phone-only customers. -->
+    <record id="point_of_sale.res_partner_action_edit_pos" model="ir.actions.act_window">
+        <field name="view_id" ref="view_partner_pos_quick_form"/>
+        <field name="context">{'pos_quick_customer': 1}</field>
+    </record>
+
+    <!-- Customer-side counterpart to the vendor "Outstanding Balance" button
+         above: same shape, same groups (account.move.line access is
+         accounting-gated the same way for both sides), mirrored field
+         (credit, not debit; see res_partner.py action_view_customer_ledger
+         for the sign convention: positive credit = the customer owes us). -->
+    <record id="view_partner_form_pos_retail_customer_ledger" model="ir.ui.view">
+        <field name="name">res.partner.form.pos.retail.customer.ledger</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button name="action_view_customer_ledger" type="object" class="oe_stat_button"
+                        icon="fa-book" groups="account.group_account_invoice,account.group_account_readonly"
+                        invisible="not credit">
+                    <field name="credit" widget="statinfo" string="Amount Owed"/>
+                </button>
+            </div>
+            <!-- Khata actions: the ledger's history is never edited in place;
+                 the balance changes through these. Gated on Invoicing access
+                 because both post real accounting documents. -->
+            <sheet position="before">
+                <header>
+                    <button name="action_receive_customer_payment" type="object"
+                            string="Receive Payment" class="btn-primary"
+                            groups="account.group_account_invoice"/>
+                    <button name="action_open_ledger_adjustment" type="object"
+                            string="Khata Adjustment"
+                            groups="account.group_account_invoice"/>
+                </header>
+            </sheet>
+        </field>
+    </record>
+
+    <record id="view_partner_form_pos_history" model="ir.ui.view">
+        <field name="name">res.partner.form.pos.history</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <page name="internal_notes" position="after">
+                <page string="POS History" name="pos_retail_history">
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-shopping-bag mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> this customer's Point of Sale purchase history and totals, for a quick look before or during a sale.<br/>
+                            <strong>How to use:</strong> read-only summary computed from completed POS orders; click a row below to open the underlying order.
+                        </div>
+                    </div>
+                    <field name="pos_history_currency_id" invisible="1"/>
+                    <group string="At the Counter">
+                        <field name="category_id" widget="many2many_tags"
+                               options="{'color_field': 'color'}"
+                               string="Customer Tags"
+                               placeholder="e.g. Wholesale, Pays on time, VIP"/>
+                        <field name="pos_retail_note" placeholder="e.g. Deliver to home; always needs an invoice"/>
+                    </group>
+                    <group>
+                        <group string="Purchase Summary">
+                            <field name="pos_sales_order_count"/>
+                            <field name="pos_total_spent"/>
+                            <field name="pos_avg_order_value"/>
+                            <field name="pos_last_purchase_date"/>
+                        </group>
+                        <group string="Balances &amp; Rewards">
+                            <field name="pos_refund_total"/>
+                            <field name="pos_outstanding_balance" widget="monetary"/>
+                            <field name="credit_limit" string="Credit Limit" widget="monetary"
+                                   groups="account.group_account_invoice,account.group_account_readonly"
+                                   help="How much this customer may owe at once. Zero means no limit. Checked at the till when paying by Customer Account."/>
+                            <field name="pos_credit_available" widget="monetary"
+                                   groups="account.group_account_invoice,account.group_account_readonly"
+                                   decoration-danger="pos_credit_available &lt; 0"/>
+                            <field name="pos_loyalty_points"/>
+                        </group>
+                    </group>
+                    <separator string="Orders"/>
+                    <field name="pos_order_ids" nolabel="1" readonly="1">
+                        <list decoration-danger="amount_total &lt; 0">
+                            <field name="date_order"/>
+                            <field name="name"/>
+                            <field name="amount_total"/>
+                            <field name="state"/>
+                        </list>
+                    </field>
+                    <separator string="Quotations"/>
+                    <field name="sale_order_ids" nolabel="1" readonly="1"
+                           domain="[('state', 'in', ['draft', 'sent'])]">
+                        <list decoration-success="pos_customer_approved">
+                            <field name="date_order"/>
+                            <field name="name"/>
+                            <field name="amount_total"/>
+                            <field name="validity_date"/>
+                            <field name="pos_customer_approved" string="Approved"/>
+                            <field name="state"/>
+                        </list>
+                    </field>
+                </page>
+            </page>
         </field>
     </record>
 

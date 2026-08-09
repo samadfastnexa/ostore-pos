@@ -1,0 +1,44 @@
+// The "what is this screen" line above a form.
+//
+// Deliberately quiet: it is read once, then ignored for the rest of that
+// person's life with the screen. Anything louder would compete with the form
+// every single time it is opened.
+
+.pos-retail-form-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: .5rem;
+    margin: .5rem auto 0;
+    padding: .55rem .85rem;
+    max-width: 1140px;          // tracks the sheet width so it lines up
+    border-radius: .4rem;
+    border-left: 3px solid #7c3aed;
+    background: rgba(124, 58, 237, .07);
+    color: var(--text-color, #1f2937);
+    font-size: .86rem;
+    line-height: 1.35;
+
+    .fa {
+        margin-top: .12rem;
+        opacity: .75;
+    }
+
+    // Screens where getting it wrong has consequences: posted accounts,
+    // stock write-offs, warehouse setup.
+    &.is-warning {
+        border-left-color: #d97706;
+        background: rgba(217, 119, 6, .09);
+    }
+
+    // Dialogs are tight on space; keep it, shrink it.
+    .modal & {
+        margin-top: 0;
+        font-size: .82rem;
+        padding: .45rem .7rem;
+    }
+}
+
+// Printing a record should not carry a note aimed at whoever is typing.
+@media print {
+    .pos-retail-form-intro { display: none; }
+}

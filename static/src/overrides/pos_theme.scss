@@ -1,0 +1,581 @@
+// Light accent theming for the POS checkout screen.
+//
+// Odoo's own checkout layout (product grid, cart, payment screen) already
+// implements the modern-POS structure this addon's spec asked for — always
+// visible cart, +/- qty, large search/barcode entry, large Pay button, large
+// total. This file only maps the requested color language onto the highest-
+// traffic actions via CSS, on top of that existing structure. It does not
+// replace any template or JS behavior, so it survives Odoo upgrades.
+//
+// Color language (kept consistent, never reused across action types):
+//   green  = confirm / pay / complete sale
+//   orange = discounts / offers / warnings
+//   red    = delete / cancel / refund
+//   blue   = customer / search / info
+//   purple = reports & analytics (see dashboard.scss)
+
+$o_retail_green: #16a34a;
+$o_retail_green_dark: #15803d;
+$o_retail_orange: #f59e0b;
+$o_retail_orange_dark: #d97706;
+$o_retail_red: #dc2626;
+$o_retail_red_dark: #b91c1c;
+$o_retail_blue: #2563eb;
+
+// ---- Pay / Validate (green) ------------------------------------------------
+.pos .validation-button.highlight {
+    background-color: $o_retail_green;
+    border-color: $o_retail_green;
+
+    &:hover, &:focus {
+        background-color: $o_retail_green_dark;
+        border-color: $o_retail_green_dark;
+    }
+}
+
+// ---- Discounts (orange) — both the native pos_discount button and ours ----
+.pos .js_discount,
+.pos .pos-retail-order-discount .btn-primary {
+    background-color: $o_retail_orange;
+    border-color: $o_retail_orange;
+    color: #fff;
+
+    &:hover, &:focus {
+        background-color: $o_retail_orange_dark;
+        border-color: $o_retail_orange_dark;
+    }
+}
+.pos .pos-retail-order-discount {
+    border-color: $o_retail_orange !important;
+}
+
+// ---- Refund / Cancel / Delete (red) ---------------------------------------
+// Targeted by icon rather than a template-specific class, since core doesn't
+// give these a unique class of their own — stable across Odoo point releases
+// as long as the icon choice itself doesn't change.
+.pos button:has(> .fa-trash),
+.pos button:has(> .fa-undo) {
+    &:hover, &:focus {
+        background-color: rgba($o_retail_red, 0.12);
+        border-color: $o_retail_red;
+        color: $o_retail_red_dark;
+    }
+}
+
+// ---- Customer / search (blue accent on focus) -----------------------------
+.pos input:focus,
+.pos .partner-button.highlight {
+    border-color: $o_retail_blue;
+}
+.pos .partner-button.highlight {
+    color: $o_retail_blue;
+}
+
+// ---- Touch-friendly sizing & consistent interaction feedback --------------
+.pos {
+    .btn-lg, .button.btn-lg {
+        min-height: 44px;
+        transition: transform 0.05s ease-in-out, background-color 0.1s ease-in-out;
+
+        &:active {
+            transform: scale(0.97);
+        }
+    }
+}
+
+// Order-discount panel (payment screen): keep it from clipping the numpad /
+// Back-Validate buttons. It lives in a flex-shrink-0, overflow-hidden column,
+// so cap the expanded body's height and let it scroll internally on short
+// screens instead of pushing the essential buttons off-screen.
+.pos-retail-order-discount-body {
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+// ============================================================================
+// Till polish (product screen): search, category chips, receipt-style totals,
+// tile-language action buttons, softened numpad. Every selector verified
+// against the 19.0 templates.
+// ============================================================================
+.pos {
+    // ---- product search (top bar): rounded, blue focus ring (blue = search
+    // in the fixed colour language) --------------------------------------
+    .pos-topheader .input-container {
+        border-radius: .6rem;
+
+        &:focus-within {
+            border-color: $o_retail_blue;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+        }
+    }
+
+    // ---- category strip: softer chips. Selection contrast is native (the
+    // selected chip keeps full opacity + its colour border; the rest are
+    // dimmed), so only the shape and weight change. Radius stays moderate
+    // because chips can carry category images. -----------------------------
+    .category-button {
+        border-radius: .8rem;
+        font-weight: 600;
+
+        &:hover { border-color: var(--pos-retail-accent); }
+    }
+
+    // ---- cart totals: read like a receipt subtotal block ------------------
+    .order-summary {
+        background-color: color-mix(in srgb, var(--pos-retail-accent) 4%, #fff);
+
+        .tax-info { font-size: .85rem; }
+
+        // the Total row (the only fs-3 child): a dashed rule above it, like
+        // the receipt's own total separator
+        > .fs-3 {
+            border-top: 1px dashed rgba(0, 0, 0, .18);
+            padding-top: .4rem;
+            margin-top: .15rem;
+        }
+    }
+
+    // ---- action row under the cart ----------------------------------------
+    .control-buttons {
+        // Customer: blue tile, matching the payment screen's colour language
+        .set-partner {
+            --btn-bg: #fff;
+            --btn-border-color: #{rgba($o_retail_blue, .45)};
+            --btn-color: #{$o_retail_blue};
+            --btn-hover-bg: #{rgba($o_retail_blue, .08)};
+            --btn-hover-border-color: #{$o_retail_blue};
+            border-radius: .65rem;
+            border-width: 1.5px;
+            font-weight: 650;
+        }
+
+        .more-btn { border-radius: .65rem; }
+    }
+
+    // ---- numpad: rounded keys with a visible pressed state -----------------
+    .numpad { gap: .35rem; }
+
+    .numpad-button {
+        border-radius: .6rem !important;   // core pins rounded-0 on the key
+        transition: transform .05s ease, filter .1s ease;
+
+        &:active {
+            transform: scale(.96);
+            filter: brightness(.93);
+        }
+    }
+
+    // ---- desktop Pay button: green like every confirm action. The earlier
+    // rule only matched the mobile switchpane variant (.pay-button); the
+    // desktop action pad uses .pay-order-button. -----------------------------
+    .pay-order-button.btn-primary {
+        --btn-bg: #{$o_retail_green};
+        --btn-border-color: #{$o_retail_green};
+        --btn-hover-bg: #{$o_retail_green_dark};
+        --btn-hover-border-color: #{$o_retail_green_dark};
+        --btn-active-bg: #{$o_retail_green_dark};
+        box-shadow: 0 8px 20px -8px rgba($o_retail_green, .7);
+    }
+}
+
+// ============================================================================
+// Payment screen: roomy method tiles on the left, a structured summary on the
+// right instead of a bare number adrift in whitespace.
+// ============================================================================
+.pos .payment-screen {
+    // The methods list natively receives only the space left over after the
+    // numpad, buttons and our discount panel, collapsing into a two-row
+    // scroll strip. Reserve room so a typical five-method register (Cash,
+    // Card, Customer Account, JazzCash, EasyPaisa) shows every tender.
+    .left-content > .flex-grow-1.overflow-auto {
+        flex: 1 1 auto;
+        min-height: 16.5rem;
+    }
+
+    // ---- method tiles ------------------------------------------------------
+    .paymentmethod {
+        padding: .55rem .9rem;
+        border: 1.5px solid rgba(0, 0, 0, .1);
+        border-radius: .65rem;
+        background-color: #fff;
+        transition: border-color .12s ease, background-color .12s ease, transform .05s ease;
+
+        &:hover {
+            border-color: var(--pos-retail-accent);
+            background-color: color-mix(in srgb, var(--pos-retail-accent) 6%, #fff);
+        }
+        &:active { transform: scale(.985); }
+
+        // Native cap is 50px but the row style keeps them small; a fixed
+        // square keeps the JazzCash/EasyPaisa tiles and the stock cash/card
+        // glyphs the same visual weight.
+        .payment-method-icon {
+            width: 34px;
+            height: 34px;
+            max-width: 34px;
+            max-height: 34px;
+            object-fit: contain;
+            border-radius: .5rem;
+        }
+        .payment-name { font-weight: 650; }
+    }
+
+    // ---- the due amount ----------------------------------------------------
+    .pos-retail-due-label {
+        font-size: .78rem;
+        font-weight: 750;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        opacity: .55;
+        text-align: center;
+    }
+
+    // The desktop template hard-codes font-size:125px as an inline style; an
+    // author !important outranks inline declarations, so no template surgery.
+    .total {
+        font-size: clamp(44px, 6.5vw, 92px) !important;
+        line-height: 1.05;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .pos-retail-due-hint {
+        text-align: center;
+        font-size: .95rem;
+        opacity: .6;
+        margin-top: .75rem;
+    }
+
+    // ---- tendered lines ----------------------------------------------------
+    .paymentline {
+        border: 1px solid rgba(0, 0, 0, .08);
+
+        &.selected {
+            border-color: var(--pos-retail-accent);
+            box-shadow: inset 3px 0 0 var(--pos-retail-accent);
+        }
+        .delete-button:hover .oi { transform: scale(1.2); }
+    }
+
+    // Remaining / Change row: the native template floats the amount away from
+    // the right edge (me-5 pe-5); pull it flush so it aligns with the lines.
+    .payment-status-amount .amount {
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+    }
+}
+
+// ============================================================================
+// Shop look ("Signature"): a coloured header, softly raised product cards and
+// an accented selection, layered on top of Odoo's own checkout markup. The
+// accent is per store: pos.config.pos_retail_theme_color is published as a
+// data attribute on the POS root (see pos_theme.xml) and mapped to a hex here.
+// The action colours above are deliberately NOT derived from the accent, so
+// Pay/discount/return/customer stay recognisable whatever colour a store picks.
+// ============================================================================
+.pos {
+    --pos-retail-accent: #7c3aed;
+    --pos-retail-accent-deep: #2a1466;
+
+    &[data-pos-retail-color="purple"] { --pos-retail-accent: #7c3aed; --pos-retail-accent-deep: #2a1466; }
+    &[data-pos-retail-color="blue"]   { --pos-retail-accent: #2563eb; --pos-retail-accent-deep: #10214d; }
+    &[data-pos-retail-color="green"]  { --pos-retail-accent: #15803d; --pos-retail-accent-deep: #0a2e18; }
+    &[data-pos-retail-color="teal"]   { --pos-retail-accent: #0d9488; --pos-retail-accent-deep: #06312d; }
+    &[data-pos-retail-color="orange"] { --pos-retail-accent: #ea580c; --pos-retail-accent-deep: #4a1a05; }
+    &[data-pos-retail-color="pink"]   { --pos-retail-accent: #db2777; --pos-retail-accent-deep: #4c0d29; }
+}
+
+// ---- Coloured top bar ------------------------------------------------------
+.pos .pos-topheader {
+    background: linear-gradient(120deg, var(--pos-retail-accent), var(--pos-retail-accent-deep));
+    border-bottom: 0;
+    color: #fff;
+
+    // Core fills the header with .btn-light (solid white) buttons, which read as
+    // blocks on a coloured bar. Restyle them as translucent chips instead. POS
+    // buttons are driven by these CSS vars (see point_of_sale/scss/pos.scss).
+    .btn-light {
+        --btn-color: #fff;
+        --btn-bg: rgba(255, 255, 255, .16);
+        --btn-border-color: rgba(255, 255, 255, .24);
+        --btn-hover-bg: rgba(255, 255, 255, .28);
+        --btn-hover-border-color: rgba(255, 255, 255, .38);
+        --btn-active-bg: rgba(255, 255, 255, .34);
+        --btn-active-border-color: rgba(255, 255, 255, .44);
+        color: #fff;
+
+        &.active { background-color: rgba(255, 255, 255, .32); }
+    }
+
+    .text-muted, .text-secondary { color: rgba(255, 255, 255, .78) !important; }
+}
+
+// ---- Product cards: softly raised, lift on hover ---------------------------
+.pos .product {
+    border-color: transparent;
+    box-shadow: 0 4px 14px -8px rgba(23, 19, 42, .38);
+    transition: transform .12s ease-in-out, box-shadow .15s ease-in-out;
+
+    &:hover, &:focus-visible {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px -12px rgba(23, 19, 42, .5);
+    }
+}
+
+// ---- Selected cart line gets the accent ------------------------------------
+.pos .orderline.selected {
+    background-color: color-mix(in srgb, var(--pos-retail-accent) 10%, transparent);
+    box-shadow: inset 3px 0 0 var(--pos-retail-accent);
+}
+
+// ---- Pay (product screen) stays green, like Validate ----------------------
+.pos .pay-button.btn-primary {
+    background-color: $o_retail_green;
+    border-color: $o_retail_green;
+
+    &:hover, &:focus {
+        background-color: $o_retail_green_dark;
+        border-color: $o_retail_green_dark;
+    }
+}
+
+// ---- Product card: price, allowed range, stock ----------------------------
+// Large and high-contrast: a cashier reads these at arm's length, mid-queue.
+.pos .product {
+    .pos-retail-card-price {
+        font-size: 1.05rem;
+        font-weight: 800;
+        line-height: 1.15;
+        color: var(--pos-retail-accent);
+        margin-top: .1rem;
+    }
+
+    .pos-retail-card-range {
+        font-size: .72rem;
+        font-weight: 600;
+        line-height: 1.2;
+        opacity: .72;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .pos-retail-card-stock {
+        font-size: .7rem;
+        font-weight: 600;
+        line-height: 1.2;
+        opacity: .68;
+
+        &.pos-retail-card-stock--out {
+            color: $o_retail_red;
+            opacity: 1;
+        }
+    }
+}
+
+// ---- Add a customer straight from the search box ---------------------------
+.pos-retail-quick-partner {
+    padding: .6rem .75rem 0;
+
+    &__btn {
+        display: flex;
+        align-items: center;
+        gap: .7rem;
+        width: 100%;
+        padding: .85rem 1rem;
+        border-radius: .6rem;
+        border: 2px dashed color-mix(in srgb, var(--pos-retail-accent) 55%, transparent);
+        background-color: color-mix(in srgb, var(--pos-retail-accent) 7%, transparent);
+        color: var(--pos-retail-accent);
+        font-weight: 650;
+        font-size: 1rem;
+        text-align: left;
+        cursor: pointer;
+        transition: background-color .13s ease, border-color .13s ease;
+
+        &:hover:not(:disabled) {
+            background-color: color-mix(in srgb, var(--pos-retail-accent) 14%, transparent);
+            border-style: solid;
+        }
+        &:disabled { opacity: .6; cursor: default; }
+
+        .fa { font-size: 1.15rem; }
+    }
+
+    &__main { flex: 1; }
+
+    &__hint {
+        font-size: .76rem;
+        font-weight: 600;
+        opacity: .7;
+        white-space: nowrap;
+    }
+}
+
+// ---- Price selection popup ------------------------------------------------
+// Colour language for a price: green = default, orange = adjusted within the
+// allowed range, red = outside it (manager approval required).
+.pos-retail-price-ok       { color: $o_retail_green_dark; }
+.pos-retail-price-adjusted { color: $o_retail_orange_dark; }
+.pos-retail-price-blocked  { color: $o_retail_red_dark; }
+
+.pos-retail-price-popup {
+    .pos-retail-price-range-banner {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: .6rem .85rem;
+        border-radius: .6rem;
+        background-color: rgba(0, 0, 0, .04);
+
+        .label {
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            opacity: .65;
+        }
+        .value { font-size: 1.05rem; font-weight: 700; }
+    }
+
+    .pos-retail-price-choices {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        gap: .6rem;
+    }
+
+    .pos-retail-price-choice {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .15rem;
+        padding: .75rem .5rem;
+        border-radius: .7rem;
+        border: 2px solid rgba(0, 0, 0, .12);
+        background-color: #fff;
+        cursor: pointer;
+        transition: border-color .13s ease, background-color .13s ease, transform .05s ease;
+
+        .tag {
+            font-size: .66rem;
+            font-weight: 700;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            opacity: .6;
+        }
+        .amount { font-size: 1.05rem; font-weight: 800; }
+
+        &:hover {
+            border-color: var(--pos-retail-accent);
+            background-color: color-mix(in srgb, var(--pos-retail-accent) 8%, #fff);
+        }
+        &:active { transform: scale(.97); }
+
+        &--default {
+            border-color: color-mix(in srgb, #{$o_retail_green} 55%, transparent);
+            .amount { color: $o_retail_green_dark; }
+        }
+    }
+
+    // Big, touch friendly, and tinted by validity.
+    .pos-retail-price-input {
+        font-size: 1.35rem;
+        font-weight: 800;
+        text-align: center;
+        padding: .7rem;
+        border-width: 2px;
+
+        &.pos-retail-price-ok       { border-color: $o_retail_green; }
+        &.pos-retail-price-adjusted { border-color: $o_retail_orange; }
+        &.pos-retail-price-blocked  { border-color: $o_retail_red; }
+    }
+
+    .pos-retail-price-message { font-size: .9rem; font-weight: 600; }
+
+    .pos-retail-price-approval {
+        font-size: .85rem;
+        font-weight: 600;
+        padding: .55rem .8rem;
+        border-radius: .55rem;
+        color: $o_retail_red_dark;
+        background-color: rgba($o_retail_red, .1);
+    }
+}
+
+// ---- Cart line: how its price was set -------------------------------------
+.pos .orderline {
+    &.pos-retail-line-adjusted .product-price { color: $o_retail_orange_dark; }
+    &.pos-retail-line-overridden .product-price { color: $o_retail_red_dark; }
+}
+
+// ---- Per-line quantity buttons in the cart --------------------------------
+.pos .pos-retail-qty-btn {
+    width: 1.7rem;
+    height: 1.7rem;
+    padding: 0;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .45rem;
+    border: 1px solid rgba(0, 0, 0, .18);
+    background-color: #fff;
+    font-size: .72rem;
+    line-height: 1;
+
+    &:hover, &:focus {
+        border-color: var(--pos-retail-accent);
+        color: var(--pos-retail-accent);
+        background-color: color-mix(in srgb, var(--pos-retail-accent) 10%, #fff);
+    }
+
+    &:active { transform: scale(.94); }
+}
+
+// ---- Measurement-based selling --------------------------------------------
+// A cashier selling pipe by the metre and taps by the piece needs the unit
+// visible at a glance, on the card and on the cart line. Deliberately quieter
+// than the number itself: the quantity is what is being read, the unit is what
+// stops it being misread.
+
+.pos .product .pos-retail-card-uom {
+    font-size: .7rem;
+    font-weight: 600;
+    opacity: .7;
+    margin-left: .1rem;
+}
+
+.pos .pos-retail-line-uom {
+    font-size: 80%;
+    opacity: .72;
+}
+
+// Shortcut quantities on the selected cart line. Sized for a fingertip on a
+// touch screen, not a mouse: 2.1rem is the smallest reliable tap target here.
+.pos .pos-retail-quick-qty-btn {
+    min-width: 2.9rem;
+    height: 2.1rem;
+    padding: 0 .5rem;
+    font-size: .82rem;
+    font-weight: 700;
+    line-height: 1;
+    border-radius: .45rem;
+    border: 1px solid rgba(0, 0, 0, .18);
+    background-color: #fff;
+    color: inherit;
+
+    &:hover {
+        color: var(--pos-retail-accent);
+        background-color: color-mix(in srgb, var(--pos-retail-accent) 10%, #fff);
+    }
+
+    // The chip matching the line's current quantity, so the cashier can see
+    // which shortcut is in effect without reading the number back.
+    &.active {
+        color: #fff;
+        background-color: var(--pos-retail-accent);
+        border-color: var(--pos-retail-accent);
+    }
+
+    &:active { transform: scale(.94); }
+}

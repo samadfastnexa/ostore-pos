@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Two everyday stock jobs, made usable by a shop assistant.
+
+         Both are simplified views over Odoo's own machinery rather than new
+         models: writing off stock and adjusting a count are exactly what
+         stock.scrap and stock.quant already do correctly, including the
+         accounting entries and the audit trail. What made them unusable was
+         the form asking a shop assistant about source locations, destination
+         locations, owners, packages and lots. Those still have sensible
+         defaults; they are simply not shown. -->
+
+    <!-- ============ RECORD DAMAGE ============ -->
+
+    <record id="view_stock_scrap_form_pos_retail" model="ir.ui.view">
+        <field name="name">stock.scrap.form.pos.retail</field>
+        <field name="model">stock.scrap</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <form string="Record Damage">
+                <header>
+                    <button name="action_validate" type="object" string="Confirm Write-Off"
+                            class="btn-primary" invisible="state != 'draft'"
+                            confirm="This removes the quantity from stock. Confirm?"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-exclamation-triangle mt-1" role="img" aria-label="Warning" title="Warning"/>
+                        <div>
+                            Use this when goods can no longer be sold: broken, expired, spoiled or
+                            missing. The quantity is taken off your stock and recorded against the
+                            reason you pick, so the loss shows up in your reports instead of
+                            quietly turning into a counting error.
+                        </div>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="What was lost">
+                            <field name="product_id"
+                                   context="{'default_is_storable': True}"
+                                   options="{'no_create_edit': True}"/>
+                            <label for="scrap_qty"/>
+                            <div class="d-flex gap-2 align-items-center">
+                                <field name="scrap_qty" nolabel="1" class="oe_inline"/>
+                                <field name="product_uom_id" nolabel="1" class="oe_inline"
+                                       groups="uom.group_uom" options="{'no_open': True}"/>
+                            </div>
+                            <field name="tracking" invisible="1"/>
+                            <field name="lot_id" invisible="tracking not in ('lot', 'serial')"
+                                   groups="stock.group_production_lot"/>
+                        </group>
+                        <group string="Why">
+                            <field name="scrap_reason_tag_ids" widget="many2many_tags"
+                                   options="{'color_field': 'color', 'no_create_edit': True}"
+                                   string="Reason"/>
+                            <field name="origin" string="Note"
+                                   placeholder="e.g. dropped during unpacking"/>
+                            <field name="date_done" readonly="1" invisible="state != 'done'"/>
+                        </group>
+                    </group>
+                    <!-- Locations are kept out of sight: they default correctly
+                         for a single-shop setup, and asking a shop assistant to
+                         choose one is how these screens became unusable. They
+                         remain editable in the native Inventory view. -->
+                    <group invisible="1">
+                        <field name="location_id"/>
+                        <field name="scrap_location_id"/>
+                        <field name="company_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_stock_scrap_list_pos_retail" model="ir.ui.view">
+        <field name="name">stock.scrap.list.pos.retail</field>
+        <field name="model">stock.scrap</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Damage &amp; Wastage" default_order="date_done desc, id desc">
+                <field name="date_done" string="Date"/>
+                <field name="name" string="Reference"/>
+                <field name="product_id"/>
+                <field name="scrap_qty" string="Quantity"/>
+                <field name="product_uom_id" string="Unit" groups="uom.group_uom" optional="hide"/>
+                <field name="scrap_reason_tag_ids" widget="many2many_tags"
+                       options="{'color_field': 'color'}" string="Reason"/>
+                <field name="origin" string="Note" optional="hide"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'done'"
+                       decoration-info="state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_stock_scrap_search_pos_retail" model="ir.ui.view">
+        <field name="name">stock.scrap.search.pos.retail</field>
+        <field name="model">stock.scrap</field>
+        <field name="arch" type="xml">
+            <search string="Damage &amp; Wastage">
+                <field name="product_id"/>
+                <field name="scrap_reason_tag_ids" string="Reason"/>
+                <field name="name"/>
+                <filter name="done" string="Confirmed" domain="[('state', '=', 'done')]"/>
+                <filter name="draft" string="Not Yet Confirmed" domain="[('state', '=', 'draft')]"/>
+                <separator/>
+                <filter name="filter_date" date="date_done" string="Date"/>
+                <group>
+                    <filter name="group_reason" string="Reason"
+                            context="{'group_by': 'scrap_reason_tag_ids'}"/>
+                    <filter name="group_product" string="Product"
+                            context="{'group_by': 'product_id'}"/>
+                    <filter name="group_month" string="Month"
+                            context="{'group_by': 'date_done:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_record_damage" model="ir.actions.act_window">
+        <field name="name">Record Damage</field>
+        <field name="res_model">stock.scrap</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_stock_scrap_list_pos_retail"/>
+        <field name="search_view_id" ref="view_stock_scrap_search_pos_retail"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing written off yet</p>
+            <p>Record goods that can no longer be sold: broken, expired, spoiled or missing.
+               Each entry takes the quantity off your stock and files it under a reason, so
+               losses appear in your reports instead of turning up later as a counting error.</p>
+        </field>
+    </record>
+
+    <!-- ============ STOCK COUNT ============ -->
+
+    <record id="view_stock_quant_list_pos_retail_count" model="ir.ui.view">
+        <field name="name">stock.quant.list.pos.retail.count</field>
+        <field name="model">stock.quant</field>
+        <field name="arch" type="xml">
+            <!-- inventory_mode is what turns these rows into a count sheet:
+                 it makes Counted editable and enables Apply. -->
+            <!-- create="1" is what makes this usable for OPENING stock: a
+                 product that has never had any has no row here at all, so a
+                 count-only screen could never bring one into stock. On a
+                 saved row the product and place stay locked (readonly="id",
+                 the same trick native uses); on a new row you pick them. -->
+            <list string="Stock Count" editable="bottom" create="1"
+                  js_class="inventory_report_list"
+                  default_order="product_id">
+                <field name="product_id" readonly="id"
+                       options="{'no_create': True}"/>
+                <field name="location_id" readonly="id"
+                       domain="[('usage', 'in', ('internal', 'transit'))]"
+                       options="{'no_create': True}"
+                       groups="stock.group_stock_multi_locations" optional="show"/>
+                <field name="lot_id" readonly="1"
+                       groups="stock.group_production_lot" optional="hide"/>
+                <field name="quantity" string="In System" readonly="1"/>
+                <field name="product_uom_id" string="Unit" readonly="1"
+                       groups="uom.group_uom" optional="hide"/>
+                <field name="inventory_quantity" string="Counted"/>
+                <field name="inventory_diff_quantity" string="Difference" readonly="1"
+                       decoration-danger="inventory_diff_quantity &lt; 0"
+                       decoration-success="inventory_diff_quantity &gt; 0"/>
+                <field name="inventory_quantity_set" column_invisible="1"/>
+                <field name="last_count_date" string="Last Counted" readonly="1" optional="hide"/>
+                <field name="user_id" string="Assigned To" optional="hide"/>
+                <button name="action_apply_inventory" type="object" icon="fa-check"
+                        title="Apply this count" invisible="not inventory_quantity_set"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_stock_quant_search_pos_retail_count" model="ir.ui.view">
+        <field name="name">stock.quant.search.pos.retail.count</field>
+        <field name="model">stock.quant</field>
+        <field name="arch" type="xml">
+            <search string="Stock Count">
+                <field name="product_id"/>
+                <filter name="counted" string="Counted, Not Yet Applied"
+                        domain="[('inventory_quantity_set', '=', True)]"/>
+                <filter name="mismatch" string="Does Not Match"
+                        domain="[('inventory_quantity_set', '=', True),
+                                 ('inventory_diff_quantity', '!=', 0)]"/>
+                <separator/>
+                <filter name="in_stock" string="In Stock" domain="[('quantity', '&gt;', 0)]"/>
+                <filter name="negative" string="Negative Stock" domain="[('quantity', '&lt;', 0)]"/>
+                <group>
+                    <filter name="group_product" string="Product" context="{'group_by': 'product_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_stock_count" model="ir.actions.act_window">
+        <field name="name">Stock Count</field>
+        <field name="res_model">stock.quant</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_stock_quant_list_pos_retail_count"/>
+        <field name="search_view_id" ref="view_stock_quant_search_pos_retail_count"/>
+        <field name="domain">[('location_id.usage', '=', 'internal')]</field>
+        <!-- inventory_mode is the switch that makes Counted writable and the
+             Apply action available; without it these rows are read-only. -->
+        <field name="context">{'inventory_mode': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing to count yet</p>
+            <p>Count what is actually on the shelf and type it into the Counted column.
+               For something that has never been in stock, press New and pick the product first.
+               The Difference column shows what you are over or short by; press the tick to
+               apply a line, or use Apply from the Actions menu to post several at once.
+               Nothing changes until you apply.</p>
+        </field>
+    </record>
+
+</odoo>

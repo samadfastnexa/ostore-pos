@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Packages of a product: the 500g packet, the 5kg bag, the sack.
+         Built on Odoo 19's product.uom (which replaced product.packaging):
+         the barcode and the link to the product are native, the commercial
+         fields are ours. See models/product_uom.py. -->
+
+    <record id="product_uom_view_list_packages" model="ir.ui.view">
+        <field name="name">product.uom.list.pos.retail</field>
+        <field name="model">product.uom</field>
+        <field name="arch" type="xml">
+            <list string="Packages" editable="bottom">
+                <field name="currency_id" column_invisible="1"/>
+                <field name="package_name" string="Package" placeholder="e.g. 5 KG Bag"/>
+                <field name="uom_id" string="Unit"/>
+                <field name="package_qty" string="Contains" readonly="1"/>
+                <field name="barcode"/>
+                <button name="action_generate_barcode" type="object" icon="fa-barcode"
+                        title="Generate a barcode" invisible="barcode"/>
+                <field name="sku" optional="show"/>
+                <field name="standard_price" string="Cost" optional="show"/>
+                <field name="list_price" string="Selling Price"/>
+                <field name="unit_price" string="Per Unit" readonly="1" optional="hide"/>
+                <field name="min_price" optional="hide"/>
+                <field name="max_price" optional="hide"/>
+                <field name="weight" optional="hide"/>
+                <field name="active" widget="boolean_toggle" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="product_uom_view_form_package" model="ir.ui.view">
+        <field name="name">product.uom.form.pos.retail</field>
+        <field name="model">product.uom</field>
+        <field name="arch" type="xml">
+            <form string="Package">
+                <sheet>
+                    <field name="image_128" widget="image" class="oe_avatar"/>
+                    <div class="oe_title">
+                        <label for="package_name" string="Package Name"/>
+                        <h1><field name="package_name" placeholder="e.g. 5 KG Bag"/></h1>
+                    </div>
+                    <field name="currency_id" invisible="1"/>
+                    <group>
+                        <group string="Package">
+                            <field name="product_id"/>
+                            <field name="uom_id"/>
+                            <field name="package_qty" readonly="1"/>
+                            <field name="weight"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Identification">
+                            <label for="barcode"/>
+                            <div class="d-flex gap-2 align-items-center">
+                                <field name="barcode" nolabel="1"/>
+                                <button name="action_generate_barcode" type="object"
+                                        string="Generate" class="btn-link"
+                                        invisible="barcode"/>
+                            </div>
+                            <field name="sku"/>
+                        </group>
+                        <group string="Pricing">
+                            <field name="standard_price"/>
+                            <field name="list_price"/>
+                            <field name="unit_price" readonly="1"/>
+                        </group>
+                        <group string="Selling Range">
+                            <field name="min_price"/>
+                            <field name="max_price"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        Scanning this package's barcode at the till adds
+                        <strong>the product</strong> with the package quantity, and charges the
+                        package's own Selling Price. Stock always moves in the product's own
+                        unit, so one base inventory serves every package size.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="product_uom_view_search_package" model="ir.ui.view">
+        <field name="name">product.uom.search.pos.retail</field>
+        <field name="model">product.uom</field>
+        <field name="arch" type="xml">
+            <search string="Packages">
+                <field name="package_name" string="Package"/>
+                <field name="barcode"/>
+                <field name="sku"/>
+                <field name="product_id"/>
+                <filter name="no_barcode" string="Without Barcode" domain="[('barcode', '=', False)]"/>
+                <filter name="no_price" string="Without Price" domain="[('list_price', '=', 0)]"/>
+                <separator/>
+                <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_product" string="Product" context="{'group_by': 'product_id'}"/>
+                    <filter name="group_uom" string="Unit" context="{'group_by': 'uom_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_packages" model="ir.actions.act_window">
+        <field name="name">Product Packages</field>
+        <field name="res_model">product.uom</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="product_uom_view_search_package"/>
+        <field name="context">{'search_default_group_product': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create your first package</p>
+            <p>Sell one product in several sizes, each with its own barcode and price:
+               a 500g packet, a 1kg packet, a 5kg bag. Stock stays on the product itself,
+               so every size draws from the same inventory.</p>
+        </field>
+    </record>
+
+    <!-- Packages page on the product form. Hidden for multi-variant products:
+         packages belong to a specific variant, so those are managed from the
+         variant's own form where the choice is unambiguous. -->
+    <record id="product_template_form_view_packages" model="ir.ui.view">
+        <field name="name">product.template.form.pos.retail.packages</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <page name="inventory" position="before">
+                <page string="Packages" name="pos_retail_packages"
+                      invisible="product_variant_count &gt; 1">
+                    <div class="alert alert-info" role="alert">
+                        Sell this product in several package sizes. Scanning a package barcode
+                        at the till picks the product, the quantity and the package price
+                        automatically; stock always moves in
+                        <field name="uom_name" class="fw-bold" readonly="1" nolabel="1"/>.
+                    </div>
+                    <field name="pos_retail_package_ids" nolabel="1"
+                           context="{'default_product_id': product_variant_id}">
+                        <list string="Packages" editable="bottom">
+                            <field name="currency_id" column_invisible="1"/>
+                            <field name="package_name" string="Package" placeholder="e.g. 5 KG Bag"/>
+                            <field name="uom_id" string="Unit"/>
+                            <field name="package_qty" string="Contains" readonly="1"/>
+                            <field name="barcode"/>
+                            <button name="action_generate_barcode" type="object" icon="fa-barcode"
+                                    title="Generate a barcode" invisible="barcode"/>
+                            <field name="sku" optional="show"/>
+                            <field name="standard_price" string="Cost" optional="show"/>
+                            <field name="list_price" string="Selling Price"/>
+                            <field name="unit_price" string="Per Unit" readonly="1" optional="hide"/>
+                            <field name="min_price" optional="hide"/>
+                            <field name="max_price" optional="hide"/>
+                            <field name="weight" optional="hide"/>
+                            <field name="active" widget="boolean_toggle" optional="hide"/>
+                        </list>
+                    </field>
+                </page>
+            </page>
+        </field>
+    </record>
+
+</odoo>

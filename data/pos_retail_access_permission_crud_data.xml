@@ -1,0 +1,708 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- CRUD permission slices, one View/Create/Edit/Delete set per area,
+         complementing the coarse full-access permissions in
+         pos_retail_access_permission_data.xml. Generated mechanically; the
+         access rows are standalone records for the same reasons as there
+         (explicit names, own xmlids, clean uninstall). -->
+
+    <record id="perm_partners_create" model="pos.retail.access.permission">
+        <field name="name">Create Customers &amp; Vendors</field>
+        <field name="category">partners</field>
+        <field name="sequence">20</field>
+        <field name="description">Add new customers &amp; vendors. Does not allow editing or deleting existing ones.</field>
+    </record>
+    <record id="access_perm_partners_create_partner" model="ir.model.access">
+        <field name="name">Permission Create Customers &amp; Vendors: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_partners_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_partners_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Customers &amp; Vendors</field>
+        <field name="category">partners</field>
+        <field name="sequence">30</field>
+        <field name="description">Modify existing customers &amp; vendors. Does not allow adding new ones or deleting.</field>
+    </record>
+    <record id="access_perm_partners_edit_partner" model="ir.model.access">
+        <field name="name">Permission Edit Customers &amp; Vendors: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_partners_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_partners_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Customers &amp; Vendors</field>
+        <field name="category">partners</field>
+        <field name="sequence">40</field>
+        <field name="description">Delete customers &amp; vendors. Odoo's own rules still apply (e.g. posted or confirmed documents cannot be deleted).</field>
+    </record>
+    <record id="access_perm_partners_delete_partner" model="ir.model.access">
+        <field name="name">Permission Delete Customers &amp; Vendors: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_partners_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <record id="perm_sales_view" model="pos.retail.access.permission">
+        <field name="name">View Quotations &amp; Sales Orders</field>
+        <field name="category">sales</field>
+        <field name="sequence">20</field>
+        <field name="description">Read-only access to quotations &amp; sales orders. No create, edit or delete.</field>
+    </record>
+    <record id="access_perm_sales_view_order" model="ir.model.access">
+        <field name="name">Permission View Quotations &amp; Sales Orders: sale_order</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="group_id" ref="perm_sales_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_sales_view_line" model="ir.model.access">
+        <field name="name">Permission View Quotations &amp; Sales Orders: sale_order_line</field>
+        <field name="model_id" ref="sale.model_sale_order_line"/>
+        <field name="group_id" ref="perm_sales_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_sales_create" model="pos.retail.access.permission">
+        <field name="name">Create Quotations &amp; Sales Orders</field>
+        <field name="category">sales</field>
+        <field name="sequence">30</field>
+        <!-- Includes the native salesperson group: Odoo's quote-creation flow
+             reads fields that core gates on that group at FIELD level, which
+             no ACL row can cross. Verified empirically; a pure ACL slice
+             cannot create a quotation at all. -->
+        <field name="implied_ids" eval="[(6, 0, [ref('sales_team.group_sale_salesman')])]"/>
+        <field name="description">Add and edit quotations and sales orders (their own documents). Odoo requires the salesperson access level to make quotes, so creating and editing come together here; deleting stays separate.</field>
+    </record>
+    <record id="access_perm_sales_create_order" model="ir.model.access">
+        <field name="name">Permission Create Quotations &amp; Sales Orders: sale_order</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="group_id" ref="perm_sales_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_sales_create_line" model="ir.model.access">
+        <field name="name">Permission Create Quotations &amp; Sales Orders: sale_order_line</field>
+        <field name="model_id" ref="sale.model_sale_order_line"/>
+        <field name="group_id" ref="perm_sales_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_sales_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Quotations &amp; Sales Orders</field>
+        <field name="category">sales</field>
+        <field name="sequence">40</field>
+        <!-- Same field-level core gate as the Create permission (see there):
+             editing a quote recomputes the same salesperson-gated fields, so
+             this also carries the native salesperson group and is effectively
+             the same access level as Create. -->
+        <field name="implied_ids" eval="[(6, 0, [ref('sales_team.group_sale_salesman')])]"/>
+        <field name="description">Modify quotations and sales orders (their own documents). Odoo requires the salesperson access level for this, which also allows creating quotes; deleting stays separate.</field>
+    </record>
+    <record id="access_perm_sales_edit_order" model="ir.model.access">
+        <field name="name">Permission Edit Quotations &amp; Sales Orders: sale_order</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="group_id" ref="perm_sales_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_sales_edit_line" model="ir.model.access">
+        <field name="name">Permission Edit Quotations &amp; Sales Orders: sale_order_line</field>
+        <field name="model_id" ref="sale.model_sale_order_line"/>
+        <field name="group_id" ref="perm_sales_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_sales_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Quotations &amp; Sales Orders</field>
+        <field name="category">sales</field>
+        <field name="sequence">50</field>
+        <field name="description">Delete quotations &amp; sales orders. Odoo's own rules still apply (e.g. posted or confirmed documents cannot be deleted).</field>
+    </record>
+    <record id="access_perm_sales_delete_order" model="ir.model.access">
+        <field name="name">Permission Delete Quotations &amp; Sales Orders: sale_order</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="group_id" ref="perm_sales_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_sales_delete_line" model="ir.model.access">
+        <field name="name">Permission Delete Quotations &amp; Sales Orders: sale_order_line</field>
+        <field name="model_id" ref="sale.model_sale_order_line"/>
+        <field name="group_id" ref="perm_sales_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <record id="perm_purchases_view" model="pos.retail.access.permission">
+        <field name="name">View Purchase Orders</field>
+        <field name="category">purchases</field>
+        <field name="sequence">20</field>
+        <field name="description">Read-only access to purchase orders. No create, edit or delete.</field>
+    </record>
+    <record id="access_perm_purchases_view_order" model="ir.model.access">
+        <field name="name">Permission View Purchase Orders: purchase_order</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="group_id" ref="perm_purchases_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_purchases_view_line" model="ir.model.access">
+        <field name="name">Permission View Purchase Orders: purchase_order_line</field>
+        <field name="model_id" ref="purchase.model_purchase_order_line"/>
+        <field name="group_id" ref="perm_purchases_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_purchases_create" model="pos.retail.access.permission">
+        <field name="name">Create Purchase Orders</field>
+        <field name="category">purchases</field>
+        <field name="sequence">30</field>
+        <field name="description">Add new purchase orders. Includes editing them: the document workflow (adding lines, confirming) writes the record itself.</field>
+    </record>
+    <record id="access_perm_purchases_create_order" model="ir.model.access">
+        <field name="name">Permission Create Purchase Orders: purchase_order</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="group_id" ref="perm_purchases_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_purchases_create_line" model="ir.model.access">
+        <field name="name">Permission Create Purchase Orders: purchase_order_line</field>
+        <field name="model_id" ref="purchase.model_purchase_order_line"/>
+        <field name="group_id" ref="perm_purchases_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_purchases_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Purchase Orders</field>
+        <field name="category">purchases</field>
+        <field name="sequence">40</field>
+        <field name="description">Modify existing purchase orders. Does not allow adding new ones or deleting.</field>
+    </record>
+    <record id="access_perm_purchases_edit_order" model="ir.model.access">
+        <field name="name">Permission Edit Purchase Orders: purchase_order</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="group_id" ref="perm_purchases_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_purchases_edit_line" model="ir.model.access">
+        <field name="name">Permission Edit Purchase Orders: purchase_order_line</field>
+        <field name="model_id" ref="purchase.model_purchase_order_line"/>
+        <field name="group_id" ref="perm_purchases_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_purchases_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Purchase Orders</field>
+        <field name="category">purchases</field>
+        <field name="sequence">50</field>
+        <field name="description">Delete purchase orders. Odoo's own rules still apply (e.g. posted or confirmed documents cannot be deleted).</field>
+    </record>
+    <record id="access_perm_purchases_delete_order" model="ir.model.access">
+        <field name="name">Permission Delete Purchase Orders: purchase_order</field>
+        <field name="model_id" ref="purchase.model_purchase_order"/>
+        <field name="group_id" ref="perm_purchases_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_purchases_delete_line" model="ir.model.access">
+        <field name="name">Permission Delete Purchase Orders: purchase_order_line</field>
+        <field name="model_id" ref="purchase.model_purchase_order_line"/>
+        <field name="group_id" ref="perm_purchases_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <record id="perm_inventory_view" model="pos.retail.access.permission">
+        <field name="name">View Inventory Transfers</field>
+        <field name="category">inventory</field>
+        <field name="sequence">20</field>
+        <field name="description">Read-only access to inventory transfers. No create, edit or delete.</field>
+    </record>
+    <record id="access_perm_inventory_view_picking" model="ir.model.access">
+        <field name="name">Permission View Inventory Transfers: stock_picking</field>
+        <field name="model_id" ref="stock.model_stock_picking"/>
+        <field name="group_id" ref="perm_inventory_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_inventory_view_move" model="ir.model.access">
+        <field name="name">Permission View Inventory Transfers: stock_move</field>
+        <field name="model_id" ref="stock.model_stock_move"/>
+        <field name="group_id" ref="perm_inventory_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_inventory_view_move_line" model="ir.model.access">
+        <field name="name">Permission View Inventory Transfers: stock_move_line</field>
+        <field name="model_id" ref="stock.model_stock_move_line"/>
+        <field name="group_id" ref="perm_inventory_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_inventory_create" model="pos.retail.access.permission">
+        <field name="name">Create Inventory Transfers</field>
+        <field name="category">inventory</field>
+        <field name="sequence">30</field>
+        <field name="description">Add new inventory transfers. Includes editing them: the document workflow (adding lines, confirming) writes the record itself.</field>
+    </record>
+    <record id="access_perm_inventory_create_picking" model="ir.model.access">
+        <field name="name">Permission Create Inventory Transfers: stock_picking</field>
+        <field name="model_id" ref="stock.model_stock_picking"/>
+        <field name="group_id" ref="perm_inventory_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_inventory_create_move" model="ir.model.access">
+        <field name="name">Permission Create Inventory Transfers: stock_move</field>
+        <field name="model_id" ref="stock.model_stock_move"/>
+        <field name="group_id" ref="perm_inventory_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_inventory_create_move_line" model="ir.model.access">
+        <field name="name">Permission Create Inventory Transfers: stock_move_line</field>
+        <field name="model_id" ref="stock.model_stock_move_line"/>
+        <field name="group_id" ref="perm_inventory_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_inventory_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Inventory Transfers</field>
+        <field name="category">inventory</field>
+        <field name="sequence">40</field>
+        <field name="description">Modify existing inventory transfers. Does not allow adding new ones or deleting.</field>
+    </record>
+    <record id="access_perm_inventory_edit_picking" model="ir.model.access">
+        <field name="name">Permission Edit Inventory Transfers: stock_picking</field>
+        <field name="model_id" ref="stock.model_stock_picking"/>
+        <field name="group_id" ref="perm_inventory_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_inventory_edit_move" model="ir.model.access">
+        <field name="name">Permission Edit Inventory Transfers: stock_move</field>
+        <field name="model_id" ref="stock.model_stock_move"/>
+        <field name="group_id" ref="perm_inventory_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_inventory_edit_move_line" model="ir.model.access">
+        <field name="name">Permission Edit Inventory Transfers: stock_move_line</field>
+        <field name="model_id" ref="stock.model_stock_move_line"/>
+        <field name="group_id" ref="perm_inventory_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_inventory_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Inventory Transfers</field>
+        <field name="category">inventory</field>
+        <field name="sequence">50</field>
+        <field name="description">Delete inventory transfers. Odoo's own rules still apply (e.g. posted or confirmed documents cannot be deleted).</field>
+    </record>
+    <record id="access_perm_inventory_delete_picking" model="ir.model.access">
+        <field name="name">Permission Delete Inventory Transfers: stock_picking</field>
+        <field name="model_id" ref="stock.model_stock_picking"/>
+        <field name="group_id" ref="perm_inventory_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_inventory_delete_move" model="ir.model.access">
+        <field name="name">Permission Delete Inventory Transfers: stock_move</field>
+        <field name="model_id" ref="stock.model_stock_move"/>
+        <field name="group_id" ref="perm_inventory_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_inventory_delete_move_line" model="ir.model.access">
+        <field name="name">Permission Delete Inventory Transfers: stock_move_line</field>
+        <field name="model_id" ref="stock.model_stock_move_line"/>
+        <field name="group_id" ref="perm_inventory_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <record id="perm_invoicing_view" model="pos.retail.access.permission">
+        <field name="name">View Invoices &amp; Bills</field>
+        <field name="category">accounting</field>
+        <field name="sequence">20</field>
+        <field name="description">Read-only access to invoices &amp; bills. No create, edit or delete.</field>
+    </record>
+    <record id="access_perm_invoicing_view_move" model="ir.model.access">
+        <field name="name">Permission View Invoices &amp; Bills: account_move</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="group_id" ref="perm_invoicing_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_invoicing_view_line" model="ir.model.access">
+        <field name="name">Permission View Invoices &amp; Bills: account_move_line</field>
+        <field name="model_id" ref="account.model_account_move_line"/>
+        <field name="group_id" ref="perm_invoicing_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_invoicing_create" model="pos.retail.access.permission">
+        <field name="name">Create Invoices &amp; Bills</field>
+        <field name="category">accounting</field>
+        <field name="sequence">30</field>
+        <field name="description">Add new invoices &amp; bills. Includes editing them: the document workflow (adding lines, confirming) writes the record itself.</field>
+    </record>
+    <record id="access_perm_invoicing_create_move" model="ir.model.access">
+        <field name="name">Permission Create Invoices &amp; Bills: account_move</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="group_id" ref="perm_invoicing_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_invoicing_create_line" model="ir.model.access">
+        <field name="name">Permission Create Invoices &amp; Bills: account_move_line</field>
+        <field name="model_id" ref="account.model_account_move_line"/>
+        <field name="group_id" ref="perm_invoicing_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_invoicing_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Invoices &amp; Bills</field>
+        <field name="category">accounting</field>
+        <field name="sequence">40</field>
+        <field name="description">Modify existing invoices &amp; bills. Does not allow adding new ones or deleting.</field>
+    </record>
+    <record id="access_perm_invoicing_edit_move" model="ir.model.access">
+        <field name="name">Permission Edit Invoices &amp; Bills: account_move</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="group_id" ref="perm_invoicing_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_invoicing_edit_line" model="ir.model.access">
+        <field name="name">Permission Edit Invoices &amp; Bills: account_move_line</field>
+        <field name="model_id" ref="account.model_account_move_line"/>
+        <field name="group_id" ref="perm_invoicing_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_invoicing_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Invoices &amp; Bills</field>
+        <field name="category">accounting</field>
+        <field name="sequence">50</field>
+        <field name="description">Delete invoices &amp; bills. Odoo's own rules still apply (e.g. posted or confirmed documents cannot be deleted).</field>
+    </record>
+    <record id="access_perm_invoicing_delete_move" model="ir.model.access">
+        <field name="name">Permission Delete Invoices &amp; Bills: account_move</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="group_id" ref="perm_invoicing_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_invoicing_delete_line" model="ir.model.access">
+        <field name="name">Permission Delete Invoices &amp; Bills: account_move_line</field>
+        <field name="model_id" ref="account.model_account_move_line"/>
+        <field name="group_id" ref="perm_invoicing_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <record id="perm_expenses_create" model="pos.retail.access.permission">
+        <field name="name">Create Store Expenses</field>
+        <field name="category">expenses</field>
+        <field name="sequence">20</field>
+        <field name="description">Add new store expenses. Does not allow editing or deleting existing ones.</field>
+    </record>
+    <record id="access_perm_expenses_create_expense" model="ir.model.access">
+        <field name="name">Permission Create Store Expenses: pos_retail_expense</field>
+        <field name="model_id" ref="model_pos_retail_expense"/>
+        <field name="group_id" ref="perm_expenses_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_expenses_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Store Expenses</field>
+        <field name="category">expenses</field>
+        <field name="sequence">30</field>
+        <field name="description">Modify existing store expenses. Does not allow adding new ones or deleting.</field>
+    </record>
+    <record id="access_perm_expenses_edit_expense" model="ir.model.access">
+        <field name="name">Permission Edit Store Expenses: pos_retail_expense</field>
+        <field name="model_id" ref="model_pos_retail_expense"/>
+        <field name="group_id" ref="perm_expenses_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_expenses_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Store Expenses</field>
+        <field name="category">expenses</field>
+        <field name="sequence">40</field>
+        <field name="description">Delete store expenses. Odoo's own rules still apply (e.g. posted or confirmed documents cannot be deleted).</field>
+    </record>
+    <record id="access_perm_expenses_delete_expense" model="ir.model.access">
+        <field name="name">Permission Delete Store Expenses: pos_retail_expense</field>
+        <field name="model_id" ref="model_pos_retail_expense"/>
+        <field name="group_id" ref="perm_expenses_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <record id="perm_config_lists_create" model="pos.retail.access.permission">
+        <field name="name">Create Configuration Lists</field>
+        <field name="category">configuration</field>
+        <field name="sequence">20</field>
+        <field name="description">Add new configuration lists. Does not allow editing or deleting existing ones.</field>
+    </record>
+    <record id="access_perm_config_lists_create_membership" model="ir.model.access">
+        <field name="name">Permission Create Configuration Lists: pos_membership_level</field>
+        <field name="model_id" ref="model_pos_membership_level"/>
+        <field name="group_id" ref="perm_config_lists_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_create_discount_role" model="ir.model.access">
+        <field name="name">Permission Create Configuration Lists: pos_retail_discount_role</field>
+        <field name="model_id" ref="model_pos_retail_discount_role"/>
+        <field name="group_id" ref="perm_config_lists_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_create_discount_reason" model="ir.model.access">
+        <field name="name">Permission Create Configuration Lists: pos_retail_discount_reason</field>
+        <field name="model_id" ref="model_pos_retail_discount_reason"/>
+        <field name="group_id" ref="perm_config_lists_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_create_return_reason" model="ir.model.access">
+        <field name="name">Permission Create Configuration Lists: pos_retail_return_reason</field>
+        <field name="model_id" ref="model_pos_retail_return_reason"/>
+        <field name="group_id" ref="perm_config_lists_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_create_price_reason" model="ir.model.access">
+        <field name="name">Permission Create Configuration Lists: pos_retail_price_reason</field>
+        <field name="model_id" ref="model_pos_retail_price_reason"/>
+        <field name="group_id" ref="perm_config_lists_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_config_lists_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Configuration Lists</field>
+        <field name="category">configuration</field>
+        <field name="sequence">30</field>
+        <field name="description">Modify existing configuration lists. Does not allow adding new ones or deleting.</field>
+    </record>
+    <record id="access_perm_config_lists_edit_membership" model="ir.model.access">
+        <field name="name">Permission Edit Configuration Lists: pos_membership_level</field>
+        <field name="model_id" ref="model_pos_membership_level"/>
+        <field name="group_id" ref="perm_config_lists_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_edit_discount_role" model="ir.model.access">
+        <field name="name">Permission Edit Configuration Lists: pos_retail_discount_role</field>
+        <field name="model_id" ref="model_pos_retail_discount_role"/>
+        <field name="group_id" ref="perm_config_lists_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_edit_discount_reason" model="ir.model.access">
+        <field name="name">Permission Edit Configuration Lists: pos_retail_discount_reason</field>
+        <field name="model_id" ref="model_pos_retail_discount_reason"/>
+        <field name="group_id" ref="perm_config_lists_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_edit_return_reason" model="ir.model.access">
+        <field name="name">Permission Edit Configuration Lists: pos_retail_return_reason</field>
+        <field name="model_id" ref="model_pos_retail_return_reason"/>
+        <field name="group_id" ref="perm_config_lists_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_edit_price_reason" model="ir.model.access">
+        <field name="name">Permission Edit Configuration Lists: pos_retail_price_reason</field>
+        <field name="model_id" ref="model_pos_retail_price_reason"/>
+        <field name="group_id" ref="perm_config_lists_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_config_lists_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Configuration Lists</field>
+        <field name="category">configuration</field>
+        <field name="sequence">40</field>
+        <field name="description">Delete configuration lists. Odoo's own rules still apply (e.g. posted or confirmed documents cannot be deleted).</field>
+    </record>
+    <record id="access_perm_config_lists_delete_membership" model="ir.model.access">
+        <field name="name">Permission Delete Configuration Lists: pos_membership_level</field>
+        <field name="model_id" ref="model_pos_membership_level"/>
+        <field name="group_id" ref="perm_config_lists_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_config_lists_delete_discount_role" model="ir.model.access">
+        <field name="name">Permission Delete Configuration Lists: pos_retail_discount_role</field>
+        <field name="model_id" ref="model_pos_retail_discount_role"/>
+        <field name="group_id" ref="perm_config_lists_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_config_lists_delete_discount_reason" model="ir.model.access">
+        <field name="name">Permission Delete Configuration Lists: pos_retail_discount_reason</field>
+        <field name="model_id" ref="model_pos_retail_discount_reason"/>
+        <field name="group_id" ref="perm_config_lists_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_config_lists_delete_return_reason" model="ir.model.access">
+        <field name="name">Permission Delete Configuration Lists: pos_retail_return_reason</field>
+        <field name="model_id" ref="model_pos_retail_return_reason"/>
+        <field name="group_id" ref="perm_config_lists_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_config_lists_delete_price_reason" model="ir.model.access">
+        <field name="name">Permission Delete Configuration Lists: pos_retail_price_reason</field>
+        <field name="model_id" ref="model_pos_retail_price_reason"/>
+        <field name="group_id" ref="perm_config_lists_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+</odoo>

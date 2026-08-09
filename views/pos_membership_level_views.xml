@@ -20,6 +20,14 @@
         <field name="arch" type="xml">
             <form string="Membership Level">
                 <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> customer loyalty tiers (e.g. Bronze/Silver/Gold/VIP).<br/>
+                            <strong>How to use:</strong> create tiers here, assign one on a customer's record,
+                            then set up a Loyalty/Promotion program targeting that tier to actually grant the discount at checkout.
+                        </div>
+                    </div>
                     <div class="oe_title">
                         <label for="name"/>
                         <h1><field name="name" placeholder="e.g. Gold"/></h1>

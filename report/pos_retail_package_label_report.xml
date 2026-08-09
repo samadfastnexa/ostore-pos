@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Shelf/package labels. One label per package: what it is, what it
+         costs, and a scannable barcode that the till already understands.
+         Sized for a 50x30 mm label roll, the common shelf-label stock; the
+         A4 sheet variant below prints the same label 3 x 8 to a page for
+         shops without a label printer. -->
+
+    <record id="paperformat_pos_retail_package_label" model="report.paperformat">
+        <field name="name">Package Label 50x30mm</field>
+        <field name="format">custom</field>
+        <field name="page_width">50</field>
+        <field name="page_height">30</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">1</field>
+        <field name="margin_bottom">1</field>
+        <field name="margin_left">1</field>
+        <field name="margin_right">1</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="disable_shrinking" eval="True"/>
+        <field name="dpi">96</field>
+    </record>
+
+    <template id="report_package_label_body">
+        <div class="pos-retail-pkg-label" style="width:48mm; text-align:center; font-family:sans-serif;">
+            <div style="font-size:8pt; font-weight:bold; line-height:1.1; overflow:hidden;">
+                <t t-esc="pkg.product_id.name"/>
+            </div>
+            <div style="font-size:7pt; line-height:1.1;">
+                <t t-esc="pkg.display_package_name"/>
+                <t t-if="pkg.package_qty">
+                    (<t t-esc="'%g' % pkg.package_qty"/> <t t-esc="pkg.product_id.uom_id.name"/>)
+                </t>
+            </div>
+            <div t-if="pkg.list_price" style="font-size:11pt; font-weight:bold; line-height:1.2;">
+                <span t-field="pkg.list_price"
+                      t-options='{"widget": "monetary", "display_currency": pkg.currency_id}'/>
+            </div>
+            <div t-if="pkg.barcode" style="line-height:1;">
+                <span t-field="pkg.barcode"
+                      t-options='{"widget": "barcode", "symbology": "auto", "width": 600, "height": 150, "quiet": 0, "img_style": "width:42mm;height:9mm;"}'/>
+            </div>
+            <div style="font-size:6pt; line-height:1.1;">
+                <t t-esc="pkg.barcode"/>
+                <t t-if="pkg.sku"> | <t t-esc="pkg.sku"/></t>
+            </div>
+        </div>
+    </template>
+
+    <template id="report_package_label">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="pkg">
+                <t t-call="web.basic_layout">
+                    <div class="page" style="page-break-after: always;">
+                        <t t-call="pos_retail.report_package_label_body"/>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_package_label_sheet">
+        <t t-call="web.html_container">
+            <t t-call="web.basic_layout">
+                <div class="page">
+                    <div style="display:flex; flex-wrap:wrap;">
+                        <t t-foreach="docs" t-as="pkg">
+                            <div style="width:33%; height:33mm; padding:2mm 1mm; box-sizing:border-box;">
+                                <t t-call="pos_retail.report_package_label_body"/>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_package_label" model="ir.actions.report">
+        <field name="name">Package Label (Roll)</field>
+        <field name="model">product.uom</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_package_label</field>
+        <field name="report_file">pos_retail.report_package_label</field>
+        <field name="paperformat_id" ref="paperformat_pos_retail_package_label"/>
+        <field name="print_report_name">'Package Labels'</field>
+        <field name="binding_model_id" ref="product.model_product_uom"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <record id="action_report_package_label_sheet" model="ir.actions.report">
+        <field name="name">Package Labels (A4 Sheet)</field>
+        <field name="model">product.uom</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_package_label_sheet</field>
+        <field name="report_file">pos_retail.report_package_label_sheet</field>
+        <field name="print_report_name">'Package Labels'</field>
+        <field name="binding_model_id" ref="product.model_product_uom"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

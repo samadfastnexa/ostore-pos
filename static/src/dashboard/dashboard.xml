@@ -9,6 +9,10 @@
             <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
                 <h1 class="h4 mb-0">
                     <i class="fa fa-shopping-cart me-2"/>POS Dashboard
+                    <i class="fa fa-info-circle text-muted ms-1" style="font-size:.85rem; cursor:help;"
+                       role="img" aria-label="Info" title="Info"
+                       data-tooltip="Purpose: at-a-glance sales, inventory and financial health for this store.
+How to use: switch Today/Week/Month/Custom above to change the period; click any tile or table row to drill into the underlying records."/>
                     <small class="text-muted ms-2" t-if="state.data" t-esc="state.data.company_name"/>
                 </h1>
                 <div class="d-flex align-items-center gap-2">
@@ -18,22 +22,22 @@
                     <div class="btn-group" role="group">
                         <button class="btn btn-sm"
                                 t-att-class="state.period === 'today' ? 'btn-primary' : 'btn-outline-secondary'"
-                                t-on-click="() => this.setPeriod('today')">Today</button>
+                                t-on-click="() => this.setPeriod('today')"><i class="fa fa-clock-o me-1"/>Today</button>
                         <button class="btn btn-sm"
                                 t-att-class="state.period === 'week' ? 'btn-primary' : 'btn-outline-secondary'"
-                                t-on-click="() => this.setPeriod('week')">Week</button>
+                                t-on-click="() => this.setPeriod('week')"><i class="fa fa-calendar-o me-1"/>Week</button>
                         <button class="btn btn-sm"
                                 t-att-class="state.period === 'month' ? 'btn-primary' : 'btn-outline-secondary'"
-                                t-on-click="() => this.setPeriod('month')">Month</button>
+                                t-on-click="() => this.setPeriod('month')"><i class="fa fa-calendar me-1"/>Month</button>
                         <button class="btn btn-sm"
                                 t-att-class="state.period === 'custom' ? 'btn-primary' : 'btn-outline-secondary'"
-                                t-on-click="() => this.toggleCustom()">Custom</button>
+                                t-on-click="() => this.toggleCustom()"><i class="fa fa-sliders me-1"/>Custom</button>
                     </div>
                     <div class="d-flex align-items-center gap-1" t-if="state.showCustom">
                         <input type="date" class="form-control form-control-sm" t-model="state.dateFrom"/>
                         <span class="text-muted">to</span>
                         <input type="date" class="form-control form-control-sm" t-model="state.dateTo"/>
-                        <button class="btn btn-sm btn-primary" t-on-click="() => this.applyCustom()">Apply</button>
+                        <button class="btn btn-sm btn-primary" t-on-click="() => this.applyCustom()"><i class="fa fa-check me-1"/>Apply</button>
                     </div>
                     <button class="btn btn-sm btn-outline-primary" t-on-click="() => this.refresh()">
                         <i class="fa fa-refresh"/>
@@ -42,9 +46,16 @@
             </div>
 
             <t t-if="state.loading">
-                <div class="text-center text-muted py-5">
-                    <i class="fa fa-spinner fa-spin fa-2x"/>
-                    <div class="mt-2">Loading dashboard…</div>
+                <div class="row g-3 mb-1">
+                    <t t-foreach="[1,2,3,4,5,6,7,8]" t-as="n" t-key="n">
+                        <div class="col-6 col-md-3">
+                            <div class="o_kpi_card o_skeleton"/>
+                        </div>
+                    </t>
+                </div>
+                <div class="row g-3 mt-0">
+                    <div class="col-12 col-lg-8"><div class="o_dash_panel o_skeleton" style="height:240px;"/></div>
+                    <div class="col-12 col-lg-4"><div class="o_dash_panel o_skeleton" style="height:240px;"/></div>
                 </div>
             </t>
 
@@ -58,56 +69,76 @@
                         product(s) sold below zero stock — inventory needs reconciliation.
                     </span>
                     <button class="btn btn-sm btn-outline-light border-danger text-danger" t-on-click="() => this.openNegativeStock()">
-                        View details
+                        <i class="fa fa-search me-1"/>View details
                     </button>
                 </div>
                 <!-- KPI tiles -->
                 <div class="row g-3 mb-1">
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_sales" t-on-click="() => this.openOrders([['state','in',['paid','done']]], 'Sales Orders')">
+                        <div class="o_kpi_card o_kpi_sales" t-on-click="() => this.openPeriodOrders([['state','in',['paid','done']]], 'Sales')">
+                            <i class="fa fa-money o_kpi_icon"/>
                             <div class="o_kpi_label"><t t-esc="periodLabel"/> Sales</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.sales)"/>
+                            <div class="o_kpi_trend" t-att-class="trendClass(state.trend.sales_pct)">
+                                <i class="fa" t-att-class="trendIcon(state.trend.sales_pct)"/>
+                                <t t-esc="trendLabel(state.trend.sales_pct)"/>
+                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_txn">
+                        <div class="o_kpi_card o_kpi_txn" t-on-click="() => this.openPeriodOrders([['state','in',['paid','done']]], 'Transactions')">
+                            <i class="fa fa-shopping-basket o_kpi_icon"/>
                             <div class="o_kpi_label">Transactions</div>
                             <div class="o_kpi_value" t-esc="state.data.kpis.transactions"/>
+                            <div class="o_kpi_trend" t-att-class="trendClass(state.trend.transactions_pct)">
+                                <i class="fa" t-att-class="trendIcon(state.trend.transactions_pct)"/>
+                                <t t-esc="trendLabel(state.trend.transactions_pct)"/>
+                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_basket">
+                        <div class="o_kpi_card o_kpi_basket" t-on-click="() => this.openPeriodOrders([['state','in',['paid','done']]], 'Orders behind the average basket')">
+                            <i class="fa fa-calculator o_kpi_icon"/>
                             <div class="o_kpi_label">Avg. Basket</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.avg_basket)"/>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_profit">
+                        <div class="o_kpi_card o_kpi_profit" t-on-click="() => this.openSoldLines('Gross Profit')">
+                            <i class="fa fa-line-chart o_kpi_icon"/>
                             <div class="o_kpi_label">Gross Profit</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.gross_profit)"/>
                             <div class="o_kpi_sub" t-esc="state.data.kpis.margin_pct.toFixed(1) + '% margin'"/>
+                            <div class="o_kpi_trend" t-att-class="trendClass(state.trend.gross_profit_pct)">
+                                <i class="fa" t-att-class="trendIcon(state.trend.gross_profit_pct)"/>
+                                <t t-esc="trendLabel(state.trend.gross_profit_pct)"/>
+                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_cash">
+                        <div class="o_kpi_card o_kpi_cash" t-on-click="() => this.openSessions()">
+                            <i class="fa fa-inbox o_kpi_icon"/>
                             <div class="o_kpi_label">Cash in Drawer</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.cash_in_drawer)"/>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_shifts">
+                        <div class="o_kpi_card o_kpi_shifts" t-on-click="() => this.openSessions()">
+                            <i class="fa fa-clock-o o_kpi_icon"/>
                             <div class="o_kpi_label">Open Shifts</div>
                             <div class="o_kpi_value" t-esc="state.data.kpis.open_sessions"/>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_cust">
+                        <div class="o_kpi_card o_kpi_cust" t-on-click="() => this.openCustomersList()">
+                            <i class="fa fa-users o_kpi_icon"/>
                             <div class="o_kpi_label">Customers</div>
                             <div class="o_kpi_value" t-esc="state.data.kpis.customers"/>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_refund" t-on-click="() => this.openOrders([['amount_total','&lt;',0],['state','in',['paid','done']]], 'Refunds')">
+                        <div class="o_kpi_card o_kpi_refund" t-on-click="() => this.openPeriodOrders([['amount_total','&lt;',0],['state','in',['paid','done']]], 'Refunds')">
+                            <i class="fa fa-undo o_kpi_icon"/>
                             <div class="o_kpi_label">Refunds</div>
                             <div class="o_kpi_value" t-esc="money(state.data.refunds.amount)"/>
                             <div class="o_kpi_sub" t-esc="state.data.refunds.count + ' order(s)'"/>
@@ -118,26 +149,34 @@
                 <!-- Financial detail tiles -->
                 <div class="row g-3 mt-0 mb-1">
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_netsales">
+                        <div class="o_kpi_card o_kpi_netsales" t-on-click="() => this.openSoldLines('Net Sales')">
+                            <i class="fa fa-usd o_kpi_icon"/>
                             <div class="o_kpi_label">Net Sales</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.net_sales)"/>
                             <div class="o_kpi_sub">excl. tax</div>
+                            <div class="o_kpi_trend" t-att-class="trendClass(state.trend.net_sales_pct)">
+                                <i class="fa" t-att-class="trendIcon(state.trend.net_sales_pct)"/>
+                                <t t-esc="trendLabel(state.trend.net_sales_pct)"/>
+                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_cogs">
+                        <div class="o_kpi_card o_kpi_cogs" t-on-click="() => this.openSoldLines('Cost of Goods Sold')">
+                            <i class="fa fa-cubes o_kpi_icon"/>
                             <div class="o_kpi_label">Cost of Goods Sold</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.cogs)"/>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_tax">
+                        <div class="o_kpi_card o_kpi_tax" t-on-click="() => this.openSoldLines('Taxes Collected')">
+                            <i class="fa fa-percent o_kpi_icon"/>
                             <div class="o_kpi_label">Taxes Collected</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.taxes_collected)"/>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="o_kpi_card o_kpi_discount">
+                        <div class="o_kpi_card o_kpi_discount" t-on-click="() => this.openSoldLines('Discounts Given')">
+                            <i class="fa fa-tag o_kpi_icon"/>
                             <div class="o_kpi_label">Discounts Given</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.discounts_given)"/>
                         </div>
@@ -145,6 +184,7 @@
                     <div class="col-6 col-md-3">
                         <div class="o_kpi_card o_kpi_expense"
                              t-on-click="() => this.openExpenses([['date','=', this.today]], 'Expenses Today')">
+                            <i class="fa fa-credit-card o_kpi_icon"/>
                             <div class="o_kpi_label">Expenses Today</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.expenses_today)"/>
                         </div>
@@ -152,6 +192,7 @@
                     <div class="col-6 col-md-3">
                         <div class="o_kpi_card o_kpi_expense"
                              t-on-click="() => this.openExpenses([['date','&gt;=', this.today.slice(0, 8) + '01']], 'Expenses This Month')">
+                            <i class="fa fa-credit-card o_kpi_icon"/>
                             <div class="o_kpi_label">Expenses This Month</div>
                             <div class="o_kpi_value" t-esc="money(state.data.kpis.expenses_month)"/>
                         </div>
@@ -164,24 +205,25 @@
                         <div class="o_dash_panel">
                             <div class="o_dash_panel_title">Inventory snapshot</div>
                             <div class="o_inv_grid">
-                                <div class="o_inv_stat">
+                                <div class="o_inv_stat o_click_row" t-on-click="() => this.openProducts(this.drill.pos_product_ids, 'Products in POS')">
                                     <div class="o_inv_stat_value" t-esc="state.data.kpis.total_products"/>
                                     <div class="o_inv_stat_label">Products in POS</div>
                                 </div>
-                                <div class="o_inv_stat">
+                                <div class="o_inv_stat o_click_row" t-on-click="() => this.openProducts(this.drill.in_stock_ids, 'Products in Stock')">
                                     <div class="o_inv_stat_value" t-esc="state.data.kpis.total_stock_qty"/>
                                     <div class="o_inv_stat_label">Total stock qty</div>
                                 </div>
-                                <div class="o_inv_stat">
+                                <div class="o_inv_stat o_click_row" t-on-click="() => this.openProducts(this.drill.in_stock_ids, 'Inventory Value at Cost')">
                                     <div class="o_inv_stat_value" t-esc="money(state.data.kpis.inventory_value_cost)"/>
                                     <div class="o_inv_stat_label">Value @ cost</div>
                                 </div>
-                                <div class="o_inv_stat">
+                                <div class="o_inv_stat o_click_row" t-on-click="() => this.openProducts(this.drill.in_stock_ids, 'Inventory Value at Selling Price')">
                                     <div class="o_inv_stat_value" t-esc="money(state.data.kpis.inventory_value_selling)"/>
                                     <div class="o_inv_stat_label">Value @ selling price</div>
                                 </div>
-                                <div class="o_inv_stat"
-                                     t-att-class="state.data.kpis.out_of_stock_count > 0 ? 'o_status_serious' : ''">
+                                <div class="o_inv_stat o_click_row"
+                                     t-att-class="state.data.kpis.out_of_stock_count > 0 ? 'o_status_serious' : ''"
+                                     t-on-click="() => this.openProducts(this.drill.out_of_stock_ids, 'Out of Stock')">
                                     <div class="o_inv_stat_value" t-esc="state.data.kpis.out_of_stock_count"/>
                                     <div class="o_inv_stat_label">Out of stock</div>
                                 </div>
@@ -192,6 +234,134 @@
                                     <div class="o_inv_stat_label">Negative stock</div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock movement, losses and turnover -->
+                <div class="row g-3 mt-0 mb-1">
+                    <div class="col-12">
+                        <div class="o_dash_panel">
+                            <div class="o_dash_panel_title">Stock movement and losses</div>
+                            <div class="o_inv_grid">
+                                <div class="o_inv_stat o_click_row" t-on-click="() => this.openStockMoves('in', 'Stock Received Today')">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.stock_in_value_today)"/>
+                                    <div class="o_inv_stat_label">
+                                        Stock in today
+                                        <span class="o_inv_stat_sub" t-esc="qtyLabel(state.data.kpis.stock_in_qty_today)"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat o_click_row" t-on-click="() => this.openStockMoves('out', 'Stock Out Today')">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.stock_out_value_today)"/>
+                                    <div class="o_inv_stat_label">
+                                        Stock out today
+                                        <span class="o_inv_stat_sub" t-esc="qtyLabel(state.data.kpis.stock_out_qty_today)"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat o_click_row"
+                                     t-att-class="state.data.kpis.damaged_value > 0 ? 'o_status_warning' : ''"
+                                     t-on-click="() => this.openScrap()">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.damaged_value)"/>
+                                    <div class="o_inv_stat_label">
+                                        Damaged (scrapped)
+                                        <span class="o_inv_stat_sub" t-esc="qtyLabel(state.data.kpis.damaged_qty)"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat o_click_row"
+                                     t-att-class="state.data.kpis.expired_value > 0 ? 'o_status_serious' : ''"
+                                     t-on-click="() => this.openExpiredLots()">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.expired_value)"/>
+                                    <div class="o_inv_stat_label">
+                                        Expired stock
+                                        <span class="o_inv_stat_sub"
+                                              t-esc="state.data.kpis.expired_lot_count + ' lot(s)'"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat o_click_row"
+                                     t-att-class="state.data.kpis.dead_stock_value > 0 ? 'o_status_warning' : ''"
+                                     t-on-click="() => this.openProducts(this.drill.dead_stock_ids, 'Dead Stock')">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.dead_stock_value)"/>
+                                    <div class="o_inv_stat_label">
+                                        Dead stock
+                                        <span class="o_inv_stat_sub"
+                                              t-esc="state.data.kpis.dead_stock_count + ' product(s)'"/>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat o_click_row" t-on-click="() => this.openSoldLines('Cost of Goods Sold behind turnover')">
+                                    <div class="o_inv_stat_value" t-esc="turnoverLabel"/>
+                                    <div class="o_inv_stat_label">
+                                        Stock turnover
+                                        <span class="o_inv_stat_sub">cost of sales vs stock value</span>
+                                    </div>
+                                </div>
+                                <div class="o_inv_stat o_click_row" t-on-click="() => this.openReorderRules()">
+                                    <div class="o_inv_stat_value" t-esc="money(state.data.kpis.reorder_cost)"/>
+                                    <div class="o_inv_stat_label">
+                                        Expected reorder cost
+                                        <span class="o_inv_stat_sub"
+                                              t-esc="state.data.kpis.reorder_product_count + ' product(s)'"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- What moves, what does not -->
+                <div class="row g-3 mt-0 mb-1">
+                    <div class="col-12 col-lg-4">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">Fast moving</div>
+                            <t t-if="!state.data.fast_movers.length">
+                                <div class="o_empty">No sales in this period.</div>
+                            </t>
+                            <t t-else="">
+                                <div t-foreach="state.data.fast_movers" t-as="row" t-key="row.product_id"
+                                     class="o_list_row o_click_row"
+                                     t-on-click="() => this.openProduct(row.product_id)">
+                                    <span class="o_list_name" t-esc="row.name"/>
+                                    <span class="o_list_value">
+                                        <t t-esc="row.qty_sold"/> sold
+                                    </span>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">Slow moving</div>
+                            <t t-if="!state.data.slow_movers.length">
+                                <div class="o_empty">No sales in this period.</div>
+                            </t>
+                            <t t-else="">
+                                <div t-foreach="state.data.slow_movers" t-as="row" t-key="row.product_id"
+                                     class="o_list_row o_click_row"
+                                     t-on-click="() => this.openProduct(row.product_id)">
+                                    <span class="o_list_name" t-esc="row.name"/>
+                                    <span class="o_list_value">
+                                        <t t-esc="row.qty_sold"/> sold
+                                    </span>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <div class="o_dash_panel h-100">
+                            <div class="o_dash_panel_title">
+                                Dead stock
+                                <span class="o_dash_panel_hint">in stock, nothing sold</span>
+                            </div>
+                            <t t-if="!state.data.dead_stock.length">
+                                <div class="o_empty">Everything on the shelf sold at least once.</div>
+                            </t>
+                            <t t-else="">
+                                <div t-foreach="state.data.dead_stock" t-as="row" t-key="row.product_id"
+                                     class="o_list_row o_click_row"
+                                     t-on-click="() => this.openProduct(row.product_id)">
+                                    <span class="o_list_name" t-esc="row.name"/>
+                                    <span class="o_list_value" t-esc="money(row.stock_value)"/>
+                                </div>
+                            </t>
                         </div>
                     </div>
                 </div>

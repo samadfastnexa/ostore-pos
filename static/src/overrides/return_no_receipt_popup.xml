@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.ReturnNoReceiptPopup">
+        <Dialog title="'Return Without Receipt'" size="'lg'">
+            <div class="pos-retail-return-popup d-flex flex-column gap-2">
+                <input type="text" class="form-control"
+                       placeholder="Search product by name or barcode..."
+                       t-model="state.search" t-if="!selectedProduct"/>
+                <div t-if="!selectedProduct" class="return-product-list d-flex flex-column gap-1"
+                     style="max-height:45vh; overflow-y:auto;">
+                    <button t-foreach="products" t-as="product" t-key="product.id"
+                            class="btn btn-outline-secondary w-100 text-start"
+                            t-on-click="() => this.selectProduct(product)">
+                        <t t-esc="product.display_name"/>
+                    </button>
+                    <div t-if="!products.length" class="text-muted text-center p-3">No products match.</div>
+                </div>
+                <div t-else="" class="d-flex flex-column gap-2">
+                    <div class="fw-bold d-flex align-items-center justify-content-between">
+                        <span><i class="fa fa-undo me-1"/><t t-esc="selectedProduct.display_name"/></span>
+                        <button class="btn btn-sm btn-link" t-on-click="() => this.clearProduct()">change product</button>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col">
+                            <label class="form-label mb-0">Quantity</label>
+                            <input type="number" min="1" class="form-control" t-model="state.qty"/>
+                        </div>
+                        <div class="col">
+                            <label class="form-label mb-0">Refund price (each)</label>
+                            <input type="number" min="0" step="0.01" class="form-control" t-model="state.price"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-primary" t-att-disabled="!canConfirm"
+                        t-on-click="() => this.confirm()">
+                    <i class="fa fa-undo me-1"/>Add Return Line
+                </button>
+                <button class="btn btn-secondary" t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

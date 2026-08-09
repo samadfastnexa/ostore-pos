@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.CustomerProfile">
+        <Dialog title="props.partner.name" bodyClass="'pos-retail-profile'">
+            <div class="pos-retail-profile__head d-flex align-items-center gap-3 mb-3">
+                <div class="pos-retail-profile__avatar" t-esc="props.partner.name.charAt(0).toUpperCase()"/>
+                <div class="flex-grow-1">
+                    <div class="fs-4 fw-bolder" t-esc="props.partner.name"/>
+                    <div class="text-muted small">
+                        <t t-if="props.partner.phone"><t t-esc="props.partner.phone"/></t>
+                        <t t-if="props.partner.membership_level_id">
+                            <span class="pos-retail-profile__tier ms-1"
+                                  t-esc="props.partner.membership_level_id.name"/>
+                        </t>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pos-retail-profile__grid">
+                <div class="pos-retail-profile__stat"
+                     t-att-class="{ 'is-warning': props.partner.pos_outstanding_balance > 0 }">
+                    <span class="pos-retail-profile__label">Outstanding Balance</span>
+                    <span class="pos-retail-profile__value"
+                          t-esc="formatCurrency(props.partner.pos_outstanding_balance)"/>
+                </div>
+                <div class="pos-retail-profile__stat">
+                    <span class="pos-retail-profile__label">Lifetime Purchases</span>
+                    <span class="pos-retail-profile__value"
+                          t-esc="formatCurrency(props.partner.pos_total_spent)"/>
+                </div>
+                <div class="pos-retail-profile__stat">
+                    <span class="pos-retail-profile__label">Orders</span>
+                    <span class="pos-retail-profile__value" t-esc="props.partner.pos_sales_order_count or 0"/>
+                </div>
+                <div class="pos-retail-profile__stat">
+                    <span class="pos-retail-profile__label">Last Purchase</span>
+                    <span class="pos-retail-profile__value" t-esc="lastPurchase"/>
+                </div>
+                <div class="pos-retail-profile__stat">
+                    <span class="pos-retail-profile__label">Average Order</span>
+                    <span class="pos-retail-profile__value"
+                          t-esc="formatCurrency(props.partner.pos_avg_order_value)"/>
+                </div>
+                <div class="pos-retail-profile__stat">
+                    <span class="pos-retail-profile__label">Loyalty Points</span>
+                    <span class="pos-retail-profile__value"
+                          t-esc="Math.round(props.partner.pos_loyalty_points or 0)"/>
+                </div>
+                <div t-if="hasCreditLimit" class="pos-retail-profile__stat"
+                     t-att-class="{ 'is-danger': overLimit }">
+                    <span class="pos-retail-profile__label">Credit Limit</span>
+                    <span class="pos-retail-profile__value"
+                          t-esc="formatCurrency(props.partner.pos_credit_limit)"/>
+                </div>
+                <div t-if="hasCreditLimit" class="pos-retail-profile__stat"
+                     t-att-class="{ 'is-danger': overLimit }">
+                    <span class="pos-retail-profile__label">Credit Available</span>
+                    <span class="pos-retail-profile__value"
+                          t-esc="formatCurrency(props.partner.pos_credit_available)"/>
+                </div>
+            </div>
+
+            <div t-if="tags.length" class="pos-retail-profile__tags mt-3">
+                <span t-foreach="tags" t-as="tag" t-key="tag.id"
+                      class="pos-retail-profile__tag" t-esc="tag.name"/>
+            </div>
+
+            <div t-if="props.partner.pos_retail_note"
+                 class="pos-retail-profile__note mt-3" role="note">
+                <i class="fa fa-sticky-note-o me-1"/>
+                <t t-esc="props.partner.pos_retail_note"/>
+            </div>
+
+            <div t-if="overLimit" class="alert alert-danger mt-3 mb-0" role="alert">
+                This customer is over their credit limit. A manager's approval is
+                needed to sell to them on account.
+            </div>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-primary btn-lg" t-on-click="() => this.showHistory()">
+                    <i class="fa fa-history me-1"/> Customer History
+                </button>
+                <button class="btn btn-secondary btn-lg" t-on-click="() => this.props.close()">
+                    Close
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

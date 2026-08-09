@@ -1,0 +1,78 @@
+// Make "this field is mandatory" visible before the user tries to save.
+//
+// Odoo signals required fields only through a subtly different input border
+// colour. That is easy to miss, and staff end up finding out what was
+// required by hitting Save and reading an error. These rules add the mark
+// people already expect from every other form on the internet.
+
+$pos-retail-required: #dc2626;
+
+// ---- Form labels: the asterisk ---------------------------------------------
+.o_form_label.o_pos_retail_required::after {
+    content: "*";
+    margin-left: .15rem;
+    color: $pos-retail-required;
+    font-weight: 700;
+    // The tooltip "?" superscript sits inside the label too; keep the star
+    // clear of it so they do not read as one symbol.
+    line-height: 1;
+}
+
+// A label can also be rendered as a plain <label for="..."> in hand-written
+// arches, where FormLabel is not used. Those still carry the required field
+// beside them, so fall back to marking the input itself.
+.o_form_view {
+    // ---- Empty required inputs: a visible edge ------------------------------
+    // Only while EMPTY: once filled there is nothing left to prompt for, and a
+    // permanent red edge on every filled-in mandatory field turns the whole
+    // form into a wall of alarm.
+    //
+    // Two classes: Odoo's own (view-level required) and ours (model-level),
+    // because the native one covers almost nothing in practice.
+    .o_field_widget.o_required_modifier.o_field_empty,
+    .o_field_widget.o_pos_retail_required_field.o_field_empty {
+        input,
+        textarea,
+        .o_input,
+        .o_select_menu_toggler {
+            border-color: rgba($pos-retail-required, .55) !important;
+            background-color: rgba($pos-retail-required, .035);
+        }
+    }
+
+    // Already-invalid fields keep Odoo's own stronger red; do not fight it.
+    .o_field_widget.o_field_invalid {
+        input,
+        textarea,
+        .o_input {
+            background-color: transparent;
+        }
+    }
+}
+
+// ---- Editable lists ---------------------------------------------------------
+// Column headers do not say which cells are mandatory either.
+.o_list_renderer thead th.o_required_modifier > div::after,
+.o_list_table thead th.o_required_modifier::after {
+    content: "*";
+    margin-left: .15rem;
+    color: $pos-retail-required;
+    font-weight: 700;
+}
+
+// ---- A quiet legend, so the asterisk needs no explaining --------------------
+.o_form_view .o_form_sheet::before {
+    content: "* required";
+    display: block;
+    float: right;
+    margin: 0 0 .25rem .5rem;
+    font-size: .72rem;
+    color: rgba(0, 0, 0, .45);
+}
+
+// The settings page is a wall of toggles with no required fields; a legend
+// there would explain a mark that never appears.
+.o_form_view.o_base_settings .o_form_sheet::before,
+.o_form_view .o_form_sheet.o_settings_container::before {
+    content: none;
+}

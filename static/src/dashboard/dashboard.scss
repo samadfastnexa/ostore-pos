@@ -18,6 +18,7 @@
 
     // ---- KPI tiles -------------------------------------------------------
     .o_kpi_card {
+        position: relative;
         border-radius: .75rem;
         padding: .9rem 1.1rem;
         color: #fff;
@@ -25,11 +26,19 @@
         height: 100%;
         transition: transform .08s ease-in-out;
 
+        .o_kpi_icon {
+            position: absolute;
+            top: .75rem;
+            right: .85rem;
+            font-size: 1.1rem;
+            opacity: .35;
+        }
         .o_kpi_label {
             font-size: .78rem;
             text-transform: uppercase;
             letter-spacing: .04em;
             opacity: .92;
+            padding-right: 1.5rem; // keep clear of the icon
         }
         .o_kpi_value {
             font-size: 1.6rem;
@@ -41,6 +50,21 @@
             font-size: .72rem;
             opacity: .85;
             margin-top: .1rem;
+        }
+        .o_kpi_trend {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            font-size: .72rem;
+            font-weight: 600;
+            margin-top: .35rem;
+            padding: .1rem .4rem;
+            border-radius: .35rem;
+            background: rgba(255, 255, 255, .18);
+
+            &.o_trend_up { color: #d1fae5; }
+            &.o_trend_down { color: #fecaca; }
+            &.o_trend_flat { color: rgba(255, 255, 255, .7); }
         }
     }
     // Sales, refunds & expenses are clickable
@@ -138,11 +162,97 @@
             text-transform: uppercase;
             letter-spacing: .03em;
         }
+        // Secondary line under a stat label: the quantity behind a value, or
+        // what the ratio is measuring. Deliberately quieter than the label.
+        .o_inv_stat_sub {
+            display: block;
+            font-size: .68rem;
+            text-transform: none;
+            letter-spacing: 0;
+            opacity: .75;
+        }
+    }
+
+    // ---- Simple name/value lists (movement panels) -----------------------
+    .o_list_row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: .75rem;
+        padding: .3rem 0;
+        border-bottom: 1px solid var(--border-color, #eceef1);
+
+        &:last-child { border-bottom: 0; }
+
+        .o_list_name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: .88rem;
+        }
+        .o_list_value {
+            flex: none;
+            font-weight: 650;
+            font-size: .88rem;
+        }
+    }
+
+    .o_dash_panel_hint {
+        display: block;
+        font-weight: 400;
+        font-size: .72rem;
+        color: var(--text-muted, #6c757d);
     }
 
     // ---- Clickable rows --------------------------------------------------
     .o_click_row { cursor: pointer; }
     .o_click_row:hover { background-color: var(--gray-200, #e9ecef); }
+
+    // ---- Every figure opens the records behind it ------------------------
+    // The affordance has to be visible before the pointer arrives, otherwise
+    // people never discover that a number is a doorway. A quiet corner arrow
+    // does that without competing with the figure itself.
+    .o_kpi_card,
+    .o_inv_stat.o_click_row {
+        cursor: pointer;
+
+        &::after {
+            content: "\f105";  // fa-angle-right
+            font-family: FontAwesome;
+            position: absolute;
+            right: .55rem;
+            bottom: .35rem;
+            font-size: .8rem;
+            opacity: .35;
+            transition: opacity .12s ease, transform .12s ease;
+        }
+
+        &:hover::after { opacity: .9; transform: translateX(2px); }
+        &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+    }
+
+    // The inventory stats are not positioned by default; the arrow needs it.
+    .o_inv_stat.o_click_row { position: relative; }
+
+    .o_kpi_card:hover { transform: translateY(-1px); }
+
+    // A skeleton is not clickable and must not advertise otherwise.
+    .o_kpi_card.o_skeleton { cursor: default; }
+    .o_kpi_card.o_skeleton::after { content: none; }
+
+    // ---- Skeleton loader (replaces the spinner while the first load runs) --
+    .o_skeleton {
+        background: linear-gradient(90deg, var(--gray-200, #e9ecef) 25%, var(--gray-100, #f3f4f6) 50%, var(--gray-200, #e9ecef) 75%);
+        background-size: 200% 100%;
+        animation: o_skeleton_shimmer 1.4s ease-in-out infinite;
+        border-radius: .75rem;
+    }
+    @keyframes o_skeleton_shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
 
     // ---- Dark mode -------------------------------------------------------
     @media (prefers-color-scheme: dark) {
@@ -152,5 +262,9 @@
         .o_status_warning  { color: #fbbf24; }
         .o_status_serious  { color: #fb923c; }
         .o_status_critical { color: #f87171; }
+        .o_skeleton {
+            background: linear-gradient(90deg, #2b2b2b 25%, #3a3a3a 50%, #2b2b2b 75%);
+            background-size: 200% 100%;
+        }
     }
 }

@@ -1,0 +1,166 @@
+// Branded sign-in for OStore.
+//
+// The login page renders through web.frontend_layout, so this ships in
+// web.assets_frontend (not the backend or POS bundles). Everything is scoped
+// under .zipnix-login, a hook class added in login_templates.xml, so the
+// portal and the database manager keep their stock styling.
+//
+// The palette matches the POS "Signature" look. It is fixed here rather than
+// driven by the per-store shop colour, because sign-in happens before any
+// register (and therefore any pos.config) is known.
+
+$zipnix-purple: #7c3aed;
+$zipnix-purple-dark: #6d28d9;
+$zipnix-deep: #2a1466;
+$zipnix-ink: #1e1b2e;
+$zipnix-muted: #6b6790;
+$zipnix-line: #e6e2f2;
+
+// Tint the page behind the card. :has() lets us do this without overriding the
+// body class in the template; if a browser lacks support the card still looks
+// right, it just sits on the stock background.
+body:has(.zipnix-login) {
+    background:
+        radial-gradient(900px 420px at 15% -10%, rgba(124, 58, 237, .16), transparent 60%),
+        radial-gradient(760px 380px at 95% 110%, rgba(42, 20, 102, .14), transparent 60%),
+        #f6f5fb !important;
+}
+
+.zipnix-login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+
+    // ---- the card ----------------------------------------------------------
+    .o_database_list {
+        width: 100%;
+        max-width: 410px !important;   // core sets 300px inline
+        background: #fff !important;
+        border-radius: 1.15rem;
+        box-shadow:
+            0 30px 70px -34px rgba(42, 20, 102, .55),
+            0 2px 10px rgba(42, 20, 102, .06);
+    }
+
+    .card-body { padding: 2rem 2rem 1.5rem; }
+
+    // ---- logo block --------------------------------------------------------
+    .card-body > .text-center.pb-3 {
+        border-bottom: 0 !important;
+        padding-bottom: .25rem !important;
+        margin-bottom: 1.5rem !important;
+
+        img { max-height: 72px !important; }
+    }
+
+    // ---- fields ------------------------------------------------------------
+    .form-label,
+    label.col-form-label {
+        font-weight: 600;
+        font-size: .86rem;
+        color: $zipnix-ink;
+        margin-bottom: .35rem;
+    }
+
+    .form-control {
+        padding: .7rem .9rem;
+        border-radius: .6rem;
+        border: 1px solid $zipnix-line;
+        background-color: #fcfbff;
+        font-size: .95rem;
+        transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+
+        &::placeholder { color: #a9a5c0; }
+
+        &:focus {
+            background-color: #fff;
+            border-color: $zipnix-purple;
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, .14);
+        }
+    }
+
+    // Keep the show-password eye flush with the rounded input.
+    .input-group .form-control {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    .o_show_password {
+        border-radius: 0 .6rem .6rem 0;
+        border: 1px solid $zipnix-line;
+        border-left: 0;
+        background-color: #fcfbff;
+        color: $zipnix-muted;
+
+        &:hover { color: $zipnix-purple; }
+    }
+
+    // ---- primary action ----------------------------------------------------
+    .oe_login_buttons { padding-top: 1.25rem !important; }
+
+    .btn-primary {
+        background: linear-gradient(120deg, $zipnix-purple, $zipnix-deep);
+        border: 0;
+        border-radius: .65rem;
+        padding: .8rem 1rem;
+        font-weight: 650;
+        font-size: 1rem;
+        letter-spacing: .01em;
+        box-shadow: 0 10px 22px -12px rgba(124, 58, 237, .9);
+        transition: filter .15s ease, transform .06s ease, box-shadow .15s ease;
+
+        &:hover, &:focus {
+            filter: brightness(1.07);
+            box-shadow: 0 14px 26px -12px rgba(124, 58, 237, 1);
+        }
+        &:active { transform: scale(.99); }
+    }
+
+    // Secondary routes (passkey, oauth) read as outline buttons.
+    .list-group-item,
+    .btn-secondary,
+    .btn-outline-secondary {
+        border-radius: .65rem;
+        border: 1px solid $zipnix-line;
+        color: $zipnix-ink;
+
+        &:hover {
+            border-color: $zipnix-purple;
+            color: $zipnix-purple;
+            background-color: rgba(124, 58, 237, .05);
+        }
+    }
+
+    // ---- links -------------------------------------------------------------
+    a { color: $zipnix-purple; text-decoration: none; }
+    a:hover { color: $zipnix-purple-dark; text-decoration: underline; }
+
+    .btn-link {
+        color: $zipnix-purple;
+        font-weight: 600;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    // ---- footer credit -----------------------------------------------------
+    .card-body > .text-center.small.mt-4 {
+        border-top: 1px solid $zipnix-line !important;
+        color: $zipnix-muted;
+        padding-top: 1rem !important;
+    }
+
+    .zipnix-login__credit { color: $zipnix-muted; }
+    .zipnix-login__brand {
+        color: $zipnix-purple;
+        font-weight: 700;
+    }
+
+    // ---- feedback ----------------------------------------------------------
+    .alert {
+        border-radius: .6rem;
+        border: 0;
+        font-size: .89rem;
+        padding: .7rem .9rem;
+    }
+}

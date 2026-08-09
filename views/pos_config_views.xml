@@ -1,6 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- Drop the whole "Payment Terminals" block (Adyen, Stripe, Viva.com,
+         Razorpay, Mercado Pago, Pine Labs, QFPay). These are foreign terminal
+         integrations irrelevant to a Pakistani retail deployment; payments here
+         are Cash, Card, JazzCash and EasyPaisa, managed under Payment Methods.
+         Removing the block removes its heading with it; the title lives on
+         the block tag, so no empty section is left behind. -->
+    <record id="res_config_settings_view_form_no_terminals" model="ir.ui.view">
+        <field name="name">res.config.settings.pos.retail.no.terminals</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='pos_payment_terminals_section']" position="replace"/>
+        </field>
+    </record>
+
+    <!-- Receipt Studio: its own setting block appended to the Bills and
+         Receipts section. Deliberately NOT anchored inside the receipt
+         header/footer content-group (that group is hidden whenever the
+         "Custom Header and Footer" toggle is off, which would make these
+         settings vanish with it). -->
+    <record id="res_config_settings_view_form_pos_retail_receipt" model="ir.ui.view">
+        <field name="name">res.config.settings.pos.retail.receipt.studio</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='pos_bills_and_receipts_section']" position="inside">
+                <setting string="Receipt Studio"
+                         help="Layout, paper width and content of the printed receipt">
+                    <div class="content-group">
+                        <div class="row mt8">
+                            <label string="Template Style" for="pos_retail_receipt_style" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_style"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Paper Width" for="pos_retail_receipt_width" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_width"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Font Size" for="pos_retail_receipt_font" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_font"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Show Product Code (SKU) on Lines" for="pos_retail_receipt_show_sku" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_show_sku"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Show QR Code" for="pos_retail_receipt_show_qr" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_show_qr"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Show Reference Barcode" for="pos_retail_receipt_show_ref_barcode" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_show_ref_barcode"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Thank-You Message" for="pos_retail_receipt_thankyou" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_thankyou"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Website &amp; Social Line" for="pos_retail_receipt_social" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_social"
+                                   placeholder="www.mystore.pk | fb.com/mystore"/>
+                        </div>
+                        <div class="row mt8">
+                            <label string="Terms &amp; Conditions (PDF)" for="pos_retail_receipt_terms" class="col-lg-4 o_light_label"/>
+                            <field name="pos_retail_receipt_terms"
+                                   placeholder="Printed on A4/PDF receipts only"/>
+                        </div>
+                    </div>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+
     <record id="res_config_settings_view_form_pos_retail" model="ir.ui.view">
         <field name="name">res.config.settings.pos.retail.return.policy</field>
         <field name="model">res.config.settings</field>
@@ -45,6 +118,62 @@
                 <div class="mt-3">
                     <label string="Max. Round-Off Amount" for="pos_retail_max_roundoff_amount" class="col-lg-4 o_light_label"/>
                     <field name="pos_retail_max_roundoff_amount"/>
+                </div>
+                <div class="mt-3">
+                    <span class="o_form_label fw-bold">Quotations</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Allow Quotations" for="pos_retail_allow_quotation" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_allow_quotation"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_allow_quotation">
+                        <label string="Product Images on Quotation PDF" for="pos_retail_quote_show_images" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_quote_show_images"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_allow_quotation">
+                        <label string="QR Code on Quotation PDF" for="pos_retail_quote_show_qr" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_quote_show_qr"/>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <span class="o_form_label fw-bold">Flexible Pricing</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Allow Price Within Range" for="pos_retail_price_range_enabled" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_price_range_enabled"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_price_range_enabled">
+                        <label string="Require Reason for Price Override" for="pos_retail_price_override_requires_reason" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_price_override_requires_reason"/>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <span class="o_form_label fw-bold">Appearance</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Shop Colour" for="pos_retail_theme_color" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_theme_color"/>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <span class="o_form_label fw-bold">Returns and Refunds</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Require Return Reason" for="pos_retail_require_return_reason" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_require_return_reason"/>
+                    </div>
+                    <div class="row mt8">
+                        <label string="Allow Returns Without Receipt" for="pos_retail_allow_no_receipt_return" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_allow_no_receipt_return"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_allow_no_receipt_return">
+                        <label string="Return Needs Manager Approval" for="pos_retail_return_requires_manager" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_return_requires_manager"/>
+                    </div>
                 </div>
             </xpath>
         </field>

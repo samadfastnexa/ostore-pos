@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Drop "Send message" from the chatter everywhere.
+         That button posts with the Discussions subtype, which notifies the
+         record's followers and emails external ones, so a staff member jotting
+         a remark on a customer can accidentally email that customer. Log note
+         (internal only) and Activity stay, as does the automatic history:
+         tracked field changes and system messages are unaffected. -->
+    <t t-name="pos_retail.ChatterNoSendMessage" t-inherit="mail.Chatter" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('o-mail-Chatter-sendMessage')]" position="replace"/>
+    </t>
+
+</templates>

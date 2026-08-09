@@ -24,6 +24,7 @@ export class PosRetailDashboard extends Component {
             dateFrom: today,
             dateTo: today,
             data: null,
+            trend: {},
         });
         onWillStart(() => this.load());
     }
@@ -36,6 +37,7 @@ export class PosRetailDashboard extends Component {
         this.state.data = await this.orm.call(
             "pos.retail.dashboard", "get_dashboard_data", [this.state.period], kwargs
         );
+        this.state.trend = this.state.data.trend || {};
         this.state.loading = false;
     }
 
@@ -68,6 +70,20 @@ export class PosRetailDashboard extends Component {
     // --- formatting -----------------------------------------------------
     money(value) {
         return formatMonetary(value ?? 0, { currencyId: this.state.data.currency_id });
+    }
+
+    /** Quantities are counts of goods, not money: no currency, no decimals
+     *  unless the number actually has them. */
+    qtyLabel(value) {
+        const qty = Math.round((value ?? 0) * 100) / 100;
+        return `${qty} unit(s)`;
+    }
+
+    /** Turnover reads as "1.8x": how many times the current shelf was sold
+     *  over during the period. */
+    get turnoverLabel() {
+        const t = this.state.data?.kpis?.stock_turnover ?? 0;
+        return `${(Math.round(t * 100) / 100).toFixed(2)}x`;
     }
 
     shortDate(isoDate) {
@@ -118,6 +134,28 @@ export class PosRetailDashboard extends Component {
         }));
     }
 
+    // --- trend indicator (up/down vs the same elapsed time, one period back)
+    trendClass(pct) {
+        if (pct === null || pct === undefined) {
+            return "o_trend_flat";
+        }
+        return pct >= 0 ? "o_trend_up" : "o_trend_down";
+    }
+
+    trendIcon(pct) {
+        if (pct === null || pct === undefined) {
+            return "fa-minus";
+        }
+        return pct >= 0 ? "fa-arrow-up" : "fa-arrow-down";
+    }
+
+    trendLabel(pct) {
+        if (pct === null || pct === undefined) {
+            return "no prior data";
+        }
+        return `${Math.abs(pct).toFixed(1)}%`;
+    }
+
     expiryClass(daysLeft) {
         if (daysLeft <= 3) {
             return "o_status_critical";
@@ -164,6 +202,120 @@ export class PosRetailDashboard extends Component {
             views: [[false, "list"], [false, "form"]],
             domain: [["has_negative_stock_warning", "=", true]],
         });
+    }
+
+    // --- generic openers -------------------------------------------------
+    /** Open a list, optionally pivot/graph-first for figures that are sums. */
+    openList(model, domain, name, views) {
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name,
+            res_model: model,
+            views: views || [
+                [false, "list"],
+                [false, "form"],
+            ],
+            domain: domain || [],
+        });
+    }
+
+    get drill() {
+        return this.state.data?.drill || {};
+    }
+
+    /** Records the server counted, opened by id so the list always matches
+     *  the number on the card exactly. */
+    openIds(model, ids, name, views) {
+        this.openList(model, [["id", "in", ids || []]], name, views);
+    }
+
+    /** The period the dashboard filter is currently showing. */
+    periodDomain(field) {
+        const d = [];
+        if (this.state.data?.period_start) {
+            d.push([field, ">=", this.state.data.period_start]);
+        }
+        if (this.state.data?.period_end) {
+            d.push([field, "<=", this.state.data.period_end]);
+        }
+        return d;
+    }
+
+    openPeriodOrders(extra, name) {
+        this.openOrders(
+            [...this.periodDomain("date_order"), ...(extra || [])],
+            `${name} — ${this.periodLabel}`
+        );
+    }
+
+    openSoldLines(name) {
+        // Order lines rather than orders: these figures (profit, COGS, taxes,
+        // discounts) are line-level sums, so the lines are what explains them.
+        this.openList(
+            "pos.order.line",
+            [
+                ...this.periodDomain("order_id.date_order"),
+                ["order_id.state", "in", ["paid", "done", "invoiced"]],
+            ],
+            `${name} — ${this.periodLabel}`,
+            [[false, "list"], [false, "pivot"], [false, "form"]]
+        );
+    }
+
+    openProducts(ids, name) {
+        this.openIds("product.product", ids, name);
+    }
+
+    openStockMoves(direction, name) {
+        // Mirrors _get_stock_flow_today: completed move lines since local
+        // midnight, excluding internal shuffling.
+        const base = [
+            ["state", "=", "done"],
+            ["date", ">=", this.drill.today_start],
+        ];
+        const flow =
+            direction === "in"
+                ? [
+                      ["location_id.usage", "not in", ["internal", "transit"]],
+                      ["location_dest_id.usage", "=", "internal"],
+                  ]
+                : [
+                      ["location_id.usage", "=", "internal"],
+                      ["location_dest_id.usage", "not in", ["internal", "transit"]],
+                  ];
+        this.openList("stock.move.line", [...base, ...flow], name);
+    }
+
+    openScrap() {
+        this.openList(
+            "stock.scrap",
+            [["state", "=", "done"], ...this.periodDomain("date_done")],
+            `Damaged Stock — ${this.periodLabel}`
+        );
+    }
+
+    openExpiredLots() {
+        this.openIds("stock.lot", this.drill.expired_lot_ids, "Expired Stock");
+    }
+
+    openReorderRules() {
+        this.openIds(
+            "stock.warehouse.orderpoint",
+            this.drill.reorder_ids,
+            "Products to Reorder"
+        );
+    }
+
+    openSessions() {
+        this.openList("pos.session", [["state", "=", "opened"]], "Open Shifts");
+    }
+
+    openCustomersList() {
+        this.openList(
+            "res.partner",
+            [["customer_rank", ">", 0]],
+            "Customers"
+        );
     }
 
     openExpenses(domain, name) {

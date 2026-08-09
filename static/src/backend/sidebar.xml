@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.Sidebar">
+        <aside class="pos-retail-side" t-att-class="{ 'pos-retail-side--collapsed': state.collapsed }">
+
+            <div class="pos-retail-side__brand">
+                <span class="pos-retail-side__mark">O</span>
+                <span class="pos-retail-side__brandname">OStore</span>
+                <button class="pos-retail-side__toggle"
+                        t-att-title="state.collapsed ? 'Expand menu' : 'Collapse menu'"
+                        t-on-click="() => this.toggle()">
+                    <i class="fa" t-att-class="state.collapsed ? 'fa-angle-double-right' : 'fa-angle-double-left'"/>
+                </button>
+            </div>
+
+            <nav class="pos-retail-side__nav">
+                <t t-foreach="apps" t-as="app" t-key="app.id">
+                <!-- Each app is one block; the OPEN app's block becomes an
+                     inset panel so its sections/items read as contents of
+                     that app, clearly set apart from the other app rows. -->
+                <div class="pos-retail-side__block"
+                     t-att-class="{ 'is-open': isCurrentApp(app) and !state.collapsed }">
+
+                    <button class="pos-retail-side__app"
+                            t-att-class="{ 'is-active': isCurrentApp(app) }"
+                            t-att-title="app.name"
+                            t-on-click="() => this.onClickMenu(app)">
+                        <img t-if="app.webIconData" class="pos-retail-side__icon"
+                             t-att-src="app.webIconData" alt=""/>
+                        <span t-else="" class="pos-retail-side__icon pos-retail-side__icon--fallback">
+                            <i class="fa fa-th-large"/>
+                        </span>
+                        <span class="pos-retail-side__text" t-esc="app.name"/>
+                    </button>
+
+                    <!-- Sections of the app you are currently in. A menu that
+                         groups other menus becomes a collapsible section
+                         header; a grouping menu INSIDE a section becomes a
+                         sub-group label with its own (deeper) items, so
+                         third-level menus stay reachable. -->
+                    <t t-if="isCurrentApp(app) and !state.collapsed">
+                        <t t-foreach="sections" t-as="section" t-key="section.id">
+                            <t t-if="hasChildren(section)">
+                                <button class="pos-retail-side__group"
+                                        t-att-class="{ 'is-open': isSectionOpen(section) }"
+                                        t-att-title="section.name"
+                                        t-on-click="() => this.toggleSection(section)">
+                                    <i class="fa pos-retail-side__chev"
+                                       t-att-class="isSectionOpen(section) ? 'fa-chevron-down' : 'fa-chevron-right'"/>
+                                    <span class="pos-retail-side__text" t-esc="section.name"/>
+                                </button>
+                                <t t-if="isSectionOpen(section)">
+                                    <!-- Guide-rail block: the open section's
+                                         items live in one indented container
+                                         with a vertical line, so their nesting
+                                         under the header is visually explicit. -->
+                                    <div class="pos-retail-side__items">
+                                        <t t-foreach="section.childrenTree" t-as="child" t-key="child.id">
+                                            <t t-if="hasChildren(child)">
+                                                <div class="pos-retail-side__subgroup" t-esc="child.name"/>
+                                                <t t-foreach="child.childrenTree" t-as="leaf" t-key="leaf.id">
+                                                    <button class="pos-retail-side__item pos-retail-side__item--sub"
+                                                            t-att-class="{ 'is-active': isActive(leaf) }"
+                                                            t-att-title="leaf.name"
+                                                            t-on-click="() => this.onClickMenu(leaf)"
+                                                            t-esc="leaf.name"/>
+                                                </t>
+                                            </t>
+                                            <button t-else="" class="pos-retail-side__item"
+                                                    t-att-class="{ 'is-active': isActive(child) }"
+                                                    t-att-title="child.name"
+                                                    t-on-click="() => this.onClickMenu(child)"
+                                                    t-esc="child.name"/>
+                                        </t>
+                                    </div>
+                                </t>
+                            </t>
+                            <button t-else="" class="pos-retail-side__item pos-retail-side__item--top"
+                                    t-att-class="{ 'is-active': isActive(section) }"
+                                    t-att-title="section.name"
+                                    t-on-click="() => this.onClickMenu(section)"
+                                    t-esc="section.name"/>
+                        </t>
+                    </t>
+
+                </div>
+                </t>
+            </nav>
+        </aside>
+    </t>
+
+</templates>

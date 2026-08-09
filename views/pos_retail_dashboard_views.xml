@@ -25,19 +25,24 @@
     </record>
 
     <!--
-        Land every user on the POS Dashboard right after login, instead of the
-        default Discuss/Apps screen.
-        Two parts are needed: `ir.default` only supplies the value for users
-        created AFTER this point (via default_get); it does not retroactively
-        change already-stored `action_id` on existing users, since the web
-        client reads that stored field directly at login (session_info).
-        So we also write it onto every current internal user.
-        To revert: Settings > Users > (user) > Preferences > Home Action.
+        Land POS MANAGERS on the dashboard after login, instead of the default
+        Discuss/Apps screen.
+
+        Managers only, and that restriction is not cosmetic. This used to set
+        the home action for every internal user via an ir.default plus a blanket
+        write. Once get_dashboard_data started refusing non-managers, which it
+        must, being an AbstractModel with no access-rule layer of its own, that
+        combination sent every cashier to a screen that greets them with
+        "available to Point of Sale managers only" and nothing else, on every
+        single login. The guard was right; forcing everyone at it was not.
+
+        The ir.default is gone with it: it applied to users created LATER, so
+        each new cashier inherited the same broken landing. res_users.py now
+        sets the home action at create time, for managers only.
+
+        To revert for one person: Settings > Users > (user) > Preferences >
+        Home Action.
     -->
-    <function model="ir.default" name="set"
-        eval="('res.users', 'action_id', ref('action_pos_retail_dashboard'), False)"/>
-    <function model="res.users" name="write"
-        eval="(obj().env['res.users'].search([('share', '=', False)]).ids,
-               {'action_id': ref('action_pos_retail_dashboard')})"/>
+    <function model="res.users" name="_pos_retail_sync_dashboard_home"/>
 
 </odoo>

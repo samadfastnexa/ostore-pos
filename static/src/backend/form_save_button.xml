@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Core reduces Save/Discard to two tiny icon-only buttons in the
+         breadcrumb (a cloud and a cross). Retail staff kept missing them, so
+         give both a text label; the sizing to match the New button lives in
+         backend_theme.scss. Hotkeys and tooltips are core's, untouched. -->
+    <t t-name="pos_retail.FormStatusIndicator" t-inherit="web.FormStatusIndicator" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('o_form_button_save')]/i" position="after">
+            <span class="pos-retail-save-label ms-1">Save</span>
+        </xpath>
+        <xpath expr="//button[hasclass('o_form_button_cancel')]/i" position="after">
+            <span class="pos-retail-discard-label ms-1">Discard</span>
+        </xpath>
+    </t>
+
+</templates>

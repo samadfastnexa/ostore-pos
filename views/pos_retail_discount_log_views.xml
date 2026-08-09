@@ -15,6 +15,7 @@
                 <field name="original_amount"/>
                 <field name="discount_amount"/>
                 <field name="discount_percentage"/>
+                <field name="discount_input_type" widget="badge" decoration-info="discount_input_type == 'percent'" decoration-warning="discount_input_type == 'fixed'"/>
                 <field name="round_off_amount"/>
                 <field name="final_amount"/>
                 <field name="reason_id"/>
@@ -29,6 +30,15 @@
         <field name="arch" type="xml">
             <form string="Discount Audit Log" create="false" edit="false">
                 <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> permanent, read-only record of every order discount and
+                            round-off, for accountability.<br/>
+                            <strong>How to use:</strong> nothing to fill in here — a row is created automatically
+                            whenever a completed sale had a discount or rounding. Use the Discount Reports menu to analyze trends.
+                        </div>
+                    </div>
                     <div class="oe_title">
                         <h1><field name="pos_order_ref"/></h1>
                     </div>
