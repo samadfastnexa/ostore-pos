@@ -76,14 +76,40 @@ systemctl list-unit-files | grep -Ei 'pgsql|postgre'
 ls -l /etc/init.d/ | grep -Ei 'pgsql|postgre'
 ```
 
-**If either printed something,** aaPanel manages it. Confirm and move on:
+**On this server both printed something** — `pgsql.service  generated` and
+`/etc/init.d/pgsql`. That means aaPanel installed an old-style SysV startup script and
+systemd auto-translates it into a unit at every boot. Translated is not the same as
+wired to boot, so confirm:
 
 ```bash
-systemctl is-enabled pgsql        # want: enabled (or generated)
+systemctl is-enabled pgsql
 ```
 
-**If both were empty,** PostgreSQL is running only because someone started it by hand.
-Create a boot unit:
+**Expect:** `enabled`.
+
+It prints a notice first — *"pgsql.service is not a native service, redirecting to
+systemd-sysv-install"*. That is **not an error**. systemd is saying "this isn't mine,
+let me ask the legacy tool", and the legacy tool's answer is the line after it.
+
+> **If it says `enabled`, this step is done — go to step 3.** Do **not** create the unit
+> file below. A second service competing to start the same database is worse than the
+> problem it was meant to solve.
+
+**Only if `is-enabled` said `disabled`, or both commands printed nothing at all,**
+nothing starts PostgreSQL at boot. Try aaPanel's own script first, which is always
+preferable to bolting on a competing unit:
+
+```bash
+systemctl enable pgsql && systemctl is-enabled pgsql
+```
+
+If *that* fails — no init script exists to enable — then write a unit of your own.
+Check the real user and data path first so the unit matches reality rather than this
+example:
+
+```bash
+ps -eo user,pid,cmd | grep '[p]ostgres' | head -3
+```
 
 ```bash
 cat > /etc/systemd/system/pgsql.service <<'EOF'
@@ -114,11 +140,16 @@ systemctl is-enabled pgsql
 > Do **not** `systemctl start pgsql` now — PostgreSQL is already running. The unit only
 > matters at boot.
 
-**Why this is not optional:** there is no `postgresql.service` on this box, so nothing
-guarantees the database starts after a power cut or a kernel update reboot. The failure
-mode is nasty: Odoo's own service *will* start and report `active`, so every check says
-"running" while every page errors with a database connection failure. You would be
-debugging Odoo when the problem is PostgreSQL being absent.
+**Why check at all, if it turned out fine?** Because the failure mode is silent and the
+check costs one second. There is no `postgresql.service` here — the service is called
+`pgsql` and it is generated rather than installed — so the obvious command
+(`systemctl status postgresql`) reports "not found" and tells you nothing either way.
+
+If nothing did start the database at boot, here is what you would see after a power cut
+or a kernel-update reboot: `odoo.service` starts normally and reports `active`. Every
+status check says running. Every page in the browser throws a database connection
+error. You would spend an hour debugging Odoo while Odoo is perfectly healthy and the
+database simply is not there.
 
 `Type=forking` because `pg_ctl start` launches the server and returns rather than
 staying in the foreground. `-m fast` on stop closes client connections and shuts down
@@ -373,25 +404,129 @@ Adjust for the machine you are on:
 
 ## 10. Create the database
 
+> ⚠️ **`-i l10n_pk` on its own does NOT give you the Pakistani chart of accounts.**
+> Learned the hard way on 2026-08-09. Odoo's default company is created by `base` as
+> *"My Company (San Francisco)"* with **country = United States**. When `account`
+> installs, it reads the company's country to decide which chart to apply — so it
+> applies the American one. `-i l10n_pk` only makes the Pakistani chart *available*,
+> never applied. The company's country must already be Pakistan **before accounting
+> installs**, which means the build has to run in phases.
+
+Write the build as a script rather than pasting commands:
+
 ```bash
-su - odoo -s /bin/bash -c "/opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin \
-  -c /etc/odoo/odoo.conf -d ostore_live \
-  -i l10n_pk,pos_retail --without-demo=True --stop-after-init"
-tail -20 /var/log/odoo/odoo.log
+cat > /opt/odoo/build_db.sh <<'SCRIPT'
+#!/bin/bash
+set -e
+BIN="/opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin"
+CONF="-c /etc/odoo/odoo.conf -d ostore_live"
+
+echo ">>> PHASE 1/5  create database, base module only"
+$BIN $CONF -i base --without-demo=True --stop-after-init
+
+echo ">>> PHASE 2/5  set company country to Pakistan"
+$BIN shell $CONF <<'PY'
+company = env.ref('base.main_company')
+company.write({'country_id': env.ref('base.pk').id})
+env.cr.commit()
+print('COUNTRY =', company.country_id.code)
+PY
+
+echo ">>> PHASE 3/5  install accounting, l10n_pk and pos_retail"
+$BIN $CONF -i l10n_pk,pos_retail --without-demo=True --stop-after-init
+
+echo ">>> PHASE 4/5  make sure the Pakistani chart is applied"
+$BIN shell $CONF <<'PY'
+company = env.ref('base.main_company')
+if not company.chart_template:
+    env['account.chart.template'].try_loading('pk', company=company, install_demo=False)
+    env.cr.commit()
+company.invalidate_recordset()
+print('CHART =', company.chart_template, '| CURRENCY =', company.currency_id.name,
+      '| ACCOUNTS =', env['account.account'].search_count([]))
+PY
+
+echo ">>> PHASE 5/5  set the admin login"
+$BIN shell $CONF <<'PY'
+admin = env.ref('base.user_admin')
+admin.write({'login': 'CHANGEME_ADMIN_EMAIL', 'password': 'CHANGEME_ADMIN_PASS'})
+admin.partner_id.write({'email': 'CHANGEME_ADMIN_EMAIL'})
+env.cr.commit()
+print('LOGIN =', admin.login)
+PY
+
+echo ">>> BUILD COMPLETE"
+SCRIPT
+
+chmod 755 /opt/odoo/build_db.sh && chown odoo:odoo /opt/odoo/build_db.sh
+setsid nohup su - odoo -s /bin/bash -c /opt/odoo/build_db.sh > /var/log/odoo/build.log 2>&1 &
+tail -f /var/log/odoo/build.log
 ```
 
-**Expect:** `Modules loaded.` and no `CRITICAL`. Takes 5–10 minutes.
+Edit the two `CHANGEME_ADMIN_*` values before running it.
 
-`-s /bin/bash` lends the `--system` account a shell for this one command; without it you
-get *"This account is currently not available"*.
+**Expect**, after roughly four minutes:
 
-**`l10n_pk` must be installed in this same command.** Installing it sets the chart of
-accounts, and **a chart of accounts cannot be changed once a journal entry exists**.
-Getting this wrong is not a cosmetic problem: with the generic (US) chart, an
-auto-applying *Foreign Trade* fiscal position matches any non-US address, and every
-Pakistani customer is silently **zero-rated**. There is one chance to get it right.
+```
+COUNTRY = PK
+CHART = pk | CURRENCY = PKR | ACCOUNTS = 130
+LOGIN = your@email
+>>> BUILD COMPLETE
+```
 
-Use `--without-demo=True`; `all` is deprecated in 19.0 and logs a warning.
+**Why a detached script rather than pasted commands** — three separate failures, each of
+which cost an hour:
+
+- **Never interrupt a module install.** Ctrl+C, a dropped SSH session, or just running
+  the next command before this one finished, leaves every module stuck in state
+  `to install` instead of `installed`. The database still *works* — you can log in and
+  query it — so nothing announces the problem. It surfaces much later as
+  `Some modules have inconsistent states` and a chart of accounts that refuses to load.
+  `setsid nohup` detaches the build from your terminal so none of that can reach it, and
+  Ctrl+C on the `tail -f` then stops only the watching.
+- **Never run a second Odoo process against a database mid-install.** Two registries on
+  one half-built database is exactly what produces those inconsistent states.
+- **`shell` is a subcommand, so it goes immediately after `odoo-bin`**, before any
+  options: `odoo-bin shell -c … -d …`. Written as `odoo-bin -c … -d … shell` you get
+  `error: unrecognized parameters: shell`, because anything not starting with a known
+  subcommand is handled by the default `server` command.
+
+**Why phase 4 exists** even though phase 3 should have covered it: on a Community
+install the chart does not always apply during module installation. `try_loading` is
+Odoo's own entry point — the same call the browser setup wizard makes when you pick a
+country — and the `if not company.chart_template` guard makes it a no-op when phase 3
+already worked.
+
+**Why the admin login is set here, before the service exists.** Odoo creates the admin
+user as `admin`/`admin` and there is no CLI flag to change it at creation time. Port
+8069 is reachable the instant the service starts, so doing it now means `admin`/`admin`
+is never live on a public address.
+
+`--without-demo=True` keeps out the fake products and customers; `all` is deprecated in
+19.0 and logs a warning.
+
+**Then verify. This is not optional:**
+
+```bash
+su -s /bin/bash postgres -c "psql -d ostore_live -Atc \"select name||' = '||state from ir_module_module where name in ('account','l10n_pk','point_of_sale','pos_retail')\""
+su -s /bin/bash postgres -c "psql -d ostore_live -Atc \"select 'taxes = '||count(*) from account_tax\""
+su -s /bin/bash postgres -c "psql -d ostore_live -Atc \"select 'PK tax tags = '||count(*) from account_account_tag t join res_country c on t.country_id=c.id where c.code='PK'\""
+```
+
+**Expect:** four `= installed` (**not** `to install`), around 61 taxes, around 122
+Pakistani tax tags.
+
+**If the chart is wrong, fix it now or never.** Odoo will not swap a chart of accounts
+once a journal entry exists. With the American chart an auto-applying *Foreign Trade*
+fiscal position matches every non-US address and silently **zero-rates every Pakistani
+customer** — no error, no warning, simply no tax collected. While the posted-entry count
+is zero the repair is `dropdb --if-exists ostore_live` and run the script again. After
+the first sale there is no repair.
+
+A related symptom to recognise: if the chart fails to load with *"missing tax tag …​ for
+country Pakistan"*, the cause is almost always that `l10n_pk` is sitting in `to install`
+rather than `installed`. Its tax tags come from `data/account_tax_vat_report.xml`, which
+never ran. Finish the install; don't go hunting for the tags.
 
 ---
 
@@ -401,19 +536,20 @@ Use `--without-demo=True`; `all` is deprecated in 19.0 and logs a warning.
 cat > /etc/systemd/system/odoo.service <<'EOF'
 [Unit]
 Description=Odoo 19
-After=network.target
+After=network.target pgsql.service
 
 [Service]
 Type=simple
 User=odoo
 ExecStart=/opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin -c /etc/odoo/odoo.conf
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload && systemctl enable --now odoo
-sleep 5 && systemctl is-active odoo && curl -sI http://127.0.0.1:8069/web/login | head -1
+sleep 8; systemctl is-active odoo; curl -sI http://127.0.0.1:8069/web/login | head -1
 ```
 
 **Expect:** `active` then `HTTP/1.0 200 OK`
@@ -421,8 +557,12 @@ sleep 5 && systemctl is-active odoo && curl -sI http://127.0.0.1:8069/web/login 
 systemd restarts Odoo after a crash (`Restart=always`) and at boot (`enable`). Started
 by hand instead, it dies when you close the SSH session. `User=odoo` keeps it off root.
 
-The `curl` hits Odoo **directly on 8069**, bypassing nginx, so if something is wrong you
-already know which half is at fault.
+**`After=pgsql.service`** matters because of what step 2 found: PostgreSQL here is a
+generated SysV unit, not a native one. Without this line systemd is free to start Odoo
+first, and Odoo exits immediately because there is no database to connect to.
+
+The `curl` deliberately targets **8069 directly**, bypassing nginx, so a failure tells
+you the fault is Odoo's and not the web server's.
 
 ---
 
@@ -431,15 +571,46 @@ already know which half is at fault.
 > ⚠️ This is the same nginx that serves aaPanel. A broken config takes the panel down
 > with it. Always run `nginx -t` before reloading.
 
+**Do not open port 8069 in the firewall.** ufw is active here with a default-DROP policy
+and 8069 is not on its allow-list — which is correct. nginx on port 80 (already open) is
+how the world reaches Odoo. If a browser on `http://SERVER_IP:8069` times out, that is
+the firewall working as intended, not a fault.
+
+First read what aaPanel already defines, because two of its files affect this one:
+
+```bash
+cat /www/server/panel/vhost/nginx/0.websocket.conf
+head -25 /www/server/panel/vhost/nginx/0.default.conf
+```
+
+On this server `0.websocket.conf` contains:
+
+```nginx
+map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+```
+
+**That map already exists, so do not write your own.** Two `map` blocks with the same
+variable name make nginx refuse to start — *"duplicate map"* — and since aaPanel shares
+this nginx, the control panel goes down with the site. The config below **uses**
+`$connection_upgrade` rather than defining it.
+
+`0.default.conf` is a catch-all holding port 80 with `server_name _`. An exact
+`server_name` beats a catch-all in nginx, so the vhost below coexists with it instead of
+replacing it.
+
 ```bash
 cat > /www/server/panel/vhost/nginx/odoo.conf <<'EOF'
-upstream odoo { server 127.0.0.1:8069; }
-upstream odoochat { server 127.0.0.1:8072; }
+upstream odoo_app  { server 127.0.0.1:8069; }
+upstream odoo_chat { server 127.0.0.1:8072; }
 
 server {
     listen 80;
     server_name 169.58.143.45;
     client_max_body_size 200M;
+
+    proxy_read_timeout 720s;
+    proxy_connect_timeout 720s;
+    proxy_send_timeout 720s;
 
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Host $host;
@@ -448,32 +619,72 @@ server {
     proxy_set_header X-Real-IP $remote_addr;
 
     location /websocket {
-        proxy_pass http://odoochat;
+        proxy_pass http://odoo_chat;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
     }
-    location / { proxy_pass http://odoo; proxy_redirect off; }
+
+    location / {
+        proxy_pass http://odoo_app;
+        proxy_redirect off;
+    }
+
+    gzip on;
+    gzip_min_length 1100;
+    gzip_types text/plain text/css text/javascript application/javascript application/json application/xml;
 }
 EOF
-nginx -t && systemctl reload nginx
+nginx -t
+grep -c proxy_pass /www/server/panel/vhost/nginx/odoo.conf
+nginx -s reload
+sleep 2
+curl -sI http://169.58.143.45/web/login | head -1
 ```
 
-**Expect:** `syntax is ok` / `test is successful`. Then open `http://169.58.143.45`.
+**Expect:** `syntax is ok` / `test is successful`, then `2`, then `HTTP/1.1 200 OK`.
+
+> **Reload with `nginx -s reload`, not `systemctl reload nginx`.** Like PostgreSQL,
+> nginx here is not a systemd service — `systemctl` answers *"nginx.service is not
+> active, cannot reload"* and, critically, **changes nothing while looking like a
+> plain warning**. The config test passes, you assume it worked, and the site keeps
+> serving the old config. `nginx -s reload` signals the running master through its pid
+> file and works regardless of init system.
+
+`grep -c proxy_pass` should print **2** — one for the app, one for the websocket. It
+catches a truncated paste that still happens to be valid nginx syntax.
 
 **The path matters.** `/etc/nginx/conf.d/` does not exist on this server and is not
 included by its nginx config; a vhost written there is silently never read. aaPanel's
 nginx includes `/www/server/panel/vhost/nginx/*.conf`, which is why the file goes there.
+It also means the vhost survives aaPanel restarting nginx from its own control panel.
 
 Odoo uses **two** ports: 8069 for pages and **8072 for the live channel** that pushes
-updates to the till. Omit the `odoochat` upstream and the POS appears to work but never
-syncs between counters. A websocket needs the explicit `Upgrade`/`Connection` headers;
-a plain proxy pass will not switch protocol.
+updates to the till. Omit the `odoo_chat` upstream and the POS appears to work but never
+syncs between counters. A websocket needs the explicit `Upgrade`/`Connection` headers; a
+plain proxy pass will not switch protocol.
 
 `client_max_body_size 200M` because nginx defaults to 1 MB and would reject product
-image uploads.
+image uploads. `proxy_read_timeout 720s` because nginx defaults to 60 seconds, and a
+long POS sync or a large report then dies as a 504 in the middle of a sale.
 
-To undo: `rm /www/server/panel/vhost/nginx/odoo.conf && systemctl reload nginx`.
+To undo: `rm /www/server/panel/vhost/nginx/odoo.conf && nginx -s reload`.
+
+### While you are in the firewall
+
+```bash
+ss -tlnp | grep 5432
+ufw delete allow 5432/tcp
+ufw delete allow 5432/udp
+```
+
+**Expect:** `127.0.0.1:5432` only, then two `Rule deleted` lines.
+
+aaPanel's default ufw rules open **5432 to the whole internet**. Combined with
+`pg_hba.conf` set to `trust`, that would mean anyone, anywhere, connecting as the
+PostgreSQL superuser with no password. Today you are saved only by PostgreSQL binding to
+loopback — that rule is a loaded gun waiting for someone to change `listen_addresses`.
+Nothing needs it: Odoo reaches PostgreSQL over loopback, which ufw does not filter.
 
 ---
 
@@ -551,7 +762,14 @@ accounts, demo products and posted journal entries.
 | `pg_dump: server version mismatch` | using Ubuntu's client 16 against server 18 | step 3; never `apt install postgresql-client` |
 | Search slow once the catalogue grows | `pg_trgm` was missing at database creation | step 4; install contrib, then re-create the database |
 | Odoo or PostgreSQL killed at random | memory limits left at Odoo's defaults | step 9 sizing table |
-| POS syncs nothing between two counters | `odoochat` upstream missing from nginx | step 12 |
+| POS syncs nothing between two counters | `odoo_chat` upstream missing from nginx | step 12 |
+| Every Pakistani customer charged 0% tax | US chart applied; company country was US when `account` installed | step 10 — only fixable before the first posted entry |
+| `Some modules have inconsistent states` | a module install was interrupted; modules stuck in `to install` | step 10; `dropdb` and re-run the build script detached |
+| Chart load fails: *missing tax tag … for country Pakistan* | `l10n_pk` never finished installing, so its tax report never ran | step 10 — finish the install, don't hunt for the tags |
+| `error: unrecognized parameters: shell` | `shell` placed after the options | `odoo-bin shell -c … -d …`, subcommand first |
+| Browser times out on port 8069 | ufw default-DROP; 8069 not allowed | correct — reach Odoo through nginx on port 80 |
+| nginx config edited but nothing changed | `systemctl reload nginx` printed *"not active, cannot reload"* and did nothing | `nginx -s reload` |
+| nginx refuses to start: *duplicate map* | redefining `$connection_upgrade`, which `0.websocket.conf` already declares | step 12 — use it, don't declare it |
 
 ## Not covered here
 
