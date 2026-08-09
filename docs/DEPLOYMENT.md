@@ -1,8 +1,6 @@
 # Deploying pos_retail to the production server
 
-Written for the Contabo VPS at `169.58.143.45` (Ubuntu 24.04, aaPanel). Every step
-says what it does and why, because the reasons are the part you need when something
-behaves differently on the next server.
+Written for the Contabo VPS at `169.58.143.45` (Ubuntu 24.04, aaPanel, PostgreSQL 18).
 
 **Substitute your own values wherever you see `CHANGEME_DB` and `CHANGEME_MASTER`.**
 
@@ -11,28 +9,189 @@ PostgreSQL and nginx are both installed under `/www/server`, not the system path
 generic Odoo guides send you to directories that either do not exist here or are never
 read. Every step below accounts for that.
 
+Run every command as `root`. Allow about **an hour**, most of it waiting on steps 8 and
+10. Do them in order; each one assumes the previous succeeded.
+
+| # | Step | What it gets you |
+|---|---|---|
+| 1 | Safety net and swap | A rollback point, and memory headroom so nothing gets killed |
+| 2 | PostgreSQL boot unit | The database comes back after a reboot |
+| 3 | PostgreSQL tools | Working `psql` and `pg_dump` — needed for backups |
+| 4 | Host checks | Encoding, search extension, password format — cheap now, expensive later |
+| 5 | System packages | Compilers, fonts, and a PDF engine that works |
+| 6 | Database role | The non-superuser account Odoo insists on |
+| 7 | Fetch the code | Odoo 19 core plus the `pos_retail` addon |
+| 8 | Python environment | An isolated virtualenv with every dependency |
+| 9 | Configuration | `odoo.conf`, sized for this machine |
+| 10 | Create the database | Pakistani chart of accounts — **one chance to get right** |
+| 11 | Run it as a service | Survives logout, crash and reboot |
+| 12 | Web server | Reachable on port 80, POS live-sync included |
+| 13 | Prove the backup works | Before there is anything to lose |
+
+Each step is written the same way: **what you are doing**, the commands, an **Expect**
+line telling you what success looks like, and **why** — because the reasons are the part
+you need when the next server behaves differently.
+
 ---
 
 ## 1. Safety net and swap
 
+**What you are doing:** taking a rollback point, then giving the machine an overflow
+area for memory.
+
 ```bash
-cp /www/server/pgsql/data/pg_hba.conf /root/pg_hba.conf.bak
+mkdir -p /root/preinstall
+cp /www/server/pgsql/data/pg_hba.conf     /root/preinstall/pg_hba.conf.orig
+cp /www/server/pgsql/data/postgresql.conf /root/preinstall/postgresql.conf.orig
+nginx -T > /root/preinstall/nginx-full.orig 2>&1
+ls /www/server/panel/vhost/nginx/ > /root/preinstall/vhosts.orig
+
 fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
 echo '/swapfile none swap sw 0 0' >> /etc/fstab
-free -h
+free -h; nproc
 ```
 
-**Expect:** `Swap: 2.0Gi`
+**Expect:** `Swap: 2.0Gi`, and `nproc` prints your CPU count (note it, step 9 uses it).
 
-`pg_hba.conf` is PostgreSQL's access-rules file; back it up before anything else goes
-near it. The swapfile matters because the server ships with **none**: without swap a
-memory spike does not slow the machine, the kernel simply kills the largest process,
-which is Odoo. `chmod 600` because swap can contain fragments of memory including
-passwords. The `fstab` line is what makes it survive a reboot.
+**Why:** this install touches two files aaPanel owns (its nginx include directory and,
+potentially, PostgreSQL config). Copying them first means any mistake is one `cp` away
+from undone. `nginx -T` dumps the *entire* running config including every include, so
+you have a record of what worked before you added anything.
+
+The swapfile matters because this server ships with **none**. Without swap a memory
+spike does not slow the machine down — the kernel picks the largest process and kills
+it outright, which is Odoo, or worse, PostgreSQL. `chmod 600` because swap holds
+fragments of memory including passwords. The `fstab` line is what makes it survive a
+reboot; without it the swap disappears on restart.
 
 ---
 
-## 2. System packages
+## 2. Make sure PostgreSQL comes back after a reboot
+
+**What you are doing:** checking whether anything starts PostgreSQL at boot, and
+creating that if nothing does.
+
+```bash
+systemctl list-unit-files | grep -Ei 'pgsql|postgre'
+ls -l /etc/init.d/ | grep -Ei 'pgsql|postgre'
+```
+
+**If either printed something,** aaPanel manages it. Confirm and move on:
+
+```bash
+systemctl is-enabled pgsql        # want: enabled (or generated)
+```
+
+**If both were empty,** PostgreSQL is running only because someone started it by hand.
+Create a boot unit:
+
+```bash
+cat > /etc/systemd/system/pgsql.service <<'EOF'
+[Unit]
+Description=PostgreSQL 18 (aaPanel build)
+After=network.target
+
+[Service]
+Type=forking
+User=postgres
+Group=postgres
+Environment=PGDATA=/www/server/pgsql/data
+ExecStart=/www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data -l /www/server/pgsql/data/pg.log start
+ExecStop=/www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data stop -m fast
+TimeoutSec=120
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload && systemctl enable pgsql
+systemctl is-enabled pgsql
+```
+
+**Expect:** `enabled`
+
+> Do **not** `systemctl start pgsql` now — PostgreSQL is already running. The unit only
+> matters at boot.
+
+**Why this is not optional:** there is no `postgresql.service` on this box, so nothing
+guarantees the database starts after a power cut or a kernel update reboot. The failure
+mode is nasty: Odoo's own service *will* start and report `active`, so every check says
+"running" while every page errors with a database connection failure. You would be
+debugging Odoo when the problem is PostgreSQL being absent.
+
+`Type=forking` because `pg_ctl start` launches the server and returns rather than
+staying in the foreground. `-m fast` on stop closes client connections and shuts down
+cleanly instead of waiting for sessions to end.
+
+---
+
+## 3. PostgreSQL command-line tools
+
+**What you are doing:** putting version-18 tools on your PATH.
+
+> ⚠️ **Do NOT run `apt install postgresql-client`.** Ubuntu 24.04 ships client version
+> **16**, and `pg_dump` **refuses to dump a server newer than itself**. Your server is
+> 18.0, so every backup you ever took would fail with a version-mismatch error. Symlink
+> aaPanel's own tools instead.
+
+```bash
+for b in psql pg_dump pg_restore createdb dropdb pg_isready; do
+  ln -sf /www/server/pgsql/bin/$b /usr/local/bin/$b
+done
+psql --version
+ldd /usr/local/bin/pg_dump | grep -i 'not found'
+```
+
+**Expect:** `psql (PostgreSQL) 18.0`, and the `ldd` line prints **nothing**.
+
+**Why:** aaPanel installs PostgreSQL outside the system PATH, which is why `psql` came
+back "command not found". The symlinks fix that without installing a second, older
+PostgreSQL.
+
+`ldd` lists the shared libraries a program needs; if it reports `libpq.so.5 => not
+found`, the binaries cannot find their own library once run from `/usr/local/bin`. Fix
+that once:
+
+```bash
+echo /www/server/pgsql/lib > /etc/ld.so.conf.d/pgsql.conf && ldconfig
+ldd /usr/local/bin/pg_dump | grep -i 'not found'   # must now print nothing
+```
+
+---
+
+## 4. Check PostgreSQL can host what Odoo needs
+
+**What you are doing:** three checks that are cheap now and expensive later.
+
+```bash
+su -s /bin/bash postgres -c "psql -Atc 'show server_encoding'"
+su -s /bin/bash postgres -c "psql -Atc \"select name from pg_available_extensions where name='pg_trgm'\""
+su -s /bin/bash postgres -c "psql -Atc 'show password_encryption'"
+```
+
+**Expect:** `UTF8`, then `pg_trgm`, then `scram-sha-256` (or `md5`).
+
+**Why each:**
+
+**`server_encoding` must be UTF8.** Odoo stores everything as UTF-8; on a `SQL_ASCII`
+server, Urdu text and even the `²` in `ft²` corrupt on write, and there is no repair
+short of rebuilding the database.
+
+**`pg_trgm` is how search stays fast.** Odoo runs `CREATE EXTENSION IF NOT EXISTS
+pg_trgm` when it creates a database, but that call sits inside a `try` block
+(`odoo/service/db.py:154`) — if it fails, Odoo logs one warning line and **carries on**.
+Search still works; it just degrades to a full table scan on every keystroke. Fine at
+500 products, unusable at 40,000, and nothing ever tells you. If the query above returns
+nothing, install PostgreSQL 18's contrib modules before building the database.
+
+**`password_encryption`** tells you how the role's password will be stored, so if you
+ever tighten `pg_hba.conf` you know whether to write `scram-sha-256` or `md5` in it.
+Writing the wrong one gives an authentication failure that looks like a wrong password.
+
+---
+
+## 5. System packages
 
 ```bash
 apt update
@@ -69,7 +228,7 @@ which is what Odoo's own documentation recommends.
 
 ---
 
-## 3. Database role
+## 6. Database role
 
 ```bash
 su - postgres -c "/www/server/pgsql/bin/psql -c \"CREATE USER odoo WITH CREATEDB PASSWORD 'CHANGEME_DB';\""
@@ -87,7 +246,7 @@ can only reach Odoo's own database, not everything PostgreSQL hosts.
 without a password, and root has no credentials of its own to offer. The full binary
 path is needed because aaPanel installed PostgreSQL outside the system PATH.
 
-`CREATEDB` is required: Odoo creates and drops databases itself, and step 7 fails
+`CREATEDB` is required: Odoo creates and drops databases itself, and step 10 fails
 without it. It is deliberately **not** `SUPERUSER`.
 
 > On this server `pg_hba.conf` is set to `trust`, so the password is not actually
@@ -95,7 +254,7 @@ without it. It is deliberately **not** `SUPERUSER`.
 
 ---
 
-## 4. Fetch the code
+## 7. Fetch the code
 
 ```bash
 adduser --system --home=/opt/odoo --group odoo
@@ -123,7 +282,7 @@ never appears — with no error to tell you why.
 
 ---
 
-## 5. Python environment
+## 8. Python environment
 
 ```bash
 python3 -m venv /opt/odoo/venv
@@ -146,11 +305,11 @@ The explicit import check exists because **`tools/import_templates.py` imports
 `xlsxwriter` at module load**. If it were missing, the entire addon would fail to import
 rather than one feature degrading. Both it and `openpyxl` are already in Odoo's
 `requirements.txt`, so this should pass; it is cheap to confirm here rather than
-discover in step 7.
+discover in step 10.
 
 ---
 
-## 6. Configuration
+## 9. Configuration
 
 ```bash
 mkdir -p /etc/odoo /var/log/odoo && chown odoo:odoo /var/log/odoo
@@ -166,7 +325,12 @@ data_dir = /opt/odoo/.local/share/Odoo
 logfile = /var/log/odoo/odoo.log
 proxy_mode = True
 workers = 3
+max_cron_threads = 2
+limit_memory_soft = 1610612736
+limit_memory_hard = 2147483648
+limit_time_cpu = 120
 limit_time_real = 300
+db_maxconn = 32
 list_db = False
 EOF
 chown odoo:odoo /etc/odoo/odoo.conf && chmod 640 /etc/odoo/odoo.conf
@@ -181,15 +345,33 @@ Edit both `CHANGEME` values before continuing.
 | `addons_path` | Where Odoo looks for modules; core first, then yours. |
 | `data_dir` | Attachments, product images and sessions on disk. |
 | `proxy_mode = True` | Tells Odoo it sits behind nginx so it trusts forwarded headers. **Without it every generated link points at the wrong address.** |
-| `workers = 3` | Separate processes rather than one thread. Below 2, the POS long-polling channel blocks the whole server. |
-| `limit_time_real = 300` | Kills a request stuck beyond 5 minutes, so one bad report cannot hang a worker forever. |
+| `workers = 3` | Separate processes rather than one thread. **Never 1**: Odoo logs *"You need to start Odoo with at least two workers to print a pdf version of the reports"* (`ir_actions_report.py:119`) and silently stops producing PDF invoices. |
+| `max_cron_threads = 2` | Background jobs. Counts toward memory, so it is sized with the workers. |
+| `limit_memory_soft/hard` | **Sized down from Odoo's defaults on purpose.** |
+| `limit_time_cpu / real` | Kills a request stuck beyond 2 minutes of CPU or 5 minutes of wall clock, so one bad report cannot hang a worker forever. |
+| `db_maxconn = 32` | Caps Odoo's share of PostgreSQL connections so it cannot starve aaPanel's other databases (the server allows 100 in total). |
 | `list_db = False` | Hides the database selector from the internet. |
+
+**On the memory limits.** Odoo defaults to `limit_memory_soft = 2048 MB` and
+`limit_memory_hard = 2560 MB` **per worker** (`odoo/tools/config.py:462-472`), which
+assumes a dedicated server. Three workers plus cron threads at those numbers is over
+7 GB on a box with 7.8 GB that is *also* running PostgreSQL and aaPanel — the kernel
+would start killing processes, quite possibly the database. The values above give each
+worker 1.5 GB soft / 2 GB hard, which fits.
+
+Adjust for the machine you are on:
+
+| Total RAM | `workers` | `max_cron_threads` | `limit_memory_soft` | `limit_memory_hard` |
+|---|---|---|---|---|
+| 4 GB | 2 | 1 | `1073741824` | `1342177280` |
+| **8 GB (this server)** | **3** | **2** | **1610612736** | **2147483648** |
+| 16 GB+ | 5 | 2 | `2147483648` | `2684354560` |
 
 `chmod 640` because the file holds two passwords in clear text.
 
 ---
 
-## 7. Create the database
+## 10. Create the database
 
 ```bash
 su - odoo -s /bin/bash -c "/opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin \
@@ -213,7 +395,7 @@ Use `--without-demo=True`; `all` is deprecated in 19.0 and logs a warning.
 
 ---
 
-## 8. Run it as a service
+## 11. Run it as a service
 
 ```bash
 cat > /etc/systemd/system/odoo.service <<'EOF'
@@ -244,7 +426,7 @@ already know which half is at fault.
 
 ---
 
-## 9. Web server
+## 12. Web server
 
 > ⚠️ This is the same nginx that serves aaPanel. A broken config takes the panel down
 > with it. Always run `nginx -t` before reloading.
@@ -295,6 +477,49 @@ To undo: `rm /www/server/panel/vhost/nginx/odoo.conf && systemctl reload nginx`.
 
 ---
 
+## 13. Prove you can take a backup — before there is anything to lose
+
+**What you are doing:** running one real backup and confirming the file is valid.
+
+```bash
+mkdir -p /var/backups/odoo && chmod 700 /var/backups/odoo
+su -s /bin/bash postgres -c \
+  "pg_dump -Fc -d ostore_live -f /var/backups/odoo/ostore_live_first.dump"
+ls -lh /var/backups/odoo/
+pg_restore -l /var/backups/odoo/ostore_live_first.dump | head -5
+```
+
+**Expect:** a file of a few MB, and `pg_restore -l` listing table entries rather than
+erroring.
+
+**Why do it now, on an empty database:** a backup you have never restored is not a
+backup. Testing the mechanism while the database holds nothing means a failure costs you
+nothing. Discovering the same failure in six months, with a year of sales in it, is a
+different day entirely.
+
+**Why each part:**
+
+- `-Fc` is PostgreSQL's compressed custom format. Smaller than plain SQL, and
+  `pg_restore` can read it selectively — restore one table without the rest.
+- `pg_restore -l` lists what is *inside* the dump without restoring anything. It is the
+  cheapest possible proof the file is not truncated or empty.
+- `chmod 700` because these dumps contain every customer name, every price and every
+  ledger balance in the shop. Treat the directory like the safe.
+
+**A database dump must never be committed to git or uploaded anywhere shared.** That is
+why `.gitignore` in this repository excludes `*.dump` and `*.sql`.
+
+The data directory holds product images and attachments, which are **not** in the
+database dump. A complete backup is both:
+
+```bash
+tar czf /var/backups/odoo/filestore_first.tgz -C /opt/odoo/.local/share Odoo
+```
+
+Automating this on a schedule is listed under *Not covered here*; do it before go-live.
+
+---
+
 ## First three things in the browser
 
 1. **Settings → Companies** — set the country to Pakistan, then check
@@ -314,16 +539,39 @@ accounts, demo products and posted journal entries.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `Using the database user 'postgres' … aborting` | `db_user` wrong in odoo.conf | must be `odoo` |
-| `role "odoo" does not exist` | step 3 not run | re-run step 3 |
-| `no pg_hba.conf entry for host` | PostgreSQL rejecting TCP auth | check `pg_hba.conf`; restore `/root/pg_hba.conf.bak` if needed |
+| `role "odoo" does not exist` | step 6 not run | re-run step 6 |
+| `no pg_hba.conf entry for host` | PostgreSQL rejecting TCP auth | check `pg_hba.conf`; restore `/root/preinstall/pg_hba.conf.orig` |
 | nginx 502 | Odoo not running | `journalctl -u odoo -n 50` |
-| Login page loads unstyled | `node-less` / `rtlcss` missing | re-run step 2, `systemctl restart odoo` |
+| Login page loads unstyled | `node-less` / `rtlcss` missing | re-run step 5, `systemctl restart odoo` |
 | Addon not in the Apps list | cloned to the wrong folder name | must be `pos_retail` |
 | `This account is currently not available` | `--system` user has no shell | keep `-s /bin/bash` |
+| Everything "running" but every page errors | PostgreSQL did not start after a reboot | step 2; `systemctl start pgsql` |
+| Invoices download but look wrong | wkhtmltopdf is not the patched-Qt build | step 5; version must say *with patched qt* |
+| No PDF at all | `workers` is 1 | set 2 or more; see step 9 |
+| `pg_dump: server version mismatch` | using Ubuntu's client 16 against server 18 | step 3; never `apt install postgresql-client` |
+| Search slow once the catalogue grows | `pg_trgm` was missing at database creation | step 4; install contrib, then re-create the database |
+| Odoo or PostgreSQL killed at random | memory limits left at Odoo's defaults | step 9 sizing table |
+| POS syncs nothing between two counters | `odoochat` upstream missing from nginx | step 12 |
 
 ## Not covered here
 
-HTTPS (needs a domain, then `certbot --nginx`), automated backups, monitoring, and
-firewalling port 8069 once nginx is proxying (`ufw deny 8069`). `pg_hba.conf` is left at
-`trust`, which means anyone with shell access can reach PostgreSQL without a password —
-worth hardening once the system is stable, carefully, because aaPanel may rely on it.
+- **HTTPS** — needs a domain first, then `certbot --nginx`. Until then, logins travel in
+  clear text over the internet. Do not run a real shop on plain HTTP for long.
+- **Scheduling the backup** from step 13 (a nightly cron plus off-server copies). A
+  backup that only exists on the same machine does not survive that machine dying.
+- **Firewalling 8069/8072** once nginx is proxying — `ufw deny 8069` — so nobody can
+  bypass nginx and reach Odoo directly.
+- **Monitoring**, so you learn the disk is full before the shop does.
+- **`pg_hba.conf` is left at `trust`**, meaning anyone with shell access reaches
+  PostgreSQL without a password. Worth hardening once the system is stable, and
+  carefully: aaPanel may rely on it, and the original is at
+  `/root/preinstall/pg_hba.conf.orig`.
+
+## Order these steps run in, and why
+
+Steps 1–4 touch nothing and install nothing; they establish that the machine can host
+what comes next. Everything after them is hard to undo, which is the point of doing the
+checks first. Within the install itself the order is forced: packages before pip
+(compilers must exist first), the role before the database, the database before the
+service, the service before nginx — so that when something fails you always know the
+layer below it was already working.
