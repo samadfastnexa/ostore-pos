@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================================================================
+         Units for measurement-based selling (hardware / sanitary / plumbing
+         / electrical / construction).
+
+         PART 1 REACTIVATES ODOO'S OWN UNITS RATHER THAN CREATING NEW ONES.
+         Odoo 19 ships cm, inch, foot, yard, square foot, gallon and cubic
+         metre already, but archived. Creating "Foot" next to the existing
+         archived "ft" would give the shop two incompatible feet, break
+         conversion between them and quietly corrupt stock. Unarchiving is the
+         only correct move.
+
+         Odoo 19 UoM model: every unit points at a reference unit
+         (relative_uom_id) with a relative_factor, forming a chain up to a root
+         (Units, mm, g, m2, ml). Two units convert only if they share a root,
+         which is what makes "sell a length in kg" impossible by construction.
+         ================================================================== -->
+
+    <!-- Reactivating Odoo's archived units CANNOT be done with <record
+         active="True"/>. Core's ir_model_data rows for them carry
+         noupdate=True, and _load_records honours that flag whatever the
+         calling data file says, so the write is silently discarded on every
+         existing database: the upgrade reports success and the units stay
+         hidden. A <function> is not routed through ir_model_data, so it works.
+         Outside any noupdate block so it also runs on upgrades. -->
+    <function model="uom.uom" name="_pos_retail_activate_trade_units"/>
+
+    <!-- New units, on the other hand, are created once and then left alone:
+         a shop that renames "Roll of 100 m" should keep its name. -->
+    <data noupdate="1">
+
+        <!-- === Genuinely absent from Odoo: create them ================= -->
+
+        <!-- Weight. Root is g, so mg is a thousandth of the reference. -->
+        <record id="uom_milligram" model="uom.uom">
+            <field name="name">mg</field>
+            <field name="relative_uom_id" ref="uom.product_uom_gram"/>
+            <field name="relative_factor">0.001</field>
+        </record>
+
+        <!-- Area. m2 is the root; 1 m2 = 10 000 cm2, so cm2 = 0.0001 m2. -->
+        <record id="uom_square_cm" model="uom.uom">
+            <field name="name">cm²</field>
+            <field name="relative_uom_id" ref="uom.product_uom_square_meter"/>
+            <field name="relative_factor">0.0001</field>
+        </record>
+        <record id="uom_square_yard" model="uom.uom">
+            <field name="name">yd²</field>
+            <field name="relative_uom_id" ref="uom.product_uom_square_meter"/>
+            <field name="relative_factor">0.83612736</field>
+        </record>
+
+        <!-- Volume. Root is ml; 1 cm3 is exactly 1 ml. -->
+        <record id="uom_cubic_cm" model="uom.uom">
+            <field name="name">cm³</field>
+            <field name="relative_uom_id" ref="uom.product_uom_milliliter"/>
+            <field name="relative_factor">1.0</field>
+        </record>
+
+        <!-- Quantity. "Piece" is Odoo's "Units"; adding a second one would
+             split the catalogue in half, so only Set is new here. -->
+        <record id="uom_set" model="uom.uom">
+            <field name="name">Set</field>
+            <field name="relative_uom_id" ref="uom.product_uom_unit"/>
+            <field name="relative_factor">1.0</field>
+        </record>
+
+        <!-- === Sized packaging units for the trade ====================
+             A UoM's factor is GLOBAL, not per product, so a bare "Roll" cannot
+             exist as a convertible unit: one product's roll is 100 m and
+             another's is 50 m, and a single factor cannot be both. Sized units
+             are the honest form, which is why Odoo's own data ships "Box of 10"
+             rather than "Box". For a pack size that really is unique to one
+             product, use a Product Package (product.uom) instead: that carries
+             its own barcode and price and is per product by design.
+             ============================================================ -->
+
+        <record id="uom_roll_100m" model="uom.uom">
+            <field name="name">Roll of 100 m</field>
+            <field name="relative_uom_id" ref="uom.product_uom_meter"/>
+            <field name="relative_factor">100.0</field>
+        </record>
+        <record id="uom_roll_90m" model="uom.uom">
+            <field name="name">Roll of 90 m</field>
+            <field name="relative_uom_id" ref="uom.product_uom_meter"/>
+            <field name="relative_factor">90.0</field>
+        </record>
+        <record id="uom_roll_50m" model="uom.uom">
+            <field name="name">Roll of 50 m</field>
+            <field name="relative_uom_id" ref="uom.product_uom_meter"/>
+            <field name="relative_factor">50.0</field>
+        </record>
+        <record id="uom_bundle_50m" model="uom.uom">
+            <field name="name">Bundle of 50 m</field>
+            <field name="relative_uom_id" ref="uom.product_uom_meter"/>
+            <field name="relative_factor">50.0</field>
+        </record>
+        <record id="uom_bundle_20m" model="uom.uom">
+            <field name="name">Bundle of 20 m</field>
+            <field name="relative_uom_id" ref="uom.product_uom_meter"/>
+            <field name="relative_factor">20.0</field>
+        </record>
+        <record id="uom_length_20ft" model="uom.uom">
+            <field name="name">Length of 20 ft</field>
+            <field name="relative_uom_id" ref="uom.product_uom_foot"/>
+            <field name="relative_factor">20.0</field>
+        </record>
+
+        <!-- Construction: cement and sand move in fixed sacks. -->
+        <record id="uom_bag_40kg" model="uom.uom">
+            <field name="name">40 kg Bag</field>
+            <field name="relative_uom_id" ref="uom.product_uom_kgm"/>
+            <field name="relative_factor">40.0</field>
+        </record>
+
+        <!-- Tiles are ordered by the box, priced by the square foot. -->
+        <record id="uom_tile_box_20sqft" model="uom.uom">
+            <field name="name">Tile Box (20 sq ft)</field>
+            <field name="relative_uom_id" ref="uom.product_uom_square_foot"/>
+            <field name="relative_factor">20.0</field>
+        </record>
+
+        <!-- Paint: the trade sizes, all resolving to litres. -->
+        <record id="uom_paint_drum_20l" model="uom.uom">
+            <field name="name">Drum of 20 L</field>
+            <field name="relative_uom_id" ref="uom.product_uom_litre"/>
+            <field name="relative_factor">20.0</field>
+        </record>
+        <record id="uom_paint_gallon_4l" model="uom.uom">
+            <field name="name">Tin of 4 L</field>
+            <field name="relative_uom_id" ref="uom.product_uom_litre"/>
+            <field name="relative_factor">4.0</field>
+        </record>
+
+    </data>
+
+</odoo>
