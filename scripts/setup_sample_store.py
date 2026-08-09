@@ -15,6 +15,37 @@ Safe to re-run: everything is looked up by a natural key before creating.
 """
 from datetime import date, timedelta
 
+# ---------------------------------------------------------------------------
+# SAFETY GUARD -- demo data must never land in a real shop's database.
+# These scripts create fake products, customers, expenses and (in part 3)
+# POSTED journal entries. A posted entry cannot be cleanly deleted from a live
+# ledger, so refusing up front is the only real protection.
+# ---------------------------------------------------------------------------
+def _refuse_if_live(env):
+    import os
+    if os.environ.get("POS_RETAIL_SEED_OK") == "yes":
+        print("  [WARN   ] live-database guard bypassed via POS_RETAIL_SEED_OK")
+        return
+    signals = []
+    posted = env["account.move"].search_count(
+        [("move_type", "in", ("out_invoice", "out_refund")), ("state", "=", "posted")])
+    if posted:
+        signals.append(f"{posted} posted customer invoice(s)")
+    closed = env["pos.session"].search_count([("state", "=", "closed")])
+    if closed:
+        signals.append(f"{closed} closed POS session(s)")
+    if signals:
+        raise RuntimeError(
+            "REFUSING TO SEED: this database shows signs of real trading ("
+            + "; ".join(signals) + "). Demo data cannot be cleanly removed once "
+            "it is in a live ledger. Run this on a scratch database instead, or "
+            "set the environment variable POS_RETAIL_SEED_OK=yes to override "
+            "deliberately."
+        )
+
+
+_refuse_if_live(env)
+
 report = {"created": [], "skipped": [], "failed": []}
 
 
