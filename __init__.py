@@ -3,6 +3,7 @@ import base64
 from odoo.tools import file_open
 
 from . import models
+from . import controllers
 
 # name, journal code (account.journal.code is capped at 5 chars), icon file.
 # Codes match the journals already provisioned in existing databases (JAZZ /
