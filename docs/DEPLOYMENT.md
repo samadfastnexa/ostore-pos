@@ -26,7 +26,7 @@ Run every command as `root`. Allow about **an hour**, most of it waiting on step
 | 10 | Create the database | Pakistani chart of accounts — **one chance to get right** |
 | 11 | Run it as a service | Survives logout, crash and reboot |
 | 12 | Web server | Reachable on port 80, POS live-sync included |
-| 13 | Prove the backup works | Before there is anything to lose |
+| 13 | Nightly backup, proven | Before there is anything to lose |
 
 Each step is written the same way: **what you are doing**, the commands, an **Expect**
 line telling you what success looks like, and **why** — because the reasons are the part
@@ -690,18 +690,54 @@ Nothing needs it: Odoo reaches PostgreSQL over loopback, which ufw does not filt
 
 ## 13. Prove you can take a backup — before there is anything to lose
 
-**What you are doing:** running one real backup and confirming the file is valid.
+**What you are doing:** installing a nightly backup and proving it works before there is
+anything to lose.
+
+> **aaPanel's Databases page will not show `ostore_live`.** It lists only databases
+> created through the panel, and Odoo created this one directly. That is normal —
+> PostgreSQL is the authority, and `psql -Atc "select datname from pg_database"` shows
+> it. Do **not** use the panel's *"Get DB from server"* button to adopt it: adoption can
+> reassign ownership or attach a panel-managed role, which risks breaking Odoo's access
+> in exchange for a row in a list. It also means **aaPanel's backup feature does not
+> cover this database** — which is what this step is for.
 
 ```bash
-mkdir -p /var/backups/odoo && chmod 700 /var/backups/odoo
-su -s /bin/bash postgres -c \
-  "pg_dump -Fc -d ostore_live -f /var/backups/odoo/ostore_live_first.dump"
+cat > /usr/local/bin/odoo-backup.sh <<'EOF'
+#!/bin/bash
+set -e
+KEEP=14
+DEST=/var/backups/odoo
+STAMP=$(date +%F_%H%M)
+mkdir -p "$DEST" && chmod 700 "$DEST"
+
+pg_dump -h 127.0.0.1 -U postgres -Fc -d ostore_live -f "$DEST/ostore_live_$STAMP.dump"
+tar czf "$DEST/filestore_$STAMP.tgz" -C /opt/odoo/.local/share Odoo
+
+find "$DEST" -name 'ostore_live_*.dump' -mtime +$KEEP -delete
+find "$DEST" -name 'filestore_*.tgz'    -mtime +$KEEP -delete
+echo "$(date '+%F %T') backup ok"
+EOF
+chmod 700 /usr/local/bin/odoo-backup.sh
+
+echo '30 2 * * * root /usr/local/bin/odoo-backup.sh >> /var/log/odoo/backup.log 2>&1' > /etc/cron.d/odoo-backup
+
+/usr/local/bin/odoo-backup.sh
+pg_restore -l /var/backups/odoo/*.dump | head -5
 ls -lh /var/backups/odoo/
-pg_restore -l /var/backups/odoo/ostore_live_first.dump | head -5
 ```
 
-**Expect:** a file of a few MB, and `pg_restore -l` listing table entries rather than
-erroring.
+**Expect:** `backup ok`, `pg_restore -l` listing table entries rather than erroring, and
+two files.
+
+**Connect over loopback as root, not via `su postgres`.** `/var/backups/odoo` is mode
+`700` and root-owned, so the `postgres` user cannot write into it —
+`su -s /bin/bash postgres -c "pg_dump … -f /var/backups/odoo/…"` fails with *Permission
+denied*. Root running `pg_dump -h 127.0.0.1 -U postgres` writes the file itself.
+
+> That connection needs no password only because `pg_hba.conf` is set to `trust`. If you
+> ever harden it, **this cron breaks silently at 2:30 AM** — and a silently broken backup
+> is worse than no backup, because you will believe you have one. Add the credentials to
+> a `~/.pgpass` at the same time you make that change.
 
 **Why do it now, on an empty database:** a backup you have never restored is not a
 backup. Testing the mechanism while the database holds nothing means a failure costs you
@@ -712,22 +748,21 @@ different day entirely.
 
 - `-Fc` is PostgreSQL's compressed custom format. Smaller than plain SQL, and
   `pg_restore` can read it selectively — restore one table without the rest.
+- **The `tar` of the data directory is not optional.** Product images and attachments
+  live on disk, not in the database. A SQL dump alone restores a shop with no pictures.
 - `pg_restore -l` lists what is *inside* the dump without restoring anything. It is the
   cheapest possible proof the file is not truncated or empty.
+- `KEEP=14` deletes anything older than two weeks. Without it the disk fills up, and a
+  full disk stops PostgreSQL writing — an outage caused by the backups.
 - `chmod 700` because these dumps contain every customer name, every price and every
   ledger balance in the shop. Treat the directory like the safe.
+- 2:30 AM because nobody is selling.
 
 **A database dump must never be committed to git or uploaded anywhere shared.** That is
 why `.gitignore` in this repository excludes `*.dump` and `*.sql`.
 
-The data directory holds product images and attachments, which are **not** in the
-database dump. A complete backup is both:
-
-```bash
-tar czf /var/backups/odoo/filestore_first.tgz -C /opt/odoo/.local/share Odoo
-```
-
-Automating this on a schedule is listed under *Not covered here*; do it before go-live.
+**Copy these off the server.** A backup that only exists on the machine it came from
+does not survive that machine dying. `rsync` them somewhere else on a schedule too.
 
 ---
 
@@ -775,8 +810,8 @@ accounts, demo products and posted journal entries.
 
 - **HTTPS** — needs a domain first, then `certbot --nginx`. Until then, logins travel in
   clear text over the internet. Do not run a real shop on plain HTTP for long.
-- **Scheduling the backup** from step 13 (a nightly cron plus off-server copies). A
-  backup that only exists on the same machine does not survive that machine dying.
+- **Copying the step 13 backups off the server**, and actually restoring one into a
+  scratch database once. Until you have done that, you have a file, not a backup.
 - **Firewalling 8069/8072** once nginx is proxying — `ufw deny 8069` — so nobody can
   bypass nginx and reach Odoo directly.
 - **Monitoring**, so you learn the disk is full before the shop does.
