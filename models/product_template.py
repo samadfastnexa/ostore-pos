@@ -327,7 +327,9 @@ class ProductTemplate(models.Model):
         off to the right where they can be left blank.
         """
         return [{
-            'label': _("Product List (5 columns)"),
+            # No column count in the label: it has been five, then twenty-three,
+            # then eleven, and a stale number on the button is worse than none.
+            'label': _("Download the Product List spreadsheet"),
             'template': '/pos_retail/import-template/product.xlsx',
         }]
 
