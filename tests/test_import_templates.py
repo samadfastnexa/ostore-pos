@@ -8,6 +8,7 @@ using ", " when Odoo's importer does not trim the space. Each was found by
 running the file rather than reading it, so that is what these tests do.
 """
 import io
+import re
 
 from odoo.tests import TransactionCase, tagged
 
@@ -225,4 +226,10 @@ class TestImportTemplates(TransactionCase):
         self.assertTrue(headings, "no pick-lists were written")
         for heading in headings:
             self.assertNotIn('_id', heading, "technical field name leaked: %s" % heading)
-            self.assertNotIn('/', heading, "technical field path leaked: %s" % heading)
+            # A bare "/" is not the tell: Odoo's own label for a nested field
+            # is "Vendors / Vendor", which is exactly what the importer matches
+            # on and is perfectly readable. What must never appear is the
+            # snake_case form -- seller_ids/partner_id, categ_id.
+            self.assertIsNone(
+                re.fullmatch(r'[a-z0-9_]+(?:/[a-z0-9_]+)*', heading),
+                "technical field path leaked: %s" % heading)

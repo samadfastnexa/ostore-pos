@@ -71,6 +71,8 @@
                         domain="[('pos_categ_ids', '=', False)]"/>
                 <filter string="Still In Units" name="pos_retail_still_units"
                         domain="[('pos_retail_measurement_type', '=', 'piece')]"/>
+                <filter string="No Barcode" name="pos_retail_no_barcode"
+                        domain="[('barcode', '=', False)]"/>
                 <separator/>
                 <filter string="Added Today" name="pos_retail_added_today"
                         domain="[('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
@@ -108,5 +110,27 @@
               parent="point_of_sale.pos_config_menu_catalog"
               action="action_pos_retail_product_setup"
               sequence="6"/>
+
+    <!-- ==================================================================
+         Generate Barcodes, as a bulk action on selected rows.
+
+         New products get a barcode on create (product_product.py), but that
+         does nothing for a catalogue imported before the setting existed, or
+         for rows deliberately left blank that now need a shelf label. Filter
+         to "No Barcode", select all, run this.
+
+         It lives on product.template because that is the model behind every
+         product list a shopkeeper actually opens; the work happens on the
+         variants, since barcodes are stored per variant and a product with
+         four sizes needs four codes.
+         ================================================================== -->
+    <record id="action_pos_retail_generate_product_barcodes" model="ir.actions.server">
+        <field name="name">Generate Barcodes</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="binding_model_id" ref="product.model_product_template"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = records.product_variant_ids.action_pos_retail_generate_barcode()</field>
+    </record>
 
 </odoo>

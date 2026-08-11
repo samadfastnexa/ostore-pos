@@ -18,3 +18,18 @@ class ResCompany(models.Model):
         help="Print a QR code the customer can scan to open the quotation "
              "online, review it and accept it.",
     )
+
+    # Company-level, not per-till: a barcode identifies the goods, not the
+    # counter they were rung up on. Two tills minting codes from different
+    # rules would put two stickers on the same pipe.
+    pos_retail_auto_product_barcode = fields.Boolean(
+        string="Generate Barcodes for New Products", default=True,
+        help="Give every new product a scannable barcode automatically when "
+             "none was typed or scanned in. Most hardware and sanitary goods "
+             "arrive with nothing printed on them, so without this you would "
+             "have to invent a number for each one by hand before you could "
+             "print a shelf label.\n\n"
+             "A barcode you scanned or typed yourself is never replaced. Turn "
+             "this off if you only sell branded goods that already carry a "
+             "manufacturer's barcode.",
+    )

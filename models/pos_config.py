@@ -290,6 +290,11 @@ class ResConfigSettings(models.TransientModel):
         readonly=False,
         string="Show QR Code on Quotations",
     )
+    pos_retail_auto_product_barcode = fields.Boolean(
+        related='company_id.pos_retail_auto_product_barcode',
+        readonly=False,
+        string="Generate Barcodes for New Products",
+    )
     pos_retail_allow_quotation = fields.Boolean(
         related='pos_config_id.pos_retail_allow_quotation',
         readonly=False,

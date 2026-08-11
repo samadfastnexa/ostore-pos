@@ -1,5 +1,5 @@
 from odoo import _, api, fields, models
-from odoo.exceptions import AccessError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tools import groupby
 
 
@@ -29,6 +29,96 @@ class ProductProduct(models.Model):
                 "\"Can Edit Cost\" permission."
             ))
         return super().write(vals)
+
+    # ------------------------------------------------------------------
+    # Generated barcodes
+    #
+    # On the variant, not the template: product.template.barcode is only a
+    # compute+inverse onto product_variant_ids (product_template.py:152 in
+    # core), so a product with four sizes has four barcodes and one template
+    # field that cannot represent them. Generating here gives every size its
+    # own code, which is what a scanner needs.
+    # ------------------------------------------------------------------
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Give a new product a barcode when none was scanned or typed.
+
+        Most hardware and sanitary goods have nothing printed on them, so the
+        alternative is the shopkeeper inventing a number per product before
+        any shelf label can be printed.
+
+        Only ever fills a BLANK barcode. A real manufacturer's code, whether
+        scanned into the form or supplied by the import sheet, always wins --
+        overwriting it would mean the printed code on the box no longer
+        matches the one in Odoo, and the product silently stops scanning.
+
+        Skipped entirely while a product.template is being created: the
+        template's barcode inverse would read our generated code back off the
+        variant and write it over the user's own. product_template.create()
+        sets pos_retail_defer_barcode for that window and fills the blanks
+        itself once the dust settles. This path still covers variants born
+        later -- a new size added to an existing product.
+        """
+        if (self.env.company.pos_retail_auto_product_barcode
+                and not self.env.context.get('pos_retail_defer_barcode')):
+            for vals in vals_list:
+                if not vals.get('barcode'):
+                    vals['barcode'] = self._pos_retail_next_free_product_barcode()
+        return super().create(vals_list)
+
+    @api.model
+    def _pos_retail_next_free_product_barcode(self):
+        """A generated EAN-13 that no product and no package already uses.
+
+        Checks both models because product.uom carries barcodes too and the
+        till resolves a scan against both: a code shared between a product and
+        a package would ring up whichever the scanner matched first.
+        """
+        sequence = self.env['ir.sequence']
+        Package = self.env['product.uom']
+        # Generous retry budget, matching the package generator: a stretch of
+        # the range can already be taken -- typically after an import that
+        # supplied its own 298-prefixed codes -- and skipping past it costs
+        # nothing but sequence numbers.
+        for _attempt in range(100):
+            body = sequence.next_by_code('pos.retail.product.barcode')
+            if not body:
+                raise UserError(_(
+                    "The product barcode sequence is missing. Upgrade the POS "
+                    "Retail module to restore it, or type a barcode by hand."))
+            candidate = Package._pos_retail_ean13(body)
+            taken = self.sudo().search_count([('barcode', '=', candidate)]) or \
+                Package.sudo().search_count([('barcode', '=', candidate)])
+            if not taken:
+                return candidate
+        raise UserError(_(
+            "Could not generate a free barcode after several tries. Check the "
+            "product barcode sequence for clashes."))
+
+    def action_pos_retail_generate_barcode(self):
+        """Fill in a barcode for the selected products that have none.
+
+        For catalogues imported before this was switched on, and for the rows
+        left blank on purpose that now need a shelf label. Existing barcodes
+        are never touched: they may already be printed and stuck to stock.
+        """
+        filled = 0
+        for product in self:
+            if not product.barcode:
+                product.barcode = self._pos_retail_next_free_product_barcode()
+                filled += 1
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'type': 'success' if filled else 'info',
+                'message': (
+                    _("Generated %s barcode(s).", filled) if filled else
+                    _("Every product selected already has a barcode.")),
+                'next': {'type': 'ir.actions.act_window_close'},
+            },
+        }
 
     @api.model
     def _load_pos_data_fields(self, config):
