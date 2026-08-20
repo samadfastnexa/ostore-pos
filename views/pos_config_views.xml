@@ -137,6 +137,22 @@
                     </div>
                 </div>
                 <div class="mt-3">
+                    <span class="o_form_label fw-bold">Catalogue</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Generate Barcodes for New Products" for="pos_retail_auto_product_barcode" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_auto_product_barcode"/>
+                    </div>
+                    <div class="row" invisible="not pos_retail_auto_product_barcode">
+                        <div class="col-lg-8 offset-lg-4 text-muted small">
+                            New products with no barcode scanned or typed get one
+                            automatically, so a shelf label can be printed straight
+                            away. A barcode you entered yourself is never replaced.
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
                     <span class="o_form_label fw-bold">Flexible Pricing</span>
                 </div>
                 <div class="content-group">

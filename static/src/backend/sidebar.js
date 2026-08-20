@@ -4,10 +4,16 @@ import { Component, onMounted, onWillUnmount, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { browser } from "@web/core/browser/browser";
 import { useBus, useService } from "@web/core/utils/hooks";
+import { fuzzyLookup } from "@web/core/utils/search";
+import { computeAppsAndMenuItems } from "@web/webclient/menus/menu_helpers";
 
 const STORAGE_KEY = "pos_retail_sidebar_collapsed";
 const SECTIONS_KEY = "pos_retail_sidebar_closed_sections";
 const BODY_CLASS = "pos-retail-side-collapsed";
+
+// Enough to cover a real query, few enough that the list never scrolls past
+// the fold. Beyond a dozen hits the answer is a better search term.
+const MAX_RESULTS = 12;
 
 // Left navigation for the back office.
 //
@@ -39,6 +45,10 @@ export class PosRetailSidebar extends Component {
             // Highlighted leaf. Tracked from sidebar clicks; the menu service
             // has no public "current leaf menu", only the current app.
             activeMenuId: null,
+            // Menu search. Odoo has this already, in the command palette --
+            // but behind Ctrl+K then "/", which a shopkeeper will never find.
+            // The searching is core's; what this adds is a box you can see.
+            query: "",
         });
 
         // The menu service announces app changes on the bus; re-render so the
@@ -66,6 +76,70 @@ export class PosRetailSidebar extends Component {
             return [];
         }
         return this.menuService.getMenuAsTree(app.id).childrenTree || [];
+    }
+
+    // ------------------------------------------------------------------
+    // Search
+    // ------------------------------------------------------------------
+
+    get isSearching() {
+        return Boolean(this.state.query.trim());
+    }
+
+    /**
+     * Every menu in the whole database that matches, not just this app's.
+     *
+     * That is the point of it: a shopkeeper looking for "till sections" does
+     * not know it lives under Point of Sale > Configuration, and being made to
+     * guess the app first is the problem, not the solution.
+     *
+     * computeAppsAndMenuItems and fuzzyLookup are core's own -- the same pair
+     * behind Ctrl+K -- so ranking and typo tolerance match the rest of Odoo
+     * instead of being a second, slightly different search.
+     */
+    get searchResults() {
+        const query = this.state.query.trim();
+        if (!query) {
+            return [];
+        }
+        const { apps, menuItems } = computeAppsAndMenuItems(
+            this.menuService.getMenuAsTree("root")
+        );
+        // Path reversed before matching, exactly as menu_providers.js does:
+        // it weights the leaf above its ancestors, so typing "categories"
+        // ranks "Configuration / Categories" over every menu that merely
+        // sits inside an app whose name happens to match.
+        const menuHits = fuzzyLookup(query, menuItems, (menu) =>
+            (menu.parents + " / " + menu.label).split("/").reverse().join("/")
+        );
+        const appHits = fuzzyLookup(query, apps, (app) => app.label).map((app) =>
+            Object.assign({}, app, { parents: "" })
+        );
+        return appHits.concat(menuHits).slice(0, MAX_RESULTS);
+    }
+
+    clearSearch() {
+        this.state.query = "";
+    }
+
+    onSearchKeydown(ev) {
+        if (ev.key === "Escape") {
+            this.clearSearch();
+            ev.target.blur();
+        } else if (ev.key === "Enter") {
+            // Enter opens the top hit, so a search can be finished without
+            // ever moving to the mouse.
+            const first = this.searchResults[0];
+            if (first) {
+                this.openResult(first);
+            }
+        }
+    }
+
+    openResult(item) {
+        this.state.query = "";
+        this.state.activeMenuId = item.id;
+        this.menuService.selectMenu(item);
     }
 
     isCurrentApp(app) {

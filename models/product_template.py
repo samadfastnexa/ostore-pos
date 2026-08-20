@@ -265,6 +265,49 @@ class ProductTemplate(models.Model):
                 result.append(field)
         return result
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Generate missing barcodes only once the template has settled.
+
+        This has to happen here rather than in product.product.create(), and
+        the reason is a trap in core.
+
+        product.template.barcode is a non-stored compute+inverse onto the
+        variant (product_template.py:152). The inverse is
+        `_set_product_variant_field`, which does
+        `template.product_variant_ids['barcode'] = template['barcode']` -- it
+        reads the template field, which is itself COMPUTED FROM THE VARIANT.
+
+        So during create the order is: variant row is created, then the
+        inverse fires. Anything that writes a barcode onto the variant in
+        between invalidates the template's cached value, the compute re-runs
+        off the variant, and the inverse then writes that generated code
+        straight back over the barcode the user actually typed. Silently.
+
+        Hence the context flag: variant-level generation is suppressed for the
+        duration of super(), and blanks are filled afterwards, by which point
+        a scanned or imported barcode is safely in place and simply is not
+        blank any more.
+
+        The variant-level hook still runs for variants created later -- adding
+        a size to an existing product -- where no template inverse is involved.
+        """
+        templates = super(
+            ProductTemplate,
+            self.with_context(pos_retail_defer_barcode=True),
+        ).create(vals_list)
+        templates._pos_retail_fill_missing_barcodes()
+        return templates
+
+    def _pos_retail_fill_missing_barcodes(self):
+        """Give a scannable code to any variant still without one."""
+        if not self.env.company.pos_retail_auto_product_barcode:
+            return
+        Variant = self.env['product.product']
+        for variant in self.product_variant_ids:
+            if not variant.barcode:
+                variant.barcode = Variant._pos_retail_next_free_product_barcode()
+
     @api.model
     def get_import_templates(self):
         """Offer ready-made spreadsheets on the product Import screen.
@@ -284,7 +327,9 @@ class ProductTemplate(models.Model):
         off to the right where they can be left blank.
         """
         return [{
-            'label': _("Product List (5 columns)"),
+            # No column count in the label: it has been five, then twenty-three,
+            # then eleven, and a stale number on the button is worse than none.
+            'label': _("Download the Product List spreadsheet"),
             'template': '/pos_retail/import-template/product.xlsx',
         }]
 

@@ -14,7 +14,44 @@
                 </button>
             </div>
 
-            <nav class="pos-retail-side__nav">
+            <!-- Menu search. Hidden while collapsed: there is no room for a
+                 field, and the icon rail is for jumping between apps. -->
+            <div t-if="!state.collapsed" class="pos-retail-side__search">
+                <i class="fa fa-search pos-retail-side__search-icon"/>
+                <input type="text" class="pos-retail-side__search-input"
+                       placeholder="Search menu..."
+                       aria-label="Search menu"
+                       t-model="state.query"
+                       t-on-keydown="onSearchKeydown"/>
+                <button t-if="isSearching" class="pos-retail-side__search-clear"
+                        title="Clear" aria-label="Clear search"
+                        t-on-click="() => this.clearSearch()">
+                    <i class="fa fa-times"/>
+                </button>
+            </div>
+
+            <!-- Results replace the app list rather than filtering in place.
+                 A tree with most branches hidden still reads as a tree, and
+                 the user has to work out why things moved; a flat list of
+                 "App / Section / Item" answers the question directly. -->
+            <nav t-if="isSearching" class="pos-retail-side__nav pos-retail-side__results">
+                <t t-if="!searchResults.length">
+                    <div class="pos-retail-side__noresult">
+                        No menu matches "<t t-esc="state.query"/>"
+                    </div>
+                </t>
+                <t t-foreach="searchResults" t-as="result" t-key="result.id">
+                    <button class="pos-retail-side__result"
+                            t-att-title="(result.parents ? result.parents + ' / ' : '') + result.label"
+                            t-on-click="() => this.openResult(result)">
+                        <span class="pos-retail-side__result-name" t-esc="result.label"/>
+                        <span t-if="result.parents" class="pos-retail-side__result-path"
+                              t-esc="result.parents"/>
+                    </button>
+                </t>
+            </nav>
+
+            <nav t-if="!isSearching" class="pos-retail-side__nav">
                 <t t-foreach="apps" t-as="app" t-key="app.id">
                 <!-- Each app is one block; the OPEN app's block becomes an
                      inset panel so its sections/items read as contents of

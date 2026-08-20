@@ -1,0 +1,43 @@
+// Till-button styling for the colours appended in backend/color_list.js.
+//
+// The product card never paints the raw swatch: point_of_sale/static/src/scss/
+// pos.scss lightens each colour by 25% for the background and 15% for the
+// border, so the product name -- always dark -- stays readable on top. That
+// formula assumes a mid-tone starting colour and breaks on the dark set added
+// here: lightening #1f2023 by 25% yields a mid grey, which is still too dark
+// for dark text. So the two values are given by hand instead of derived.
+//
+// The pairing is deliberate. The BACKGROUND is a pale tint, light enough to
+// read a product name on; the BORDER keeps the colour at full strength, which
+// is what actually identifies the button -- the card carries a 6px bottom
+// stripe in --border-color, so that stripe is where "black" reads as black.
+//
+// Keys must stay in step with backend/color_list.js and backend/color_list.scss.
+
+$pos-retail-extra-pos-colors: (
+    12: (#d8dade, #c9ccd1, #1f2023),  // Black
+    13: (#e0e2e5, #d1d4d8, #6d7278),  // Grey
+    14: (#ead9c6, #dfc9ae, #8a5a2b),  // Brown
+    15: (#f0cdd2, #e6b6bd, #8c2230),  // Maroon
+    16: (#ccd6ea, #b8c6e1, #243f7b),  // Navy
+    17: (#cfe5d4, #b9d8c0, #2f6b3a),  // Forest
+    18: (#f3e3b8, #ecd79c, #b8860b),  // Brass
+    19: (#d7e0e5, #c4d1d8, #4a6572),  // Slate
+);
+
+@each $index, $values in $pos-retail-extra-pos-colors {
+    $-background-color: nth($values, 1);
+    $-hover-color: nth($values, 2);
+    $-border-color: nth($values, 3);
+
+    .o_colorlist_item_color_transparent_#{$index} {
+        --bg: #{$-background-color};
+        --hover-bg: #{$-hover-color};
+        --border-color: #{$-border-color};
+    }
+
+    .o_colorlist_item_numpad_color_#{$index} {
+        --bg: #{$-background-color};
+        --border-color: #{$-border-color};
+    }
+}

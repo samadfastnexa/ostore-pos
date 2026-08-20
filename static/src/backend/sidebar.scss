@@ -85,6 +85,99 @@ $pos-retail-side-accent: $pos-retail-side-mid;
         &:hover { background: rgba(255, 255, 255, .16); color: #fff; }
     }
 
+    // ---- menu search ----
+    // Sits between the brand bar and the nav, always visible, because the
+    // whole point is that the shortcut version (Ctrl+K) is undiscoverable.
+    &__search {
+        position: relative;
+        flex-shrink: 0;
+        padding: .1rem .6rem .5rem;
+    }
+
+    &__search-icon {
+        position: absolute;
+        left: 1.15rem;
+        top: 50%;
+        transform: translateY(-60%);
+        font-size: .75rem;
+        color: rgba(255, 255, 255, .55);
+        pointer-events: none;
+    }
+
+    &__search-input {
+        width: 100%;
+        padding: .35rem .55rem .35rem 1.75rem;
+        font-size: .82rem;
+        color: #fff;
+        background: rgba(255, 255, 255, .13);
+        border: 1px solid rgba(255, 255, 255, .16);
+        border-radius: 5px;
+        outline: none;
+        transition: background-color .12s ease, border-color .12s ease;
+
+        &::placeholder { color: rgba(255, 255, 255, .5); }
+
+        &:focus {
+            background: rgba(255, 255, 255, .2);
+            border-color: rgba(255, 255, 255, .38);
+        }
+    }
+
+    &__search-clear {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-60%);
+        padding: 0 .2rem;
+        font-size: .75rem;
+        line-height: 1;
+        color: rgba(255, 255, 255, .6);
+        background: transparent;
+        border: 0;
+        cursor: pointer;
+
+        &:hover { color: #fff; }
+    }
+
+    // ---- search results ----
+    &__result {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: .05rem;
+        width: 100%;
+        padding: .38rem .55rem;
+        text-align: left;
+        color: rgba(255, 255, 255, .92);
+        background: transparent;
+        border: 0;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color .12s ease;
+
+        &:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+    }
+
+    &__result-name {
+        font-size: .85rem;
+        line-height: 1.2;
+    }
+
+    // The trail is what makes a result usable: "Categories" alone is
+    // ambiguous -- Inventory's filing tree and the POS till buttons are both
+    // called that -- so the path is the answer, not decoration.
+    &__result-path {
+        font-size: .68rem;
+        line-height: 1.2;
+        color: rgba(255, 255, 255, .55);
+    }
+
+    &__noresult {
+        padding: .6rem .55rem;
+        font-size: .8rem;
+        color: rgba(255, 255, 255, .6);
+    }
+
     // ---- scrolling menu ----
     &__nav {
         flex: 1;
