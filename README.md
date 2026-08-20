@@ -45,6 +45,10 @@ pulled transitively).
 See [docs/SETUP_CHECKLIST.md](docs/SETUP_CHECKLIST.md) for the full Week 0–1
 configuration checklist (maps every discount/offer to a standard Loyalty program).
 
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the work currently outstanding and
+the findings behind it — open decisions on pricing, offline behaviour and the
+customer/vendor ledger features still to build.
+
 ## Roadmap (built on top of this scaffold)
 
 1. Branded POS dashboard (OWL) — daily/monthly sales, top products, refunds
