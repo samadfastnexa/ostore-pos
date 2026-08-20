@@ -1,0 +1,31 @@
+// Picker swatches for the colours appended in color_list.js.
+//
+// Core styles indices 1..11 with a SCSS @for over its own $o-colors list, so
+// there is no hook to extend that list from here -- the loop has already been
+// compiled by the time this file is read. These rules therefore restate the
+// pattern by hand for 12 and up. No index overlaps core's, so nothing here
+// competes with it in the cascade and the specificity only has to MATCH core's
+// (.o_colorlist > button.o_colorlist_item_color_N), not beat it.
+//
+// Every colour below is dark enough that the "selected" tick, which inherits
+// the swatch's text colour, needs to be white to be seen at all.
+
+$pos-retail-extra-swatches: (
+    12: #1f2023,  // Black
+    13: #6d7278,  // Grey
+    14: #8a5a2b,  // Brown
+    15: #8c2230,  // Maroon
+    16: #243f7b,  // Navy
+    17: #2f6b3a,  // Forest
+    18: #b8860b,  // Brass
+    19: #4a6572,  // Slate
+);
+
+.o_colorlist > button {
+    @each $index, $swatch in $pos-retail-extra-swatches {
+        &.o_colorlist_item_color_#{$index} {
+            background-color: $swatch;
+            color: #fff;
+        }
+    }
+}
