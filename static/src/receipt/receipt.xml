@@ -17,11 +17,11 @@
              product's own unit, which is what stock moved by. -->
         <xpath expr="//Orderline" position="inside">
             <li t-if="line.pos_retail_package_id" class="pos-retail-line-package">
-                Package: <t t-esc="line.pos_retail_package_id.package_name or line.pos_retail_package_id.uom_id.name"/>
+                Package: <t t-esc="line.pos_retail_package_id.package_name or line.pos_retail_package_id.uom_id?.name"/>
             </li>
-            <li t-if="order.config.pos_retail_receipt_show_sku and (line.pos_retail_package_id.sku or line.product_id.default_code)"
+            <li t-if="order.config.pos_retail_receipt_show_sku and (line.pos_retail_package_id?.sku or line.product_id?.default_code)"
                 class="pos-retail-line-sku">
-                SKU: <t t-esc="line.pos_retail_package_id.sku or line.product_id.default_code"/>
+                SKU: <t t-esc="line.pos_retail_package_id?.sku or line.product_id?.default_code"/>
             </li>
         </xpath>
 
@@ -34,7 +34,7 @@
             <t t-foreach="paymentLines" t-as="pline" t-key="pline.uuid">
                 <div t-if="pline.transaction_id or pline.payment_ref_no or pline.card_no"
                      class="pos-retail-payment-ref text-start" style="font-size:75%;">
-                    <span t-esc="pline.payment_method_id.name"/>
+                    <span t-esc="pline.payment_method_id?.name"/>
                     <t t-if="pline.card_type"> <t t-esc="pline.card_type"/></t>
                     <t t-if="pline.card_no"> ****<t t-esc="pline.card_no"/></t>
                     <t t-if="pline.transaction_id or pline.payment_ref_no">
@@ -65,7 +65,7 @@
                          class="pos-retail-price-override-line text-start pt-1">
                         <span class="label-price-override">Price Approved</span>
                         <span class="pos-receipt-right-align">
-                            <t t-esc="line.pos_retail_price_manager_id.name"/>
+                            <t t-esc="line.pos_retail_price_manager_id?.name"/>
                             <t t-if="line.pos_retail_price_reason_id">
                                 (<t t-esc="line.pos_retail_price_reason_id.name"/>)
                             </t>
@@ -126,7 +126,7 @@
         <xpath expr="//div[hasclass('footer-powered-by')]" position="replace">
             <div class="pos-retail-receipt-branding pos-receipt-center-align text-center pt-3"
                  style="border-top:1px dashed currentColor; padding-top:6px;">
-                <div class="fw-bolder" t-esc="order.company.name"/>
+                <div class="fw-bolder" t-esc="order.company?.name"/>
                 <div t-if="order.config.pos_retail_receipt_social"
                      class="pos-retail-receipt-social" style="font-size:80%;"
                      t-esc="order.config.pos_retail_receipt_social"/>
