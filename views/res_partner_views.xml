@@ -241,7 +241,12 @@
                  because both post real accounting documents. -->
             <sheet position="before">
                 <header>
-                    <button name="action_receive_customer_payment" type="object"
+                    <!-- Points at pos.retail.khata.payment rather than a raw
+                         account.payment form: the wizard shows what the customer
+                         owes, defaults to clearing it, asks only cash-or-bank,
+                         and settles the oldest debts first. The full payment form
+                         is still there for accountants under Invoicing. -->
+                    <button name="action_open_khata_payment" type="object"
                             string="Receive Payment" class="btn-primary"
                             groups="account.group_account_invoice"/>
                     <button name="action_open_ledger_adjustment" type="object"

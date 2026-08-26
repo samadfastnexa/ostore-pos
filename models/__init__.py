@@ -30,4 +30,5 @@ from . import pos_config
 from . import pos_session
 from . import pos_retail_dashboard
 from . import pos_retail_ledger_adjustment
+from . import pos_retail_khata_payment
 from . import res_users
