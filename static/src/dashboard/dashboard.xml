@@ -33,6 +33,19 @@ How to use: switch Today/Week/Month/Custom above to change the period; click any
                                 t-att-class="state.period === 'custom' ? 'btn-primary' : 'btn-outline-secondary'"
                                 t-on-click="() => this.toggleCustom()"><i class="fa fa-sliders me-1"/>Custom</button>
                     </div>
+                    <!-- Branch selector. Only rendered when the user actually has more
+                         than one branch, so a single-shop install sees no stray control.
+                         The option list comes from the server and contains only the
+                         branches this user may read. -->
+                    <select class="form-select form-select-sm w-auto"
+                            t-if="state.data and state.data.branches and state.data.branches.length > 1"
+                            t-on-change="(ev) => this.setBranch(ev.target.value)">
+                        <option t-foreach="state.data.branches" t-as="branch" t-key="branch.id"
+                                t-att-value="branch.id"
+                                t-att-selected="branch.id === state.data.company_id">
+                            <t t-esc="branch.name"/>
+                        </option>
+                    </select>
                     <div class="d-flex align-items-center gap-1" t-if="state.showCustom">
                         <input type="date" class="form-control form-control-sm" t-model="state.dateFrom"/>
                         <span class="text-muted">to</span>

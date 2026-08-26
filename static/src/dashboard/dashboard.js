@@ -25,6 +25,7 @@ export class PosRetailDashboard extends Component {
             dateTo: today,
             data: null,
             trend: {},
+            branchId: null,
         });
         onWillStart(() => this.load());
     }
@@ -34,11 +35,28 @@ export class PosRetailDashboard extends Component {
         const kwargs = this.state.period === "custom"
             ? { date_from: this.state.dateFrom, date_to: this.state.dateTo }
             : {};
+        if (this.state.branchId) {
+            kwargs.company_id = this.state.branchId;
+        }
         this.state.data = await this.orm.call(
             "pos.retail.dashboard", "get_dashboard_data", [this.state.period], kwargs
         );
+        // First load has no branch chosen yet; adopt whichever one the server
+        // resolved so the dropdown opens on the branch actually being shown.
+        if (!this.state.branchId) {
+            this.state.branchId = this.state.data.company_id;
+        }
         this.state.trend = this.state.data.trend || {};
         this.state.loading = false;
+    }
+
+    setBranch(value) {
+        const branchId = parseInt(value, 10);
+        if (!branchId || branchId === this.state.branchId) {
+            return;
+        }
+        this.state.branchId = branchId;
+        this.load();
     }
 
     setPeriod(period) {

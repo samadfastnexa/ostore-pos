@@ -72,7 +72,7 @@ class PosRetailDashboard(models.AbstractModel):
     # Public entry point
     # ------------------------------------------------------------------
     @api.model
-    def get_dashboard_data(self, period='month', date_from=None, date_to=None):
+    def get_dashboard_data(self, period='month', date_from=None, date_to=None, company_id=None):
         # This model is abstract: it owns no table, so ir.model.access never
         # runs for it and the ACL layer that protects every other model here is
         # simply absent. The menu is restricted to POS managers
@@ -86,6 +86,22 @@ class PosRetailDashboard(models.AbstractModel):
                 "The Point of Sale dashboard is available to Point of Sale "
                 "managers only."
             ))
+        # Branch selector. Every figure below is gathered through the ORM, so
+        # scoping the whole method to one company is a matter of narrowing the
+        # environment once rather than threading a company through twenty
+        # queries: allowed_company_ids is what the multi-company record rules
+        # actually read, and with_company fixes the currency the totals are
+        # expressed in.
+        branches = self.env.user.company_ids
+        if company_id:
+            branch = branches.filtered(lambda c: c.id == int(company_id))
+            if not branch:
+                # Never fall back to "all branches" here: silently widening the
+                # scope would show a manager takings from a branch they were
+                # not granted, which is exactly what company_ids exists to stop.
+                raise AccessError(_("You do not have access to that branch."))
+            self = self.with_company(branch).with_context(allowed_company_ids=branch.ids)
+
         if period not in ('today', 'week', 'month', 'custom'):
             period = 'month'
         today_local = fields.Date.context_today(self)
@@ -113,6 +129,10 @@ class PosRetailDashboard(models.AbstractModel):
             'drill': self._get_drill_targets(start, end, movement),
             'currency_id': self.env.company.currency_id.id,
             'company_name': self.env.company.name,
+            # Drives the branch dropdown. Only the branches this user may see,
+            # so the list itself never leaks the existence of others.
+            'company_id': self.env.company.id,
+            'branches': [{'id': c.id, 'name': c.name} for c in branches],
             'kpis': kpis,
             'trend': self._get_trend(period, start, end, today_local, kpis),
             'sales_trend': self._get_sales_trend(trend_start),
