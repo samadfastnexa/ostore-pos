@@ -163,6 +163,14 @@ class PosConfig(models.Model):
         help="Printed on PDF receipts (A4). Kept off the thermal ticket to "
              "save paper; the Return Policy block covers the essentials there.",
     )
+    # --- Customers ---
+    pos_retail_default_partner_id = fields.Many2one(
+        'res.partner', string="Default Customer",
+        help="Pre-selected on every new POS order (e.g. a generic 'Walk-in "
+             "Customer'). The cashier can still pick a real customer at any "
+             "time; leave empty to start orders with no customer, as standard "
+             "Odoo does.",
+    )
     # --- Quotations (#11) ---
     pos_retail_allow_quotation = fields.Boolean(
         string="Allow Quotations", default=True,
@@ -170,6 +178,16 @@ class PosConfig(models.Model):
              "as a Sales quotation (sale.order) instead of being paid at the till. "
              "The quotation can later be settled back into the POS for payment.",
     )
+
+    def get_limited_partners_loading(self, offset=0):
+        # The POS only preloads the most relevant partners; make sure the
+        # configured default customer is always among them, mirroring what
+        # l10n_ar_pos does for its anonymous "Consumidor Final" partner.
+        partner_ids = super().get_limited_partners_loading(offset)
+        default_partner = self.pos_retail_default_partner_id
+        if default_partner and (default_partner.id,) not in partner_ids:
+            partner_ids.append((default_partner.id,))
+        return partner_ids
 
     @api.constrains('cash_rounding', 'rounding_method', 'pos_retail_max_roundoff_amount')
     def _check_max_roundoff_amount(self):
@@ -182,6 +200,111 @@ class PosConfig(models.Model):
                         rounding=config.rounding_method.rounding,
                         max=config.pos_retail_max_roundoff_amount,
                     ))
+
+    def write(self, vals):
+        """Never let a register be saved with an empty category restriction.
+
+        "Restrict Available Categories" with nothing actually chosen compiles,
+        server side, to `id in []` for categories (point_of_sale
+        pos_category.py:45) and `pos_categ_ids in []` for products
+        (product_template.py:79-80). The session payload then carries no
+        categories and no products, and the register opens to a bare grid with
+        no error anywhere -- the catalogue simply looks lost.
+
+        _pos_retail_fix_empty_category_limit repairs databases already in that
+        state, but it only runs on upgrade: without this, re-ticking the box in
+        Settings without picking a category breaks the till again, silently.
+        """
+        res = super().write(vals)
+        if 'limit_categories' in vals or 'iface_available_categ_ids' in vals:
+            broken = self.filtered(
+                lambda c: c.limit_categories and not c.iface_available_categ_ids)
+            if broken:
+                super(PosConfig, broken).write({'limit_categories': False})
+        return res
+
+    @api.model
+    def _pos_retail_ensure_default_customer(self):
+        """Point every register at a walk-in customer unless it names its own.
+
+        Called from data/pos_retail_partner_tag_data.xml on install and upgrade,
+        so it must stay idempotent. A register that already has a default is
+        left alone -- this fills a blank, it does not impose a choice.
+        """
+        partner = self.env.ref(
+            'pos_retail.partner_walk_in_customer', raise_if_not_found=False)
+        if not partner:
+            return
+        if not partner.active:
+            partner.sudo().write({'active': True})
+        for config in self.sudo().search([('pos_retail_default_partner_id', '=', False)]):
+            config.pos_retail_default_partner_id = partner.id
+
+    @api.model
+    def _pos_retail_fix_empty_category_limit(self):
+        """Undo the setting combination that empties a register's product grid.
+
+        Called from data/pos_retail_discount_reason_data.xml on install and
+        upgrade, so it must stay idempotent.
+
+        "Restrict Available Categories" with no categories actually chosen
+        compiles to `pos_categ_ids in []`, which matches nothing: the register
+        opens to a completely empty grid with no error anywhere, and the
+        catalogue looks lost. It is never a deliberate configuration -- a shop
+        that wants to sell nothing simply does not open the till -- so the
+        restriction is switched back off. A register that names real categories
+        is left exactly as it is.
+        """
+        broken = self.sudo().search([
+            ('limit_categories', '=', True),
+            ('iface_available_categ_ids', '=', False),
+        ])
+        for config in broken:
+            config.limit_categories = False
+
+    @api.model
+    def _pos_retail_ensure_discount_product(self):
+        """Guarantee every register has a product to carry order discounts.
+
+        Called from data/pos_retail_discount_reason_data.xml on install and on
+        every upgrade, so it must stay idempotent.
+
+        The order-discount panel posts its discount as a line on a dedicated
+        product, and reads it from pos.config.discount_product_id. That field
+        belongs to pos_discount, which only fills it in when its own
+        module_pos_discount toggle is on -- ours is a separate feature, so on a
+        register where that toggle was never enabled the field stays empty and
+        the panel can only report that the discount product is misconfigured.
+        The shipped product is also archived on some databases, and an archived
+        product never reaches the POS client.
+
+        available_in_pos is deliberately left alone: pos_discount already loads
+        this product through _get_special_products, and flagging it would put a
+        sellable "Discount" tile in the product grid.
+        """
+        product = self.env.ref(
+            'pos_discount.product_product_consumable', raise_if_not_found=False)
+        if not product:
+            return
+
+        repairs = {}
+        if not product.active:
+            repairs['active'] = True
+        if not product.sale_ok:
+            repairs['sale_ok'] = True
+        if repairs:
+            product.sudo().write(repairs)
+
+        # Registers with an open session are deliberately NOT skipped here, even
+        # though pos_discount's own compute skips them. That caution is about
+        # SWAPPING the product under a cashier who may already have discount
+        # lines on an order; this pass only ever fills a field that is empty, so
+        # there is no in-flight discount to disturb -- and skipping would leave
+        # the panel broken on exactly the register someone is standing at.
+        for config in self.sudo().search([('discount_product_id', '=', False)]):
+            if product.company_id and product.company_id != config.company_id:
+                continue
+            config.discount_product_id = product.id
 
     @api.model
     def _pos_retail_seed_pricelists(self):
@@ -299,6 +422,11 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.pos_retail_allow_quotation',
         readonly=False,
         string="Allow Quotations",
+    )
+    pos_retail_default_partner_id = fields.Many2one(
+        related='pos_config_id.pos_retail_default_partner_id',
+        readonly=False,
+        string="Default Customer",
     )
     pos_retail_theme_color = fields.Selection(
         related='pos_config_id.pos_retail_theme_color',

@@ -68,6 +68,28 @@ class ProductProduct(models.Model):
         return super().create(vals_list)
 
     @api.model
+    def _pos_retail_globalize_sequences(self):
+        """Force the module's sequences to be company-agnostic.
+
+        Called from data/pos_retail_package_data.xml on every install and
+        upgrade. The sequence records themselves are noupdate (so numbering is
+        never reset), but databases that installed an older version hold them
+        scoped to whichever company loaded the module -- ir.sequence's own
+        default. next_by_code() only matches the active company or global
+        sequences, so in a multi-company database every OTHER company got
+        "sequence is missing" instead of a barcode. Idempotent; touches only
+        company_id.
+        """
+        self.env['ir.sequence'].sudo().search([
+            ('code', 'in', [
+                'pos.retail.product.barcode',
+                'pos.retail.package.barcode',
+                'pos.retail.vendor.code',
+            ]),
+            ('company_id', '!=', False),
+        ]).write({'company_id': False})
+
+    @api.model
     def _pos_retail_next_free_product_barcode(self):
         """A generated EAN-13 that no product and no package already uses.
 

@@ -175,6 +175,16 @@
                     </div>
                 </div>
                 <div class="mt-3">
+                    <span class="o_form_label fw-bold">Customers</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Default Customer" for="pos_retail_default_partner_id" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_default_partner_id"
+                               placeholder="e.g. Walk-in Customer"/>
+                    </div>
+                </div>
+                <div class="mt-3">
                     <span class="o_form_label fw-bold">Returns and Refunds</span>
                 </div>
                 <div class="content-group">
