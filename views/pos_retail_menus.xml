@@ -405,4 +405,31 @@
         <field name="active">False</field>
     </record>
 
+    <!--
+        Hide Odoo's two other routes to the contacts list, leaving
+        Customers and Vendors as the single way in.
+
+        Neither is a straight duplicate, which is why they were left alone until
+        now: point_of_sale.menu_point_of_sale_customer applies a Customers
+        filter as a removable search CHIP and defaults new contacts to
+        is_company=True, and sale.res_partner_menu applies no filter at all.
+        Both are worse here than pos_retail_menu_customers, which filters on a
+        hard domain (customer_rank > 0) so a vendor or a cashier can never
+        surface however the search box is used - the exact confusion that put
+        Karachi Beverages Distributors in front of a cashier looking for a
+        buyer. Defaulting a khata customer to a company is wrong for a shop
+        where many of them are individuals.
+
+        Menus only: the records, the actions and every other route to them are
+        untouched. To bring either back, set active to True or delete the
+        record.
+    -->
+    <record id="point_of_sale.menu_point_of_sale_customer" model="ir.ui.menu">
+        <field name="active">False</field>
+    </record>
+
+    <record id="sale.res_partner_menu" model="ir.ui.menu">
+        <field name="active">False</field>
+    </record>
+
 </odoo>

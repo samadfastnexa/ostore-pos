@@ -1,51 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="1">
+<odoo>
 
-    <!-- Barcode bodies for generated package barcodes. The 2xx range is
-         reserved by GS1 for in-store use, so generated codes cannot clash
-         with a manufacturer's real barcodes. Prefix 299 specifically: Odoo
-         hands out 200-prefixed codes to products itself, and sharing that
-         run would make every generated package barcode collide with an
-         existing product. The sequence supplies the 12 significant digits;
-         the check digit is computed on top (product_uom.py). -->
-    <record id="seq_pos_retail_package_barcode" model="ir.sequence">
-        <field name="name">POS Retail Package Barcode</field>
-        <field name="code">pos.retail.package.barcode</field>
-        <field name="prefix">299</field>
-        <field name="padding">9</field>
-        <field name="number_next">1</field>
-        <field name="number_increment">1</field>
-        <field name="implementation">no_gap</field>
-    </record>
+    <data noupdate="1">
 
-    <!-- Barcode bodies for generated PRODUCT barcodes. Same 2xx in-store range
-         as packages, but a run of its own: sharing one sequence would mean
-         products and packages competing for the same numbers, and the
-         collision retry loop would churn through the range for no benefit.
-         298 also makes the two distinguishable at a glance on a printed label,
-         which matters when a shopkeeper is holding a bundle and a loose pipe
-         and wondering which sticker is which. -->
-    <record id="seq_pos_retail_product_barcode" model="ir.sequence">
-        <field name="name">POS Retail Product Barcode</field>
-        <field name="code">pos.retail.product.barcode</field>
-        <field name="prefix">298</field>
-        <field name="padding">9</field>
-        <field name="number_next">1</field>
-        <field name="number_increment">1</field>
-        <field name="implementation">no_gap</field>
-    </record>
+        <!-- All three sequences are deliberately GLOBAL (company_id False):
+             barcodes and vendor codes must be unique store-wide, and
+             ir.sequence.next_by_code only finds sequences belonging to the
+             active company or global ones - a company-scoped row silently
+             vanishes for users working in any other company. Without the
+             explicit field, ir.sequence defaults company_id to whichever
+             company happens to load the module. -->
 
-    <!-- Vendor codes. Generated on demand from the vendor form rather than
-         on create: most contacts are customers, and minting a vendor code for
-         every one of them would make the numbering meaningless. -->
-    <record id="seq_pos_retail_vendor_code" model="ir.sequence">
-        <field name="name">POS Retail Vendor Code</field>
-        <field name="code">pos.retail.vendor.code</field>
-        <field name="prefix">VND</field>
-        <field name="padding">5</field>
-        <field name="number_next">1</field>
-        <field name="number_increment">1</field>
-        <field name="implementation">no_gap</field>
-    </record>
+        <!-- Barcode bodies for generated package barcodes. The 2xx range is
+             reserved by GS1 for in-store use, so generated codes cannot clash
+             with a manufacturer's real barcodes. Prefix 299 specifically: Odoo
+             hands out 200-prefixed codes to products itself, and sharing that
+             run would make every generated package barcode collide with an
+             existing product. The sequence supplies the 12 significant digits;
+             the check digit is computed on top (product_uom.py). -->
+        <record id="seq_pos_retail_package_barcode" model="ir.sequence">
+            <field name="name">POS Retail Package Barcode</field>
+            <field name="code">pos.retail.package.barcode</field>
+            <field name="prefix">299</field>
+            <field name="padding">9</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">no_gap</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <!-- Barcode bodies for generated PRODUCT barcodes. Same 2xx in-store range
+             as packages, but a run of its own: sharing one sequence would mean
+             products and packages competing for the same numbers, and the
+             collision retry loop would churn through the range for no benefit.
+             298 also makes the two distinguishable at a glance on a printed label,
+             which matters when a shopkeeper is holding a bundle and a loose pipe
+             and wondering which sticker is which. -->
+        <record id="seq_pos_retail_product_barcode" model="ir.sequence">
+            <field name="name">POS Retail Product Barcode</field>
+            <field name="code">pos.retail.product.barcode</field>
+            <field name="prefix">298</field>
+            <field name="padding">9</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">no_gap</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <!-- Vendor codes. Generated on demand from the vendor form rather than
+             on create: most contacts are customers, and minting a vendor code for
+             every one of them would make the numbering meaningless. -->
+        <record id="seq_pos_retail_vendor_code" model="ir.sequence">
+            <field name="name">POS Retail Vendor Code</field>
+            <field name="code">pos.retail.vendor.code</field>
+            <field name="prefix">VND</field>
+            <field name="padding">5</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">no_gap</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+    </data>
+
+    <!-- Repair pass, OUTSIDE noupdate so it runs on every install and upgrade:
+         databases that installed an older version hold these sequences scoped
+         to one company (the default ir.sequence company at load time), which
+         breaks barcode generation for every other company. Idempotent, and
+         never touches the numbering itself. -->
+    <function model="product.product" name="_pos_retail_globalize_sequences"/>
 
 </odoo>

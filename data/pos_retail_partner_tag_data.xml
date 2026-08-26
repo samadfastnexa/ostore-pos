@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="1">
+<odoo>
+
+    <data noupdate="1">
 
     <!-- Starter counter tags. These are ordinary partner categories, so they
          also work everywhere else in Odoo (filters, reports, pricelists);
@@ -46,5 +48,20 @@
         <field name="name">Invoice required</field>
         <field name="color">1</field>
     </record>
+
+        <!-- The customer a counter sale belongs to when the buyer is nobody in
+             particular. Deliberately company-less so every register can use the
+             one record, and so its POS history is not split per company. -->
+        <record id="partner_walk_in_customer" model="res.partner">
+            <field name="name">Walk-in Customer</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+    </data>
+
+    <!-- Repair pass, OUTSIDE noupdate so it runs on every install and upgrade.
+         Idempotent, and it never overrules a register that already names its
+         own default customer. -->
+    <function model="pos.config" name="_pos_retail_ensure_default_customer"/>
 
 </odoo>

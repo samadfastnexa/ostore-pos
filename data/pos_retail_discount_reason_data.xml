@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="1">
+<odoo>
+
+    <data noupdate="1">
 
     <record id="discount_reason_customer_negotiation" model="pos.retail.discount.reason">
         <field name="name">Customer Negotiation</field>
@@ -45,5 +47,13 @@
         <field name="name">Other</field>
         <field name="sequence">90</field>
     </record>
+
+    </data>
+
+    <!-- Repair pass, OUTSIDE noupdate so it runs on every install and upgrade:
+         the order-discount panel is unusable on any register whose
+         discount_product_id was never filled in. Idempotent. -->
+    <function model="pos.config" name="_pos_retail_ensure_discount_product"/>
+    <function model="pos.config" name="_pos_retail_fix_empty_category_limit"/>
 
 </odoo>
