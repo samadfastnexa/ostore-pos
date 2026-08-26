@@ -35,6 +35,20 @@
                     <field name="mrp" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                     <field name="wholesale_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 </group>
+                <group name="pos_retail_branches" string="Branch Availability" col="4"
+                       groups="base.group_multi_company">
+                    <div class="text-muted small mb-2" colspan="4">
+                        Leave this empty to sell the item at every branch, which is right for
+                        almost all stock. Name one or more branches to offer it only there:
+                        the registers of every other branch will not show it, and will not
+                        find it by search or barcode either. Stock is unaffected - each
+                        branch still counts its own quantity, and the product stays visible
+                        in the back office so you can still move or reorder it.
+                    </div>
+                    <field name="pos_retail_branch_ids" widget="many2many_tags"
+                           options="{'no_create': True}"
+                           placeholder="All branches" colspan="4"/>
+                </group>
             </xpath>
         </field>
     </record>

@@ -1,8 +1,22 @@
-from odoo import _, api, models
+from odoo import _, api, fields, models
 
 
 class ProductCategory(models.Model):
     _inherit = 'product.category'
+
+    # Odoo ships product.category without a company, so every category is global.
+    # Branches that stock different ranges want different categories, and this
+    # costs nothing on the accounting side: the account fields on this model
+    # (property_account_income_categ_id, property_account_expense_categ_id,
+    # property_stock_valuation_account_id, property_valuation) are all
+    # company_dependent, so ONE category already stores a separate income,
+    # expense and stock-valuation account per branch. Scoping only decides who
+    # sees the category in a list.
+    company_id = fields.Many2one(
+        'res.company', string="Branch", index=True,
+        help="Branch this category belongs to. Leave empty to use it at every "
+             "branch, which suits any category both shops stock.",
+    )
 
     @api.model
     def get_import_templates(self):

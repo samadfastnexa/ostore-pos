@@ -14,6 +14,16 @@ class ProductTemplate(models.Model):
         default=lambda self: self.env.ref('product.product_category_goods',
                                           raise_if_not_found=False),
     )
+    pos_retail_branch_ids = fields.Many2many(
+        'res.company', 'pos_retail_product_branch_rel', 'product_tmpl_id', 'company_id',
+        string="Sell in Branches",
+        help="Which branches offer this item at the till. Leave EMPTY to sell it "
+             "everywhere, which is what most stock should be. Naming branches "
+             "here hides it from the registers of every other branch -- use it "
+             "for lines only one shop carries. It does not affect stock: each "
+             "branch still counts its own quantity, and the product stays "
+             "visible in the back office so you can move or reorder it.",
+    )
     brand_id = fields.Many2one(
         'product.brand', string="Brand", index=True, ondelete='set null',
         help="Maker or brand this item is sold under, e.g. Nestle or Tapal. "
@@ -249,6 +259,71 @@ class ProductTemplate(models.Model):
                 "\"Can Edit Sales Price\" permission."
             ))
         return super().write(vals)
+
+    @api.constrains('categ_id', 'company_id')
+    def _check_pos_retail_category_branch(self):
+        """Keep a product and its category in the same branch.
+
+        A category with no branch is shared and always allowed, which is the
+        normal case. The check only bites when someone files a Cash & Carry
+        product under a category that belongs solely to johar town -- which
+        would put the product in a category its own branch cannot even see.
+        """
+        for product in self:
+            cat_company = product.categ_id.company_id
+            if cat_company and product.company_id and cat_company != product.company_id:
+                raise ValidationError(_(
+                    "Product '%(product)s' belongs to %(branch)s but its category "
+                    "'%(category)s' belongs to %(cat_branch)s. Pick a category from "
+                    "the product's own branch, or leave the category unassigned so "
+                    "every branch can use it.",
+                    product=product.display_name,
+                    branch=product.company_id.name,
+                    category=product.categ_id.display_name,
+                    cat_branch=cat_company.name,
+                ))
+
+    @api.model
+    def _pos_retail_branch_domain(self, config):
+        """Restrict a register to the products its own branch sells.
+
+        Empty pos_retail_branch_ids means "every branch", so the default stays
+        a single shared catalogue and nothing has to be configured per shop.
+        """
+        return [
+            # Own products, or deliberately shared ones -- but NOT the parent
+            # company's. Odoo's _check_company_domain resolves to the whole
+            # parent chain, so a branch company set up as a CHILD of the head
+            # office inherits the head office's catalogue: johar town was being
+            # served 910 products, its own 455 plus Cash & Carry's 455. That is
+            # correct for accounting consolidation and wrong for a till, where
+            # each shop sells only what it stocks.
+            '|',
+            ('company_id', '=', False),
+            ('company_id', '=', config.company_id.id),
+            '|',
+            ('pos_retail_branch_ids', '=', False),
+            ('pos_retail_branch_ids', 'in', config.company_id.ids),
+        ]
+
+    @api.model
+    def _load_pos_data_domain(self, data, config):
+        return super()._load_pos_data_domain(data, config) + self._pos_retail_branch_domain(config)
+
+    @api.model
+    def load_product_from_pos(self, config_id, domain, offset=0, limit=0):
+        """Apply the branch restriction to the on-demand routes as well.
+
+        This method serves the "type and press Enter" search AND the barcode
+        scan of a product that was never preloaded (product_screen.js
+        _getProductByBarcode). Both hand the server a domain built on the
+        CLIENT, which knows nothing about branch restrictions -- so without
+        this, a product hidden from a branch would still be reachable there by
+        searching or scanning it, and the setting would be cosmetic.
+        """
+        config = self.env['pos.config'].browse(config_id)
+        domain = list(domain or []) + self._pos_retail_branch_domain(config)
+        return super().load_product_from_pos(config_id, domain, offset=offset, limit=limit)
 
     @api.model
     def _load_pos_data_fields(self, config):

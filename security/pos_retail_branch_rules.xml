@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <data noupdate="1">
+
+        <!-- Multi-company visibility for the two catalogue models Odoo ships
+             without a company: without a rule the new company_id field would be
+             a label only, since the back office would still list every branch's
+             sections and brands to everyone. The domain is Odoo's own standard
+             shape - a record with no branch is shared, otherwise it belongs to
+             one of the branches the user may see. -->
+
+        <record id="pos_category_branch_rule" model="ir.rule">
+            <field name="name">POS Category: visible to its own branch</field>
+            <field name="model_id" ref="point_of_sale.model_pos_category"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="product_brand_branch_rule" model="ir.rule">
+            <field name="name">Product Brand: visible to its own branch</field>
+            <field name="model_id" ref="model_product_brand"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="product_category_branch_rule" model="ir.rule">
+            <field name="name">Product Category: visible to its own branch</field>
+            <field name="model_id" ref="product.model_product_category"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+    </data>
+
+</odoo>

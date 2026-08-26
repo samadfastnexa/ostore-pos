@@ -1,8 +1,28 @@
-from odoo import _, api, models
+from odoo import _, api, fields, models
 
 
 class PosCategory(models.Model):
     _inherit = 'pos.category'
+
+    # Odoo ships pos.category with no company field, so every till section is
+    # global by default. Once each branch owns its own products it usually wants
+    # its own sections too -- a gas shop and a sanitary shop do not share a
+    # layout. Empty still means "every branch", so nothing has to be configured
+    # on a single-shop install.
+    company_id = fields.Many2one(
+        'res.company', string="Branch", index=True,
+        help="Branch this till section belongs to. Leave empty to show it at "
+             "every branch.",
+    )
+
+    @api.model
+    def _load_pos_data_domain(self, data, config):
+        domain = super()._load_pos_data_domain(data, config)
+        # Own sections or shared ones, never the parent company's: a branch set
+        # up as a child company would otherwise inherit head office's sections.
+        return domain + [
+            '|', ('company_id', '=', False), ('company_id', '=', config.company_id.id),
+        ]
 
     @api.model
     def get_import_templates(self):

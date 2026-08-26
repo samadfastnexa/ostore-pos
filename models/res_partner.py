@@ -378,11 +378,55 @@ class ResPartner(models.Model):
 
     @api.model
     def _load_pos_data_domain(self, data, config):
-        # Keep staff out of the POS customer list: employee-linked partners are
-        # cashiers/employees, not buyers, and shouldn't be selectable as the
-        # customer on a sale (that's how a cashier's name ends up on an order).
         domain = super()._load_pos_data_domain(data, config)
-        return domain + [('employee', '=', False)]
+        return domain + self._pos_retail_buyer_domain(config)
+
+    @api.model
+    def _pos_retail_buyer_domain(self, config):
+        """Contacts a cashier may pick as the buyer on a sale.
+
+        Two kinds of contact are filtered out of the POS customer list:
+
+        * employees -- cashiers and staff are not buyers, and leaving them
+          selectable is how a cashier's own name ends up on someone's order;
+        * pure suppliers -- a paint wholesaler or a pipe importer has no place
+          in the list a cashier scrolls at the counter, and picking one by
+          mistake files a retail sale against a payables account.
+
+        "Pure" matters: a contact that both buys and supplies is kept, because
+        plenty of trade counters sell to the same businesses they buy from.
+        Contacts with neither rank are kept too -- that is every ordinary
+        customer created at the till, which starts at rank zero until an
+        invoice is posted.
+        """
+        return [
+            ('employee', '=', False),
+            '|', ('supplier_rank', '=', 0), ('customer_rank', '>', 0),
+            # Own contacts, or genuinely shared ones -- but NOT the parent
+            # company's. Odoo resolves a child company to its whole parent
+            # chain, so a branch set up under the head office inherits the head
+            # office's customer list: johar town was finding Cash & Carry's
+            # customers by name as well as its own.
+            '|', ('company_id', '=', False), ('company_id', '=', config.company_id.id),
+        ]
+
+    @api.model
+    def get_new_partner(self, config_id, domain, offset):
+        """Apply the same filter to the POS "Search Customers" box.
+
+        Core searches the whole res.partner table here, deliberately bypassing
+        _load_pos_data_domain so a cashier can reach a customer who was never
+        preloaded -- which also means vendors and staff come back in the
+        results however carefully the preloaded list was filtered.
+
+        Only the search branch is narrowed. An empty domain is core's
+        pagination path over get_limited_partners_loading, whose records have
+        already been through the filtered preload.
+        """
+        if domain:
+            config = self.env['pos.config'].browse(config_id)
+            domain = list(domain) + self._pos_retail_buyer_domain(config)
+        return super().get_new_partner(config_id, domain, offset)
 
     def _compute_pos_history(self):
         company_currency = self.env.company.currency_id
@@ -501,6 +545,22 @@ class ResPartner(models.Model):
                 'default_partner_type': 'customer',
                 'default_partner_id': self.id,
             },
+        }
+
+    def action_open_khata_payment(self):
+        """Take money against this customer's khata.
+
+        Distinct from the adjustment dialog next to it: this one moves real
+        money into the till or the bank, which an adjustment never does.
+        """
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Receive Khata Payment"),
+            'res_model': 'pos.retail.khata.payment',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_partner_id': self.id},
         }
 
     def action_open_ledger_adjustment(self):
