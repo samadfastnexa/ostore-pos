@@ -17,7 +17,20 @@ import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
  * @returns the approving hr.employee record, or false if cancelled/incorrect.
  */
 export async function posRetailRequestManagerPin(pos, dialog, notification, options = {}) {
-    const candidates = pos.models["hr.employee"].filter(
+    // hr.employee is only loaded into the POS when the register has Cashier
+    // Log-in (module_pos_hr) enabled; without it there is nobody to approve,
+    // so refuse cleanly instead of crashing on a missing model.
+    const employeeModel = pos.models["hr.employee"];
+    if (!employeeModel) {
+        notification.add(
+            _t(
+                "Manager approval needs cashier log-in: enable 'Log in with Employees' on this register in the POS settings."
+            ),
+            { type: "danger" }
+        );
+        return false;
+    }
+    const candidates = employeeModel.filter(
         (employee) => employee.pos_discount_role_id?.can_approve
     );
     if (!candidates.length) {

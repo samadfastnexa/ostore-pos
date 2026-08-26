@@ -52,7 +52,12 @@ patch(PaymentScreen.prototype, {
         }
 
         // What this sale would add to their debt: the part still unpaid.
-        const due = Math.max(order.getDue(), 0);
+        // remainingDue, NOT getDue(): there is no getDue anywhere in Odoo 19
+        // (pos_order_accounting.js:82 defines the getter), so the old call threw
+        // a TypeError the moment anyone set a credit limit -- which silently
+        // killed the Customer Account button for exactly the customers the
+        // limit was meant to control.
+        const due = Math.max(order.remainingDue || 0, 0);
         const balance = partner.pos_outstanding_balance || 0;
         const projected = balance + due;
         if (projected <= limit) {
