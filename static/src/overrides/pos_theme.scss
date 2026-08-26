@@ -113,9 +113,25 @@ $o_retail_blue: #2563eb;
     // selected chip keeps full opacity + its colour border; the rest are
     // dimmed), so only the shape and weight change. Radius stays moderate
     // because chips can carry category images. -----------------------------
+    // Core gives each chip a 4rem height in ~115px columns
+    // (category_selector.scss:1-25), so a shop with more than a handful of
+    // sections loses a large band of the screen to them before a single
+    // product is visible. Shorter chips in narrower columns fit roughly twice
+    // as many, and the strip still scrolls if a shop has dozens.
+    .category-list {
+        grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+        max-height: 8.5rem;
+    }
+
     .category-button {
         border-radius: .8rem;
         font-weight: 600;
+        height: 2.5rem;
+        font-size: .78rem;
+        line-height: 1.15;
+
+        // Two lines, matching the shorter chip; three would overflow it.
+        .line-clamp-3 { -webkit-line-clamp: 2; }
 
         &:hover { border-color: var(--pos-retail-accent); }
     }
@@ -179,6 +195,42 @@ $o_retail_blue: #2563eb;
 }
 
 // ============================================================================
+// Product screen: a compact cart action pad.
+//
+// Core sizes this block for a dedicated full-height till monitor -- fs-3 numpad
+// keys, py-3 on Pay and a hard min-height:70px in product_screen.scss. On a
+// laptop that pad swallows the cart list, so the cashier ends up scrolling to
+// see the very lines they are ringing up. Trimmed to roughly two thirds here.
+// The numpad keys still land on Bootstrap's 44px floor (our own .btn-lg rule),
+// which is the accepted minimum touch target, so nothing becomes fiddly.
+// ============================================================================
+.pos .product-screen {
+    .control-buttons .btn {
+        padding-top: .4rem !important;
+        padding-bottom: .4rem !important;
+    }
+
+    .numpad .numpad-button {
+        font-size: 1.15rem !important;
+        line-height: 1.3 !important;
+        padding-top: .3rem !important;
+        padding-bottom: .3rem !important;
+    }
+
+    // Overrides core's own min-height:70px, not just the py-3 utility.
+    .pay-order-button {
+        min-height: 48px !important;
+        padding-top: .5rem !important;
+        padding-bottom: .5rem !important;
+        font-size: 1.1rem;
+    }
+
+    .subpads {
+        gap: .4rem !important;
+    }
+}
+
+// ============================================================================
 // Payment screen: roomy method tiles on the left, a structured summary on the
 // right instead of a bare number adrift in whitespace.
 // ============================================================================
@@ -186,10 +238,120 @@ $o_retail_blue: #2563eb;
     // The methods list natively receives only the space left over after the
     // numpad, buttons and our discount panel, collapsing into a two-row
     // scroll strip. Reserve room so a typical five-method register (Cash,
-    // Card, Customer Account, JazzCash, EasyPaisa) shows every tender.
+    // Card, Customer Account, JazzCash, EasyPaisa) shows every tender — but
+    // never more than the viewport can spare: a fixed 16.5rem floor pushed
+    // the Back/Validate row out of the overflow-hidden column on short
+    // screens, so the floor is capped to a viewport share and the list
+    // scrolls internally instead.
     .left-content > .flex-grow-1.overflow-auto {
         flex: 1 1 auto;
-        min-height: 16.5rem;
+        // Interpolated so the Sass compiler passes CSS min() through verbatim
+        // instead of trying (and failing) to compare rem with vh itself.
+        min-height: #{"min(16.5rem, 22vh)"};
+    }
+
+    // The essential bottom row must survive any height crunch.
+    .left-content > .d-flex.flex-row {
+        flex-shrink: 0;
+    }
+
+    // Safety net. Core sets overflow-hidden on this column, so anything that
+    // does not fit is silently CLIPPED -- which is how Back/Validate went
+    // missing rather than merely getting tight. Scrolling instead means the
+    // pay buttons stay reachable on any screen, however short. No visual
+    // change whenever the column fits, which the compaction below aims for.
+    .left-content {
+        overflow-y: auto !important;
+    }
+
+    // The numpad, the Customer/Invoice row and Back/Validate are all fixed
+    // height, and at core's full size that stack alone overflows this column on
+    // a laptop, clipping Back/Validate however much the methods list yields.
+    // Compact unconditionally rather than behind a height breakpoint: a
+    // breakpoint has to guess the viewport, and guessing wrong silently brings
+    // the clipping back. 1.15rem keys stay comfortably touch-sized on a real
+    // till. Bootstrap's fs-3 / lh-lg / py-* utilities are !important, so these
+    // must be too.
+    .left-content {
+        .numpad .numpad-button {
+            font-size: 1.15rem !important;
+            line-height: 1.35 !important;
+            padding-top: .35rem !important;
+            padding-bottom: .35rem !important;
+        }
+
+        .payment-buttons .btn,
+        .button.back,
+        .validation-button {
+            padding-top: .5rem !important;
+            padding-bottom: .5rem !important;
+            line-height: 1.35 !important;
+        }
+    }
+
+    .left-content > .flex-grow-1.overflow-auto {
+        min-height: #{"min(9rem, 14vh)"};
+    }
+
+    // ---- two-column pay pane -----------------------------------------------
+    // Core stacks the whole pane vertically: tenders, then discount, then
+    // Customer/Invoice, then numpad, then Back/Validate. That column is tall
+    // and narrow while the TOTAL DUE panel beside it is mostly empty space, so
+    // put the tenders beside the keypad instead and take the width back from
+    // the whitespace.
+    //
+    // Grid rather than flex because this column has exactly three direct
+    // children -- the tender list, the wrapper holding discount + Customer /
+    // Invoice + numpad, and the Back/Validate row -- and grid can place the
+    // tender list in its own full-height column without touching the markup.
+    // Selectors are by class, not :nth-child, so inserting anything else into
+    // the pane later cannot silently shuffle the layout.
+    //
+    // Desktop only: this pane is not rendered at all on small screens
+    // (ui.isSmall takes a separate template), and below ~lg the two columns
+    // would be too narrow to read.
+    @media (min-width: 992px) {
+        .left-content {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+            // Three tracks: row 1 the keypad block, row 2 Back/Validate, and
+            // a trailing 1fr that simply soaks up leftover height. Sizing the
+            // first two to their CONTENT is what guarantees no overlap -- both
+            // a 0 and a min-content floor let an expanded Order Discount panel
+            // push the numpad past its track and straight over Back/Validate,
+            // because grid items do not clip. The tender list spans all three,
+            // so it still fills the pane.
+            grid-template-rows: auto auto 1fr;
+            align-content: stretch;
+            column-gap: .5rem;
+            row-gap: .4rem;
+
+            // col-md-4 caps the pane at a third of the screen, which two
+            // columns cannot share legibly. The centre panel is flex-grow-1,
+            // so it simply gives up the difference.
+            flex: 0 0 auto !important;
+            width: 56% !important;
+            max-width: 56% !important;
+        }
+
+        // Tenders: left column, full height, scrolling internally.
+        .left-content > .flex-grow-1.overflow-auto {
+            grid-column: 1;
+            grid-row: 1 / -1;
+            min-height: 0;
+        }
+
+        // Discount + Customer/Invoice + numpad: right column, top.
+        .left-content > .w-100.flex-shrink-0 {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        // Back / Validate: right column, pinned under the keypad.
+        .left-content > .d-flex.flex-row {
+            grid-column: 2;
+            grid-row: 2;
+        }
     }
 
     // ---- method tiles ------------------------------------------------------
@@ -220,6 +382,14 @@ $o_retail_blue: #2563eb;
         .payment-name { font-weight: 650; }
     }
 
+    // Core pads the tendered-lines list with padding-inline:150px, sized for a
+    // centre panel that owned two thirds of the screen. Now that the pay pane
+    // takes 56%, those gutters are a dead vertical strip beside the list and
+    // squeeze the rows into what is left.
+    .payment-summary {
+        padding-inline: 1rem !important;
+    }
+
     // ---- the due amount ----------------------------------------------------
     .pos-retail-due-label {
         font-size: .78rem;
@@ -233,7 +403,9 @@ $o_retail_blue: #2563eb;
     // The desktop template hard-codes font-size:125px as an inline style; an
     // author !important outranks inline declarations, so no template surgery.
     .total {
-        font-size: clamp(44px, 6.5vw, 92px) !important;
+        // Sized against the narrower centre panel: 6.5vw was set when that
+        // panel was two thirds of the screen and now crowds the lines below.
+        font-size: #{"clamp(32px, 4vw, 68px)"} !important;
         line-height: 1.05;
         font-variant-numeric: tabular-nums;
     }
@@ -341,26 +513,53 @@ $o_retail_blue: #2563eb;
 // ---- Product card: price, allowed range, stock ----------------------------
 // Large and high-contrast: a cashier reads these at arm's length, mid-queue.
 .pos .product {
+    // Core marks .product-content d-flex (a ROW) but only ever puts the name
+    // in it, so the direction never shows. Our price/range/stock lines land in
+    // that same container and a row squeezes all four onto one line, printing
+    // "GiftRs. 50.00 Card" once the card narrows. Stack the content instead:
+    // name on top, figures under it, at every card width.
+    .product-content.d-flex {
+        flex-direction: column;
+        align-items: stretch;
+
+        .product-name {
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+    }
+
+    // Core clamps the name to two lines (product_card.scss:35-39), which cuts
+    // real hardware names mid-word -- "Gas Chabi Key Bhari Or Halki..." tells a
+    // cashier nothing. Three lines at a slightly smaller size shows the whole
+    // name on all but the longest, and the card grid absorbs the extra line.
+    .product-name {
+        -webkit-line-clamp: 3;
+        font-size: .92rem;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
     .pos-retail-card-price {
-        font-size: 1.05rem;
+        font-size: .95rem;
         font-weight: 800;
         line-height: 1.15;
         color: var(--pos-retail-accent);
         margin-top: .1rem;
     }
 
+    // Wraps rather than ellipsises: a selling range cut off at "330.00 Rs. -
+    // 410..." is worse than useless, because the cashier cannot see the ceiling
+    // they are allowed to sell within.
     .pos-retail-card-range {
-        font-size: .72rem;
+        font-size: .66rem;
         font-weight: 600;
         line-height: 1.2;
         opacity: .72;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
     }
 
     .pos-retail-card-stock {
-        font-size: .7rem;
+        font-size: .64rem;
         font-weight: 600;
         line-height: 1.2;
         opacity: .68;
@@ -578,4 +777,19 @@ $o_retail_blue: #2563eb;
     }
 
     &:active { transform: scale(.94); }
+}
+
+// Discount reason chips: nine reasons have to fit a narrow pay-pane column, so
+// they wrap and stay small. The active chip uses the discount colour rather
+// than Bootstrap's default active blue, matching the rest of the panel.
+.pos .pos-retail-discount-reasons .btn {
+    font-size: .72rem;
+    padding: .2rem .45rem;
+    line-height: 1.25;
+
+    &.active {
+        background-color: $o_retail_orange;
+        border-color: $o_retail_orange;
+        color: #fff;
+    }
 }

@@ -23,6 +23,29 @@ patch(PaymentScreen.prototype, {
             reasonId: false,
             notes: "",
         });
+        // Held on the component, not written inline in the template: an array
+        // literal in a t-foreach is one more expression for OWL's compiler to
+        // parse, and there is nothing to gain from putting it there.
+        this.posRetailDiscountPresets = [5, 10, 15, 20];
+    },
+
+    // Whether a preset button is the one currently loaded. Compared in JS
+    // because the obvious template version needed String(), and String is NOT
+    // on OWL's RESERVED_WORDS whitelist (Math, RegExp, Array, Object, Date are;
+    // String, Number and parseInt are not). An unlisted global compiles to
+    // ctx['String'](...) -- undefined() -- which throws while RENDERING, so the
+    // whole POS goes blank rather than merely misbehaving. Same trap as the
+    // parseInt note below.
+    // Tapping the chip that is already selected clears it, so a reason picked
+    // by mistake can be undone without applying anything.
+    posRetailPickReason(reasonId) {
+        const state = this.orderDiscountState;
+        state.reasonId = state.reasonId === reasonId ? false : reasonId;
+    },
+
+    posRetailIsPresetActive(percent) {
+        const state = this.orderDiscountState;
+        return state.kind === "percent" && parseFloat(state.amount) === percent;
     },
 
     // parseInt is a bare global, and OWL template expressions only resolve
@@ -47,6 +70,14 @@ patch(PaymentScreen.prototype, {
     posRetailGetCashierRole() {
         return this.pos.getCashier()?.pos_discount_role_id || false;
     },
+    // A preset only FILLS the amount, it does not apply the discount: a reason
+    // is usually mandatory, and a button that silently discounted an order on
+    // one tap would be the easiest way to give money away by accident.
+    posRetailQuickDiscount(percent) {
+        this.orderDiscountState.kind = "percent";
+        this.orderDiscountState.amount = String(percent);
+    },
+
     posRetailDiscountLimit(kind) {
         const role = this.posRetailGetCashierRole();
         if (role) {

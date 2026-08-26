@@ -99,7 +99,11 @@ $zx-muted: #6b6790;
         border: 1px solid $zx-line;
         border-radius: .8rem;
         box-shadow: 0 4px 16px -12px rgba(40, 20, 90, .25);
-        overflow: hidden;
+        // auto, NOT hidden: the list renderer is the element that scrolls, so
+        // clipping it strands every row past the first screenful -- long or
+        // grouped lists simply cannot be scrolled. border-radius still clips
+        // the corners under `auto`, so the rounded card survives.
+        overflow: auto;
     }
 
     .o_list_table {

@@ -26,9 +26,17 @@ patch(ProductCard.prototype, {
         }
         try {
             const order = pos.getOrder?.();
+            // Both values must sit under overridedValues: getBaseLine reads
+            // `opts.overridedValues` (product_template_accounting.js:178-180)
+            // and ignores anything passed at the top level -- so the earlier
+            // top-level form silently fell back to the default pricelist and
+            // no fiscal position, which is the very bug this getter exists to
+            // avoid.
             const details = product.getTaxDetails({
-                pricelist: order?.pricelist_id || pos.config?.pricelist_id || false,
-                fiscalPosition: order?.fiscal_position_id || false,
+                overridedValues: {
+                    pricelist: order?.pricelist_id || pos.config?.pricelist_id || false,
+                    fiscalPosition: order?.fiscal_position_id || false,
+                },
             });
             const amount = pos.config?.iface_tax_included === "total"
                 ? details.total_included
@@ -55,7 +63,10 @@ patch(ProductCard.prototype, {
         let range = "";
         if (hasRange) {
             if (minimum && maximum) {
-                range = `${format(minimum)} - ${format(maximum)}`;
+                // Symbol on the upper bound only: "330.00 - 410.00 Rs." says the
+                // same as repeating "Rs." twice, in a third less width, which is
+                // what stops the line being ellipsised on a narrow card.
+                range = `${format(minimum, false)} - ${format(maximum)}`;
             } else if (minimum) {
                 range = `min ${format(minimum)}`;
             } else {
