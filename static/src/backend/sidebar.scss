@@ -385,8 +385,16 @@ $pos-retail-side-accent: $pos-retail-side-mid;
 }
 
 // ---- make room for it -------------------------------------------------------
+// In Odoo 19 the BODY itself carries .o_web_client, so the collapsed rule has to
+// be a COMPOUND selector, not a descendant one: "body.collapsed .o_web_client"
+// looks for a web client INSIDE the body and matches nothing, which left the
+// content padded for the full 232px sidebar while the sidebar itself sat at
+// 62px -- a dead white strip beside the icon rail. The descendant form is kept
+// alongside it in case a future layout nests .o_web_client below body; only one
+// of the two can ever match a given element, so they cannot double up.
 .o_web_client { padding-left: $pos-retail-side-width; }
-body.pos-retail-side-collapsed .o_web_client { padding-left: $pos-retail-side-width-collapsed; }
+.o_web_client.pos-retail-side-collapsed,
+.pos-retail-side-collapsed .o_web_client { padding-left: $pos-retail-side-width-collapsed; }
 
 // The app's own sections now live in the sidebar, so drop them from the top bar
 // rather than showing the same menu twice. The apps launcher, breadcrumb and
@@ -397,6 +405,7 @@ body.pos-retail-side-collapsed .o_web_client { padding-left: $pos-retail-side-wi
 @media (max-width: 991.98px) {
     .pos-retail-side { display: none; }
     .o_web_client,
-    body.pos-retail-side-collapsed .o_web_client { padding-left: 0; }
+    .o_web_client.pos-retail-side-collapsed,
+    .pos-retail-side-collapsed .o_web_client { padding-left: 0; }
     .o_navbar .o_menu_sections { display: flex !important; }
 }

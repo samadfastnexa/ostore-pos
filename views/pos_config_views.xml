@@ -120,6 +120,10 @@
                     <field name="pos_retail_max_roundoff_amount"/>
                 </div>
                 <div class="mt-3">
+                    <label string="Round-Off Step (cashier's choice)" for="pos_retail_roundoff_step" class="col-lg-4 o_light_label"/>
+                    <field name="pos_retail_roundoff_step"/>
+                </div>
+                <div class="mt-3">
                     <span class="o_form_label fw-bold">Quotations</span>
                 </div>
                 <div class="content-group">

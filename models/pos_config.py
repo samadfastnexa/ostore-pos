@@ -114,11 +114,16 @@ class PosConfig(models.Model):
     # cashier, receipt number, tax detail, auto-print. These add what native
     # has no concept of.
     pos_retail_receipt_style = fields.Selection(
-        [('standard', "Standard"), ('modern', "Modern"), ('minimal', "Minimal")],
+        [('standard', "Standard"), ('modern', "Modern"), ('minimal', "Minimal"),
+         ('invoice', "Invoice (columned)")],
         string="Receipt Template Style", default='standard', required=True,
         help="Standard: the classic layout. Modern: bolder headings and framed "
              "totals. Minimal: hides the logo and per-line detail for the "
-             "shortest possible ticket.",
+             "shortest possible ticket. Invoice: the columned trade layout a "
+             "hardware counter prints -- ITEM / QTY / PRICE / DISC / TOTAL in "
+             "aligned columns, then Total, Total Discount, Previous Balance and "
+             "TOTAL AMOUNT. Best where sales run to many discounted lines or "
+             "the customer keeps a khata.",
     )
     pos_retail_receipt_width = fields.Selection(
         [('80', "80 mm (Standard Thermal)"), ('58', "58 mm (Compact Thermal)")],
@@ -163,6 +168,15 @@ class PosConfig(models.Model):
         help="Printed on PDF receipts (A4). Kept off the thermal ticket to "
              "save paper; the Return Policy block covers the essentials there.",
     )
+    pos_retail_roundoff_step = fields.Float(
+        string="Round-Off Step", default=5.0,
+        help="The whole figure a cashier may round a cash bill to, for example "
+             "5 or 10. The payment screen offers the two nearest figures and the "
+             "cashier picks one, or neither -- it is never applied automatically, "
+             "because whether a customer will hand over 240 for a 238 bill "
+             "depends on the customer. Set 0 to hide the option entirely.",
+    )
+
     # --- Customers ---
     pos_retail_default_partner_id = fields.Many2one(
         'res.partner', string="Default Customer",
@@ -417,6 +431,11 @@ class ResConfigSettings(models.TransientModel):
         related='company_id.pos_retail_auto_product_barcode',
         readonly=False,
         string="Generate Barcodes for New Products",
+    )
+    pos_retail_roundoff_step = fields.Float(
+        related='pos_config_id.pos_retail_roundoff_step',
+        readonly=False,
+        string="Round-Off Step",
     )
     pos_retail_allow_quotation = fields.Boolean(
         related='pos_config_id.pos_retail_allow_quotation',

@@ -74,6 +74,48 @@ $zx-muted: #6b6790;
         border-bottom: 1px solid $zx-line;
     }
 
+    // The record's own name must survive a squeeze. Core gives the breadcrumb
+    // `min-w-0` and `text-truncate`, so on a form carrying several smart
+    // buttons (a customer has Sales, PoS Orders, Invoiced, Vendor Bills) the
+    // buttons win every pixel and the title collapses to "C..", which tells
+    // nobody which customer they are looking at. A floor keeps the name
+    // readable; the button row is already flex-wrap, so it wraps to a second
+    // line instead -- the better trade, because the buttons are self-labelling
+    // and the name is not.
+    // !important is required, not decorative: core puts Bootstrap's `min-w-0`
+    // utility class on the breadcrumb, and Bootstrap utilities ship with
+    // !important, so a plain rule loses however specific it is.
+    .o_control_panel .o_breadcrumb {
+        min-width: 11rem !important;
+    }
+
+    // Below lg the control panel stacks anyway and a floor would only force a
+    // horizontal scroll, so hand it back to core there.
+    @media (max-width: 991.98px) {
+        .o_control_panel .o_breadcrumb { min-width: 0 !important; }
+    }
+
+    // ---- breathing room in the control panel -------------------------------
+    // Core packs the title, the record cog, the smart buttons and the pager
+    // into one row on a 4px gap, so the cog sits against the last letter of the
+    // name and the buttons run straight into the title. These are spacing-only
+    // and change no layout decision.
+    .o_control_panel {
+        padding-top: .3rem;
+        padding-bottom: .3rem;
+
+        // The cog acts on the record whose name it follows, so it belongs
+        // WITH the name -- just not touching it.
+        .o_cp_action_menus { margin-inline-start: .4rem; }
+
+        // Separate the identity of the record from the actions on it.
+        .o_control_panel_main { column-gap: 1.4rem; }
+
+        // The pager is a different kind of control again; keep it clear of
+        // the smart buttons it sits beside.
+        .o_cp_pager { margin-inline-start: .6rem; }
+    }
+
     .o_control_panel .o_searchview {
         border-radius: .55rem;
         border-color: $zx-line;
