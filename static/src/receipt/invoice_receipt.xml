@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!--
+        Columned invoice layout, the shape a Pakistani hardware counter prints:
+        a labelled header block, one aligned row per item under ITEM / QTY /
+        PRICE / DISC / TOTAL, then Total, Total Discount, Previous Balance and
+        TOTAL AMOUNT.
+
+        Two things it does that Odoo's stock receipt does not, and they are the
+        reason for the whole layout:
+
+        * a DISC column. Odoo prints the discount as a sentence under the line
+          ("45% discount off on 202.00"), which on a twelve-line trade sale is
+          unreadable and makes it impossible to scan down and check the maths.
+        * PREVIOUS BALANCE. On a khata sale the customer wants to see what they
+          owed before today's goods, not just today's figure. Without it the
+          slip answers the wrong question for a credit customer.
+
+        Rendered instead of the stock layout, not alongside it: the stock blocks
+        are hidden by CSS keyed off the pos-retail-style-invoice class the
+        receipt root already carries (see receipt.scss), because core builds its
+        body from components that cannot be conditionally suppressed from an
+        inheriting template.
+    -->
+    <t t-name="pos_retail.InvoiceReceiptBody" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('pos-receipt')]" position="inside">
+            <t t-if="order.config.pos_retail_receipt_style === 'invoice'">
+                <t t-set="partner" t-value="order.getPartner()"/>
+                <div class="pos-retail-invoice">
+
+                    <div class="pos-retail-invoice__title">INVOICE</div>
+
+                    <div class="pos-retail-invoice__meta">
+                        <div><span>Customer:</span><span t-esc="partner and partner.name or 'Walk-in Customer'"/></div>
+                        <div><span>Date:</span><span t-esc="order.formattedValidationDate or ''"/></div>
+                        <div><span>Invoice No.</span><span t-esc="order.pos_reference or order.name or ''"/></div>
+                        <div><span>User:</span><span t-esc="order.getCashierName() or ''"/></div>
+                    </div>
+
+                    <table class="pos-retail-invoice__table">
+                        <thead>
+                            <tr>
+                                <th class="col-item">ITEM</th>
+                                <th class="col-num">QTY</th>
+                                <th class="col-num">PRICE</th>
+                                <th class="col-disc">DISC</th>
+                                <th class="col-num">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="order.getOrderlines()" t-as="line" t-key="line.uuid">
+                                <td class="col-item"><t t-esc="line.full_product_name"/></td>
+                                <td class="col-num"><t t-esc="line.getQuantityStr().unitPart"/></td>
+                                <td class="col-num"><t t-esc="line.currencyDisplayPriceUnit"/></td>
+                                <td class="col-disc"><t t-esc="line.getDiscountStr() or '0'"/>%</td>
+                                <td class="col-num"><t t-esc="line.currencyDisplayPrice"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="pos-retail-invoice__totals">
+                        <div>
+                            <span>Total</span>
+                            <span t-esc="order.currencyDisplayPriceIncl"/>
+                        </div>
+                        <div t-if="posRetailInvoiceDiscount">
+                            <span>Total Discount</span>
+                            <span t-esc="posRetailInvoiceDiscount"/>
+                        </div>
+                        <!-- What they owed BEFORE this sale. Only shown for a
+                             named customer: a walk-in has no running account,
+                             and printing 0.00 invites the question. -->
+                        <div t-if="posRetailPreviousBalance">
+                            <span>Previous Balance</span>
+                            <span t-esc="posRetailPreviousBalance"/>
+                        </div>
+                        <div class="pos-retail-invoice__grand">
+                            <span>TOTAL AMOUNT</span>
+                            <span t-esc="posRetailAmountWithBalance"/>
+                        </div>
+                    </div>
+
+                    <div class="pos-retail-invoice__contact" t-if="partner and partner.phone">
+                        <span>Mobile Number</span>
+                        <span t-esc="partner.phone"/>
+                    </div>
+
+                </div>
+            </t>
+        </xpath>
+    </t>
+
+</templates>

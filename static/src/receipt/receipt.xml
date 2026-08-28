@@ -9,7 +9,7 @@
              See receipt.scss for the matching rules. -->
         <xpath expr="//div[hasclass('pos-receipt')]" position="attributes">
             <attribute name="t-attf-class">pos-retail-style-{{order.config.pos_retail_receipt_style || 'standard'}} pos-retail-w{{order.config.pos_retail_receipt_width || '80'}} pos-retail-font-{{order.config.pos_retail_receipt_font || 'normal'}}</attribute>
-        </xpath>
+</xpath>
 
         <!-- Package sold and SKU, under each product line (inside
              Orderline's info list). The package line names the size the

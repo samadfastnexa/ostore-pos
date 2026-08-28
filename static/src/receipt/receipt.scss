@@ -56,3 +56,104 @@
     .info-list { display: none !important; }
     .pos-retail-receipt-qr div { display: none; }
 }
+
+// ============================================================================
+// Invoice style: the columned layout a hardware counter prints.
+//
+// Selected per register in Receipt Studio. The stock body is suppressed rather
+// than replaced: core assembles it from ReceiptHeader / OrderDisplay /
+// Orderline components, and an inheriting template cannot wrap those in a
+// condition. Hiding them and rendering our own block beneath is the only way
+// to swap the whole layout without forking core's template.
+// ============================================================================
+.pos-receipt.pos-retail-style-invoice {
+
+    // Stock body off: order lines, the tax breakdown and the totals block.
+    // The header stays -- it carries the shop name, logo and address, which
+    // this layout wants above its own INVOICE title.
+    .orderlines,
+    > .pos-receipt-taxes,
+    > .pos-receipt-amount,
+    > .pos-receipt-order-data {
+        display: none !important;
+    }
+
+    .pos-retail-invoice {
+        &__title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.2em;
+            letter-spacing: .06em;
+            margin: .4rem 0 .3rem;
+        }
+
+        &__meta {
+            margin-bottom: .3rem;
+
+            > div {
+                display: flex;
+                gap: .5rem;
+
+                > span:first-child { min-width: 5.8rem; }
+                > span:last-child { flex: 1; }
+            }
+        }
+
+        &__table {
+            width: 100%;
+            border-collapse: collapse;
+            // Thermal paper is narrow: let long hardware names wrap inside the
+            // ITEM column rather than pushing the number columns off the roll.
+            table-layout: fixed;
+
+            th {
+                border-top: 1px dashed currentColor;
+                border-bottom: 1px dashed currentColor;
+                padding: .15rem 0;
+                font-weight: 700;
+                text-align: right;
+            }
+
+            td {
+                padding: .12rem 0;
+                vertical-align: top;
+                text-align: right;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .col-item { width: 42%; text-align: left; overflow-wrap: anywhere; }
+            .col-num  { width: 16%; }
+            .col-disc { width: 10%; }
+
+            tbody tr + tr td { border-top: 1px dotted rgba(0, 0, 0, .25); }
+        }
+
+        &__totals {
+            border-top: 1px dashed currentColor;
+            margin-top: .3rem;
+            padding-top: .25rem;
+
+            > div {
+                display: flex;
+                justify-content: space-between;
+                gap: 1rem;
+
+                > span:last-child { font-variant-numeric: tabular-nums; }
+            }
+        }
+
+        &__grand {
+            font-weight: 700;
+            border-top: 1px solid currentColor;
+            margin-top: .2rem;
+            padding-top: .2rem;
+        }
+
+        &__contact {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: .45rem;
+        }
+    }
+}
