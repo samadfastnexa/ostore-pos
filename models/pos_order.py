@@ -217,6 +217,15 @@ class PosOrder(models.Model):
 class PosOrderLine(models.Model):
     _inherit = 'pos.order.line'
 
+    pos_retail_is_roundoff = fields.Boolean(
+        string="Round-Off Line", readonly=True, copy=False,
+        help="Marks the line that rounds an order to a whole cash figure. Kept "
+             "as a flag rather than guessed from the product, because the same "
+             "discount product also carries ordinary order discounts -- without "
+             "it, rounding a second time would stack lines instead of replacing "
+             "the first.",
+    )
+
     # Which package was sold, when the line came from scanning a package
     # barcode. The quantity on the line stays in the product's own unit (so
     # stock moves correctly), and this records the size the customer actually
@@ -295,7 +304,8 @@ class PosOrderLine(models.Model):
             return result
         for field in ('pos_retail_default_price', 'pos_retail_min_price', 'pos_retail_max_price',
                       'pos_retail_price_state', 'pos_retail_price_manager_id',
-                      'pos_retail_price_reason_id', 'pos_retail_package_id'):
+                      'pos_retail_price_reason_id', 'pos_retail_package_id',
+                      'pos_retail_is_roundoff'):
             if field not in result:
                 result.append(field)
         return result

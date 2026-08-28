@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Round-off row on the payment screen, directly above the Customer /
+         Invoice buttons so it sits with the other order-level actions rather
+         than among the tenders. Only rendered when the total is not already a
+         whole figure, so an exact bill shows nothing at all. -->
+    <t t-inherit="point_of_sale.PaymentScreenButtons" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('payment-buttons')]" position="before">
+            <div class="pos-retail-roundoff mb-2" t-if="posRetailRoundTargets">
+                <t t-set="targets" t-value="posRetailRoundTargets"/>
+                <div class="d-flex align-items-center gap-1">
+                    <span class="pos-retail-roundoff-label">
+                        <i class="fa fa-hand-o-right me-1"/>Round to
+                    </span>
+                    <button class="btn btn-sm btn-outline-secondary flex-fill"
+                            t-on-click="() => this.posRetailRoundTo(targets.down)">
+                        <t t-esc="targets.downLabel"/>
+                        <small class="d-block"><t t-esc="targets.downDiff"/></small>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary flex-fill"
+                            t-on-click="() => this.posRetailRoundTo(targets.up)">
+                        <t t-esc="targets.upLabel"/>
+                        <small class="d-block"><t t-esc="targets.upDiff"/></small>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger"
+                            t-if="posRetailRoundOffLine"
+                            title="Remove rounding"
+                            t-on-click="() => this.posRetailClearRounding()">
+                        <i class="fa fa-times"/>
+                    </button>
+                </div>
+            </div>
+        </xpath>
+    </t>
+
+</templates>
