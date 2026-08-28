@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.3.9.4',
+    'version': '19.0.3.9.5',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.

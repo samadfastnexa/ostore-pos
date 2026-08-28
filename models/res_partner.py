@@ -22,6 +22,40 @@ class ResPartner(models.Model):
                     vals['name'] = phone
         return super().create(vals_list)
 
+    def unlink(self):
+        # Core refuses to delete a partner that appears on a journal entry
+        # (account/models/partner.py, _unlink_if_partner_in_account_move) and
+        # says only "The partner cannot be deleted because it is used in
+        # Accounting". That is correct -- deleting it would leave invoices with
+        # no counterparty -- but it is a dead end for the person at the screen,
+        # because the thing they actually want is to ARCHIVE the contact, and
+        # nothing in the message tells them so.
+        #
+        # Done here rather than as another @api.ondelete because ondelete
+        # methods have no guaranteed order between modules: whichever fires
+        # first wins the message, and that would make the wording a coin toss.
+        # unlink() runs before all of them.
+        blocked = self.browse()
+        if self.ids:
+            groups = self.env['account.move'].sudo()._read_group(
+                [('partner_id', 'in', self.ids), ('state', 'in', ['draft', 'posted'])],
+                groupby=['partner_id'],
+            )
+            blocked = self.browse([group[0].id for group in groups])
+        if blocked:
+            raise UserError(_(
+                "%(names)s cannot be deleted, because invoices, bills or "
+                "payments are recorded against them. Deleting the contact "
+                "would leave those entries with no customer or vendor on "
+                "them.\n\n"
+                "Archive the contact instead: open it, click the gear icon "
+                "next to the name and choose Archive. It then disappears from "
+                "the customer and vendor lists and from the POS, while the "
+                "accounting history stays intact.",
+                names=", ".join(blocked.mapped('display_name')),
+            ))
+        return super().unlink()
+
     @api.model
     def get_import_templates(self):
         """Offer a supplier sheet on the Vendors Import screen.
