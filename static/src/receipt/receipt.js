@@ -10,14 +10,27 @@ patch(OrderReceipt.prototype, {
     /** Total discount given on this sale, or false when there was none. */
     get posRetailInvoiceDiscount() {
         const order = this.order;
-        const lines = order.getOrderlines() || [];
+        const discountLines = order.discountLines || [];
+        const lines = (order.getOrderlines() || []).filter(
+            (line) => !discountLines.includes(line)
+        );
         // Sum what each line would have cost without its discount, less what it
         // actually cost. displayPriceNoDiscount is the same figure core prints
         // in its own "45% discount off on 202.00" sentence, so the two agree.
-        const total = lines.reduce(
+        const perLine = lines.reduce(
             (sum, line) => sum + ((line.displayPriceNoDiscount || 0) - (line.displayPrice || 0)),
             0
         );
+        // Plus the order-level discount, which is not a percentage sitting on a
+        // line but a negative line of its own, so the sum above cannot see it.
+        // That is what the "Discount the rest" button produces and it is
+        // usually the ONLY discount on the bill -- omitting it printed a
+        // receipt showing a reduced total with nothing to explain the drop.
+        const global = discountLines.reduce(
+            (sum, line) => sum + Math.abs(line.displayPrice || 0),
+            0
+        );
+        const total = perLine + global;
         if (!total || order.currency.isZero(total)) {
             return false;
         }

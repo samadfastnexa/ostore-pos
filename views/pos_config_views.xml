@@ -85,35 +85,17 @@
                     <field name="pos_return_policy"
                            placeholder="e.g. Returns within 7 days with the original receipt"/>
                 </div>
+                <!-- The discount is now taken from the cash the cashier keys
+                     in on the payment screen: whatever the tendered amount
+                     falls short of the bill is written off on one tap. There
+                     is nothing left to configure about how a discount is
+                     entered, so the type / limit / reason / approval settings
+                     that drove the old panel are gone. Their fields are still
+                     on pos.config, so putting limits back is a view change
+                     rather than a migration. -->
                 <div class="mt-3">
-                    <label string="Order Discounts" for="pos_retail_discount_enabled" class="col-lg-4 o_light_label"/>
-                    <field name="pos_retail_discount_enabled"/>
-                </div>
-                <div class="content-group" invisible="not pos_retail_discount_enabled">
-                    <div class="row mt16">
-                        <label string="Max. Cashier Discount (Fixed)" for="pos_retail_max_fixed_discount" class="col-lg-4 o_light_label"/>
-                        <field name="pos_retail_max_fixed_discount"/>
-                    </div>
-                    <div class="row mt8">
-                        <label string="Max. Cashier Discount (%)" for="pos_retail_max_percentage_discount" class="col-lg-4 o_light_label"/>
-                        <field name="pos_retail_max_percentage_discount"/>
-                    </div>
-                    <div class="row mt8">
-                        <label string="Require Discount Reason" for="pos_retail_require_discount_reason" class="col-lg-4 o_light_label"/>
-                        <field name="pos_retail_require_discount_reason"/>
-                    </div>
-                    <div class="row mt8">
-                        <label string="Require Manager Approval" for="pos_retail_require_manager_approval" class="col-lg-4 o_light_label"/>
-                        <field name="pos_retail_require_manager_approval"/>
-                    </div>
-                    <div class="row mt8">
-                        <label string="Allow Manager Override" for="pos_retail_allow_manager_override" class="col-lg-4 o_light_label"/>
-                        <field name="pos_retail_allow_manager_override"/>
-                    </div>
-                    <div class="row mt8">
-                        <label string="Show Discount Details on Receipt" for="pos_retail_receipt_show_discount_details" class="col-lg-4 o_light_label"/>
-                        <field name="pos_retail_receipt_show_discount_details"/>
-                    </div>
+                    <label string="Show Discount Details on Receipt" for="pos_retail_receipt_show_discount_details" class="col-lg-4 o_light_label"/>
+                    <field name="pos_retail_receipt_show_discount_details"/>
                 </div>
                 <div class="mt-3">
                     <label string="Max. Round-Off Amount" for="pos_retail_max_roundoff_amount" class="col-lg-4 o_light_label"/>

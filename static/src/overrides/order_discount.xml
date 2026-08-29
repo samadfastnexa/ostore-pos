@@ -1,71 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Order-level discount panel on the Payment screen. Kept COMPACT and
-         COLLAPSED by default: the payment screen's left column packs the numpad
-         and Back/Validate into a flex-shrink-0 / overflow-hidden block, so a
-         tall always-open panel clips those buttons off-screen at 100% zoom.
-         A slim toggle keeps them visible; the body (capped + scrollable via
-         pos_theme.scss) only shows when the cashier opens it. The redundant
-         Subtotal/Tax/Grand Total lines were dropped; the big total on the
-         right already shows it. -->
+    <!-- "Charge what the customer actually handed over."
+
+         The counter here runs at a high rate and the old panel was the wrong
+         shape for it: pick a type, pick a preset, type an amount, pick a
+         reason, apply. Five interactions to knock 20 off a 200 bill.
+
+         This replaces all of it with nothing to type at all, because the
+         cashier is ALREADY typing the cash received into the payment numpad.
+         Once that figure is in, whatever is still outstanding is by definition
+         the discount, so one button applies it.
+
+         Deliberately a button and not automatic. A short payment is ambiguous
+         at this shop: it is either a discount, or the balance is going on the
+         customer's khata. Auto-applying would silently wipe out credit sales,
+         so the cashier says which one it is, and saying nothing leaves the
+         balance owing, which is the safer default of the two. -->
     <t t-inherit="point_of_sale.PaymentScreenButtons" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('payment-buttons')]" position="before">
-            <div class="pos-retail-order-discount mb-2" t-if="pos.config.pos_retail_discount_enabled">
-                <button class="pos-retail-discount-toggle btn btn-sm btn-outline-primary w-100 d-flex justify-content-between align-items-center"
-                        t-on-click="() => orderDiscountState.open = !orderDiscountState.open">
-                    <span><i class="fa fa-tag me-1"/>Order Discount</span>
-                    <i t-attf-class="fa {{ orderDiscountState.open ? 'fa-chevron-up' : 'fa-chevron-down' }}"/>
-                </button>
-                <div t-if="orderDiscountState.open"
-                     class="pos-retail-order-discount-body border border-top-0 rounded-bottom p-2">
-                    <div class="d-flex gap-1">
-                        <button class="btn btn-sm flex-fill"
-                                t-att-class="orderDiscountState.kind === 'fixed' ? 'btn-primary' : 'btn-outline-secondary'"
-                                t-on-click="() => orderDiscountState.kind = 'fixed'"><i class="fa fa-money me-1"/>Fixed Amount</button>
-                        <button class="btn btn-sm flex-fill"
-                                t-att-class="orderDiscountState.kind === 'percent' ? 'btn-primary' : 'btn-outline-secondary'"
-                                t-on-click="() => orderDiscountState.kind = 'percent'"><i class="fa fa-percent me-1"/>Percentage</button>
-                    </div>
-                    <!-- One tap fills the amount for the discounts a counter
-                         actually gives, so the common case needs no typing at
-                         all. The field below still takes any other value. -->
-                    <div class="pos-retail-discount-presets d-flex gap-1 mt-1">
-                        <button t-foreach="posRetailDiscountPresets" t-as="preset" t-key="preset"
-                                class="btn btn-sm btn-outline-secondary flex-fill"
-                                t-att-class="{ 'active': this.posRetailIsPresetActive(preset) }"
-                                t-on-click="() => this.posRetailQuickDiscount(preset)">
-                            <t t-esc="preset"/>%
-                        </button>
-                    </div>
-                    <input type="number" class="form-control form-control-sm mt-1"
-                           placeholder="Discount amount" t-model="orderDiscountState.amount"/>
-                    <!-- Reasons as one-tap chips rather than a dropdown. A
-                         dropdown is three interactions (open, scan, pick) for
-                         something required on every single discount; chips make
-                         it one, so the reason stays mandatory without being the
-                         slowest part of the sale. Tapping the active chip again
-                         clears it. No globals in these expressions: an
-                         unlisted global in an OWL template throws while
-                         rendering and blanks the whole POS. -->
-                    <div class="pos-retail-discount-reasons d-flex flex-wrap gap-1 mt-1">
-                        <button t-foreach="pos.models['pos.retail.discount.reason'].getAll()"
-                                t-as="reason" t-key="reason.id"
-                                class="btn btn-sm btn-outline-secondary"
-                                t-att-class="{ 'active': orderDiscountState.reasonId === reason.id }"
-                                t-on-click="() => this.posRetailPickReason(reason.id)">
-                            <t t-esc="reason.name"/>
-                        </button>
-                    </div>
-                    <textarea class="form-control form-control-sm mt-1" rows="1"
-                              placeholder="Additional notes (optional)"
-                              t-model="orderDiscountState.notes"/>
-                    <button class="btn btn-sm btn-primary w-100 mt-2"
-                            t-on-click="() => this.posRetailApplyOrderDiscount()">
-                        <i class="fa fa-check-circle me-1"/>Apply Order Discount
-                    </button>
-                </div>
-            </div>
+            <button t-if="posRetailShortfall"
+                    class="pos-retail-charge-short btn btn-warning w-100 mb-2 d-flex justify-content-between align-items-center"
+                    t-on-click="() => this.posRetailDiscountShortfall()">
+                <span><i class="fa fa-scissors me-1"/>Discount the rest</span>
+                <span class="fw-bold"><t t-esc="posRetailShortfallLabel"/></span>
+            </button>
         </xpath>
     </t>
 

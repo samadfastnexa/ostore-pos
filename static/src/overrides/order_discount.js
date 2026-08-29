@@ -2,164 +2,91 @@
 
 import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
-import { useState } from "@odoo/owl";
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
 import { accountTaxHelpers } from "@account/helpers/account_tax";
-import { posRetailRequestManagerPin } from "../utils/manager_pin";
 
-// Order-level discount, independent of pos_discount's own Product-Screen
-// percentage button (left untouched). Reuses the exact same mechanism
-// (a negative pos.order.line on config.discount_product_id, built via the
-// shared tax-engine helper) so receipts/reports/rescale-on-cart-change all
-// keep working unchanged -- this just adds a Fixed Amount mode, a role-based
-// limit check, and manager-PIN approval on top.
+// Order-level discount, expressed the way this counter actually works: the
+// cashier does not decide "20 off" or "10 percent", they decide "call it 180"
+// while the customer is handing money over. So the amount tendered on the
+// payment screen IS the input, and the shortfall against the bill IS the
+// discount. One button, no typing beyond the cash figure that was going to be
+// keyed in regardless.
+//
+// The discount itself is still a negative pos.order.line on
+// config.discount_product_id built through the shared tax engine, exactly as
+// before, so receipts, reports and the rescale-on-cart-change watcher keep
+// working with no changes of their own.
 patch(PaymentScreen.prototype, {
-    setup() {
-        super.setup(...arguments);
-        this.orderDiscountState = useState({
-            open: false,
-            kind: "fixed",
-            amount: "",
-            reasonId: false,
-            notes: "",
-        });
-        // Held on the component, not written inline in the template: an array
-        // literal in a t-foreach is one more expression for OWL's compiler to
-        // parse, and there is nothing to gain from putting it there.
-        this.posRetailDiscountPresets = [5, 10, 15, 20];
+    // --- charge only what was handed over ------------------------------------
+
+    /** Discount lines the cashier's rounding buttons put there, which are a
+     *  separate mechanism (tax-free, deliberately) and must not be folded into
+     *  the discount arithmetic below. */
+    posRetailRoundingLines(order) {
+        return (order.discountLines || []).filter((line) => line.pos_retail_is_roundoff);
     },
 
-    // Whether a preset button is the one currently loaded. Compared in JS
-    // because the obvious template version needed String(), and String is NOT
-    // on OWL's RESERVED_WORDS whitelist (Math, RegExp, Array, Object, Date are;
-    // String, Number and parseInt are not). An unlisted global compiles to
-    // ctx['String'](...) -- undefined() -- which throws while RENDERING, so the
-    // whole POS goes blank rather than merely misbehaving. Same trap as the
-    // parseInt note below.
-    // Tapping the chip that is already selected clears it, so a reason picked
-    // by mistake can be undone without applying anything.
-    posRetailPickReason(reasonId) {
-        const state = this.orderDiscountState;
-        state.reasonId = state.reasonId === reasonId ? false : reasonId;
+    /** Order-level discount already applied, as a positive magnitude. */
+    posRetailAppliedDiscount(order) {
+        return (order.discountLines || [])
+            .filter((line) => !line.pos_retail_is_roundoff)
+            .reduce((sum, line) => sum + Math.abs(line.price_subtotal_incl || 0), 0);
     },
 
-    posRetailIsPresetActive(percent) {
-        const state = this.orderDiscountState;
-        return state.kind === "percent" && parseFloat(state.amount) === percent;
-    },
-
-    // parseInt is a bare global, and OWL template expressions only resolve
-    // identifiers on its RESERVED_WORDS whitelist (which excludes parseInt) or
-    // the component context -- an inline parseInt() in the template compiles to
-    // ctx['parseInt'](), i.e. undefined(), and throws "... is not a function"
-    // when the reason dropdown changes. Do the parsing here in JS instead.
-    posRetailSetReasonId(value) {
-        this.orderDiscountState.reasonId = value ? parseInt(value) : false;
-    },
-
-    // Cart subtotal (excluding discount lines), used to convert a fixed
-    // discount into an equivalent percentage for the native rescale-on-cart-
-    // change watcher in posRetailApplyDiscountLines.
-    posRetailComputeSubtotal(order) {
-        return (order.lines || [])
-            .filter((line) => !line.isDiscountLine)
-            .reduce((sum, line) => sum + (line.price_subtotal_incl || 0), 0);
-    },
-
-    // --- role / limit -------------------------------------------------------
-    posRetailGetCashierRole() {
-        return this.pos.getCashier()?.pos_discount_role_id || false;
-    },
-    // A preset only FILLS the amount, it does not apply the discount: a reason
-    // is usually mandatory, and a button that silently discounted an order on
-    // one tap would be the easiest way to give money away by accident.
-    posRetailQuickDiscount(percent) {
-        this.orderDiscountState.kind = "percent";
-        this.orderDiscountState.amount = String(percent);
-    },
-
-    posRetailDiscountLimit(kind) {
-        const role = this.posRetailGetCashierRole();
-        if (role) {
-            if (role.is_unlimited) {
-                return Infinity;
-            }
-            return kind === "fixed" ? role.max_fixed_discount : role.max_percentage_discount;
-        }
-        return kind === "fixed"
-            ? this.pos.config.pos_retail_max_fixed_discount
-            : this.pos.config.pos_retail_max_percentage_discount;
-    },
-
-    // --- manager PIN approval ------------------------------------------------
-    async posRetailCheckManagerPin() {
-        return posRetailRequestManagerPin(this.pos, this.dialog, this.notification, {
-            noManagerMessage: _t("No manager is configured to approve discounts."),
-        });
-    },
-
-    // --- apply ----------------------------------------------------------------
-    async posRetailApplyOrderDiscount() {
+    /**
+     * How far the cash tendered falls short of the bill, or 0 when it does not.
+     * This is what the button offers to write off.
+     */
+    get posRetailShortfall() {
         const order = this.currentOrder;
-        const state = this.orderDiscountState;
-        const kind = state.kind;
-        const amount = parseFloat(state.amount);
+        if (!order) {
+            return 0;
+        }
+        // Requires an actual payment line first. With nothing tendered the
+        // whole bill is "outstanding", and a one-tap button offering to
+        // discount 100% of an order is how a till gets emptied by accident.
+        if (!order.payment_ids?.length) {
+            return 0;
+        }
+        const short = order.remainingDue;
+        if (!short || short <= 0 || this.pos.currency.isZero(short)) {
+            return 0;
+        }
+        return short;
+    },
 
-        if (!amount || amount <= 0) {
-            this.notification.add(_t("Enter a discount amount first."), { type: "warning" });
+    get posRetailShortfallLabel() {
+        return this.env.utils.formatCurrency(this.posRetailShortfall);
+    },
+
+    async posRetailDiscountShortfall() {
+        const order = this.currentOrder;
+        const short = this.posRetailShortfall;
+        if (!short) {
             return;
         }
-        if (kind === "percent" && amount > 100) {
-            this.notification.add(_t("Percentage discount cannot exceed 100%."), { type: "warning" });
-            return;
-        }
-        if (this.pos.config.pos_retail_require_discount_reason && !state.reasonId) {
-            this.notification.add(_t("Please select a discount reason."), { type: "warning" });
-            return;
-        }
+        // Added to whatever was already discounted rather than replacing it:
+        // prepare_global_discount_lines takes the TOTAL discount for the order,
+        // and the existing lines get rewritten in place below. Passing the bare
+        // shortfall would quietly undo an earlier discount on a second tap.
+        const total = this.posRetailAppliedDiscount(order) + short;
+        await this.posRetailApplyDiscountLines("fixed", total, order);
+    },
 
-        let managerEmployee = false;
-        const limit = this.posRetailDiscountLimit(kind);
-        if (amount > limit) {
-            if (!this.pos.config.pos_retail_require_manager_approval) {
-                this.notification.add(
-                    _t("Discount exceeds your allowed limit. Manager approval is required."),
-                    { type: "danger" }
-                );
-                return;
-            }
-            this.notification.add(
-                _t("Discount exceeds your allowed limit. Manager approval is required."),
-                { type: "warning" }
-            );
-            managerEmployee = await this.posRetailCheckManagerPin();
-            if (!managerEmployee) {
-                return;
-            }
-            if (!this.pos.config.pos_retail_allow_manager_override) {
-                const managerRole = managerEmployee.pos_discount_role_id;
-                const managerLimit =
-                    managerRole && !managerRole.is_unlimited
-                        ? (kind === "fixed" ? managerRole.max_fixed_discount : managerRole.max_percentage_discount)
-                        : Infinity;
-                if (amount > managerLimit) {
-                    this.notification.add(
-                        _t("Amount exceeds the approving manager's own discount limit."),
-                        { type: "danger" }
-                    );
-                    return;
-                }
-            }
-        }
+    // --- the discount mechanism ----------------------------------------------
 
-        order.discount_reason_id = state.reasonId
-            ? this.pos.models["pos.retail.discount.reason"].get(state.reasonId)
-            : false;
-        order.discount_reason_notes = state.notes || "";
-        order.discount_manager_id = managerEmployee || false;
-        order.discount_input_type = kind;
-
-        await this.posRetailApplyDiscountLines(kind, amount, order);
+    // Cart subtotal excluding discount lines, used to convert a fixed discount
+    // into an equivalent percentage for the native rescale-on-cart-change
+    // watcher in posRetailApplyDiscountLines. Discount lines are identified the
+    // way core does it (order.discountLines, i.e. product is the discount
+    // product); the previous `line.isDiscountLine` test named a property that
+    // does not exist on the line model, so it was always undefined and every
+    // discount line counted itself into the subtotal it was discounting.
+    posRetailComputeSubtotal(order) {
+        const discountLines = order.discountLines || [];
+        return (order.lines || [])
+            .filter((line) => !discountLines.includes(line))
+            .reduce((sum, line) => sum + (line.price_subtotal_incl || 0), 0);
     },
 
     async posRetailApplyDiscountLines(kind, amount, order) {
@@ -175,10 +102,16 @@ patch(PaymentScreen.prototype, {
             return;
         }
 
+        // Rounding lines live on the same product, so they would collide in the
+        // map below and be overwritten by a discount line sharing their (empty)
+        // tax key. Held aside and left alone.
+        const roundingLines = this.posRetailRoundingLines(order);
         const discountLinesMap = {};
-        (order.discountLines || []).forEach((line) => {
-            discountLinesMap[taxKey(line.tax_ids)] = line;
-        });
+        (order.discountLines || [])
+            .filter((line) => !roundingLines.includes(line))
+            .forEach((line) => {
+                discountLinesMap[taxKey(line.tax_ids)] = line;
+            });
 
         const lines = order.getOrderlines();
         const discountableLines = lines.filter((line) => line.isGlobalDiscountApplicable());
