@@ -31,6 +31,74 @@
             <field name="global" eval="True"/>
         </record>
 
+        <!-- Stop a branch inheriting its parent company's records.
+
+             Odoo's own multi-company rules on these models are written with
+             'parent_of', which lets a child company use anything an ancestor
+             owns. That is right for a group of legal entities sharing a head
+             office; it is wrong for two shops, where the whole point is that
+             each one keeps its own catalogue and its own contacts. Measured on
+             this database before these rules existed: ticking Branch 2 alone
+             listed 912 products, its own 455 plus the parent's 455, every item
+             twice; and a branch that owned nothing still showed the parent's
+             2 vendors and 16 customers.
+
+             Global rules on one model are ANDed, so these do not replace
+             Odoo's; they intersect with them. The result is the stricter of
+             the two, which means core keeps whatever else its rule protects
+             and an Odoo upgrade cannot quietly undo this.
+
+             Records with no company stay shared, exactly as before. -->
+
+        <record id="res_partner_branch_rule" model="ir.rule">
+            <field name="name">Contacts: visible to their own branch</field>
+            <field name="model_id" ref="base.model_res_partner"/>
+            <!-- partner_share = False is carried over from Odoo's own rule on
+                 purpose. Those are the internal contacts behind users and
+                 employees; dropping the clause would hide staff records from
+                 every branch and break user administration. -->
+            <field name="domain_force">['|', '|', ('partner_share', '=', False), ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="product_template_branch_rule" model="ir.rule">
+            <field name="name">Product: visible to its own branch</field>
+            <field name="model_id" ref="product.model_product_template"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="product_supplierinfo_branch_rule" model="ir.rule">
+            <field name="name">Vendor Pricelist: visible to its own branch</field>
+            <field name="model_id" ref="product.model_product_supplierinfo"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="product_pricelist_branch_rule" model="ir.rule">
+            <field name="name">Pricelist: visible to its own branch</field>
+            <field name="model_id" ref="product.model_product_pricelist"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- Expenses had NO record rule of any kind, which is this module's own
+             omission rather than Odoo's: the model carries a company_id and
+             nothing was enforcing it, so every branch could read every other
+             branch's rent, salaries and electricity. -->
+        <record id="pos_retail_expense_branch_rule" model="ir.rule">
+            <field name="name">Expense: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_expense"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- Deliberately NOT covered here: account.journal and account.account.
+             branch 1 owns no journals at all and posts through the parent's, so
+             a strict rule on those would stop it invoicing rather than merely
+             tidying what it can see. Accounting separation needs each branch to
+             have its own journals first; that is a data change, not a rule. -->
+
     </data>
 
 </odoo>
