@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Errors and warnings, somewhere the shop owner can actually find them.
+
+         Odoo does record them: with log_db set in odoo.conf, anything at
+         WARNING or above is written to ir.logging as well as to the log file.
+         But its own menu lives under Settings > Technical, which is hidden
+         behind developer mode, so in practice the only way anyone here was
+         going to read an error was to SSH into the server and tail a file.
+
+         This surfaces the same records under Point of Sale > Reporting with a
+         plain-language name, so the owner can see what went wrong, and quote
+         it, without a terminal. -->
+
+    <record id="pos_retail_logging_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.logging.list</field>
+        <field name="model">ir.logging</field>
+        <field name="arch" type="xml">
+            <list string="Errors and Warnings" create="false" edit="false"
+                  decoration-danger="level in ('ERROR','CRITICAL')"
+                  decoration-warning="level == 'WARNING'"
+                  default_order="create_date desc">
+                <field name="create_date" string="When"/>
+                <field name="level" string="Severity"/>
+                <field name="type" string="Where" optional="show"/>
+                <field name="message" string="What happened"/>
+                <field name="name" string="Component" optional="hide"/>
+                <field name="path" optional="hide"/>
+                <field name="func" optional="hide"/>
+                <field name="line" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_logging_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.logging.form</field>
+        <field name="model">ir.logging</field>
+        <field name="arch" type="xml">
+            <form string="Error Detail" create="false" edit="false">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="create_date" string="When"/>
+                            <field name="level" string="Severity"/>
+                            <field name="type" string="Where"/>
+                        </group>
+                        <group>
+                            <field name="name" string="Component"/>
+                            <field name="path"/>
+                            <field name="func" string="Function"/>
+                            <field name="line"/>
+                        </group>
+                    </group>
+                    <separator string="What happened"/>
+                    <field name="message" widget="text" nolabel="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_logging_action" model="ir.actions.act_window">
+        <field name="name">Errors and Warnings</field>
+        <field name="res_model">ir.logging</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('level', 'in', ['WARNING', 'ERROR', 'CRITICAL'])]</field>
+        <field name="context">{'search_default_group_by_level': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing has gone wrong</p>
+            <p>
+                Errors and warnings from the system appear here as they happen.
+                An empty list is good news.
+            </p>
+            <p>
+                If something looks wrong on a screen and nothing is listed here,
+                the problem is in the browser rather than the server: press F12
+                and look at the Console tab.
+            </p>
+        </field>
+    </record>
+
+    <record id="pos_retail_logging_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.logging.search</field>
+        <field name="model">ir.logging</field>
+        <field name="arch" type="xml">
+            <!-- Shape copied from core's own ir.logging search view: fields,
+                 then filters, then a BARE <group> for the group-by entries.
+                 Odoo 19's RelaxNG schema rejects expand= and string= on that
+                 group, and the resulting error is reported against the whole
+                 search element rather than the offending attribute. -->
+            <search string="Errors and Warnings">
+                <field name="message"/>
+                <field name="name" string="Component"/>
+                <field name="level"/>
+                <filter name="errors_only" string="Errors only"
+                        domain="[('level', 'in', ['ERROR', 'CRITICAL'])]"/>
+                <filter name="today" string="Today"
+                        domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+                <group>
+                    <filter name="group_by_level" string="Severity" domain="[]" context="{'group_by': 'level'}"/>
+                    <filter name="group_by_name" string="Component" domain="[]" context="{'group_by': 'name'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <menuitem id="pos_retail_logging_menu"
+              name="Errors and Warnings"
+              parent="point_of_sale.menu_point_rep"
+              action="pos_retail_logging_action"
+              groups="base.group_system"
+              sequence="95"/>
+
+</odoo>
