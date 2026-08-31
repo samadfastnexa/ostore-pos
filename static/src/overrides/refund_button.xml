@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- A Refund button in the top bar, beside Register and Orders.
+
+         Returns happen often enough here to deserve a button of their own, and
+         the route to one had a trap in the middle: the orders list opens on
+         Active orders, a finished sale is not among them, so the sale being
+         returned appears to be missing until someone thinks to change the
+         filter to Paid. This lands on that filter directly.
+
+         Added rather than replacing Register. Register is the only one-tap way
+         back to the product grid, and without it a cashier who opens Orders
+         has no obvious route back to ringing up a sale. -->
+    <t t-inherit="point_of_sale.Navbar" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('orders-button')]" position="after">
+            <button class="pos-retail-refund-btn btn btn-lg btn-light lh-lg"
+                    t-on-click="() => this.posRetailStartRefund()">
+                <span t-if="!ui.isSmall"><i class="fa fa-undo me-1"/>Refund</span>
+                <i t-else="" class="fa fa-fw fa-undo fa-lg"/>
+            </button>
+        </xpath>
+    </t>
+
+</templates>

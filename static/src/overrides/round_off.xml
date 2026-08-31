@@ -13,7 +13,10 @@
                     <span class="pos-retail-roundoff-label">
                         <i class="fa fa-hand-o-right me-1"/>Round to
                     </span>
+                    <!-- Absent on a bill small enough that a step down would
+                         reach zero: see posRetailRoundTargets. -->
                     <button class="btn btn-sm btn-outline-secondary flex-fill"
+                            t-if="targets.down"
                             t-on-click="() => this.posRetailRoundTo(targets.down)">
                         <t t-esc="targets.downLabel"/>
                         <small class="d-block"><t t-esc="targets.downDiff"/></small>

@@ -33,22 +33,40 @@ patch(PaymentScreen.prototype, {
         if (!total || total <= 0) {
             return null;
         }
-        const down = Math.floor(total / step) * step;
-        const up = Math.ceil(total / step) * step;
-        // Already a whole figure: nothing to offer, and showing two identical
-        // buttons would just be noise.
+        let down = Math.floor(total / step) * step;
+        let up = Math.ceil(total / step) * step;
+
+        // When the bill already sits on a step there is nothing to "round", so
+        // this used to hide itself. That was wrong for this shop: the prices
+        // are round numbers, so most bills land exactly on a multiple of the
+        // step and the buttons almost never appeared. A control that shows up
+        // occasionally, with no explanation when it does not, reads as broken,
+        // and it was reported as missing three times.
+        //
+        // So on an exact total it offers one step either side instead: a 230
+        // bill becomes "Round to 225" and "Round to 235". It stops being
+        // strictly rounding and becomes a one-tap adjustment either way, which
+        // is what a cashier haggling over the last few rupees actually wants.
         if (this.pos.currency.isZero(up - down)) {
-            return null;
+            down = total - step;
+            up = total + step;
         }
-        return {
+
+        // Never offer to take the bill to zero or below: that is a giveaway,
+        // not a rounding, and it should go through the discount flow where the
+        // amount is typed deliberately.
+        const targets = {
             total,
-            down,
             up,
-            downLabel: this.env.utils.formatCurrency(down),
             upLabel: this.env.utils.formatCurrency(up),
-            downDiff: this.env.utils.formatCurrency(down - total),
             upDiff: this.env.utils.formatCurrency(up - total),
         };
+        if (down > 0) {
+            targets.down = down;
+            targets.downLabel = this.env.utils.formatCurrency(down);
+            targets.downDiff = this.env.utils.formatCurrency(down - total);
+        }
+        return targets;
     },
 
     /** Whether this order already carries a rounding line. */
@@ -79,6 +97,19 @@ patch(PaymentScreen.prototype, {
         // measured against a total that still contains the previous rounding.
         const difference = target - order.totalDue;
         if (this.pos.currency.isZero(difference)) {
+            return;
+        }
+
+        // If the order already carries an order-level discount and this is a
+        // round DOWN, fold the two together rather than adding a second line.
+        // Otherwise a customer who was given a discount and then had the bill
+        // rounded reads "Discount" twice on the receipt for what is, to them,
+        // one reduction. Rounding UP is not a discount at all, so it keeps its
+        // own line -- prepare_global_discount_lines only ever discounts, and a
+        // negative discount is not a thing it can express.
+        const applied = this.posRetailAppliedDiscount(order);
+        if (applied && difference < 0) {
+            await this.posRetailApplyDiscountLines("fixed", applied - difference, order);
             return;
         }
 

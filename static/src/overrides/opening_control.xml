@@ -1,15 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Name the cashier on the Opening Control dialog. The opening float is
-         declared, not counted by the system, so it is the one number in the
-         day that rests entirely on who typed it. Putting the name next to the
-         box makes that ownership visible at the moment of typing. -->
+    <!-- Name the cashier on the Opening Control dialog.
+
+         The opening float is the one number in the day the system does not
+         calculate: it is declared by whoever is standing at the till. When the
+         drawer is short at closing the first question is who declared it, so
+         the name belongs on screen at the moment it is typed.
+
+         Placed INSIDE the h4 rather than after it. The dialog header is a flex
+         row, so a sibling div lands on the same line and butts against the
+         title with no gap. A block element inside the heading stacks under it,
+         which is what was wanted. -->
     <t t-inherit="point_of_sale.OpeningControlPopup" t-inherit-mode="extension">
-        <xpath expr="//h4[hasclass('modal-title')]" position="after">
-            <div class="pos-retail-opening-cashier small mt-1" t-if="posRetailCashierName">
-                <i class="fa fa-user-o me-1"/>Opened by
-                <span class="fw-bold" t-esc="posRetailCashierName"/>
+        <xpath expr="//h4[hasclass('modal-title')]" position="inside">
+            <div class="pos-retail-opening-cashier" t-if="posRetailCashierName">
+                <i class="fa fa-user-circle-o"/>
+                <span class="pos-retail-opening-cashier__label">Opened by</span>
+                <span class="pos-retail-opening-cashier__name" t-esc="posRetailCashierName"/>
             </div>
         </xpath>
     </t>

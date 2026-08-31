@@ -65,11 +65,28 @@ patch(PaymentScreen.prototype, {
         if (!short) {
             return;
         }
+        // Fold any rounding adjustment into this discount instead of leaving
+        // it beside one. Rounding down to 225 and then writing off the rest of
+        // a 200 payment used to print TWO "Discount" lines on the receipt
+        // (-5.00 and -25.00), which is arithmetically right and reads as a
+        // mistake to the customer holding it. One line saying -30.00 says the
+        // same thing.
+        //
+        // The rounding line's own amount has to be added back, because
+        // removing it raises the total again: with a -5 rounding line the
+        // shortfall was measured against 225, and once it goes the bill is 230
+        // once more, so reaching 200 needs 25 + 5.
+        let absorbed = 0;
+        for (const line of this.posRetailRoundingLines(order)) {
+            absorbed += -(line.price_subtotal_incl || 0);
+            order.removeOrderline(line);
+        }
+
         // Added to whatever was already discounted rather than replacing it:
         // prepare_global_discount_lines takes the TOTAL discount for the order,
         // and the existing lines get rewritten in place below. Passing the bare
         // shortfall would quietly undo an earlier discount on a second tap.
-        const total = this.posRetailAppliedDiscount(order) + short;
+        const total = this.posRetailAppliedDiscount(order) + short + absorbed;
         await this.posRetailApplyDiscountLines("fixed", total, order);
     },
 

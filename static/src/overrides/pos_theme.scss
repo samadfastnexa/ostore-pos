@@ -793,3 +793,56 @@ $o_retail_blue: #2563eb;
         color: #fff;
     }
 }
+
+// ---- who opened the register -----------------------------------------------
+// The cashier's name on the Opening Control dialog. It sat inline against the
+// title in a smaller, lighter face, which made the one piece of accountability
+// on the screen the least visible thing on it. Given its own line, at a size
+// that can be read across a counter, with the NAME carrying the weight rather
+// than the word "Opened by".
+.pos-retail-opening-cashier {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    margin-top: .5rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.3;
+
+    .fa {
+        font-size: 1.15rem;
+        opacity: .75;
+    }
+
+    &__label {
+        opacity: .7;
+    }
+
+    // The name is the accountable fact; everything around it is a caption.
+    &__name {
+        font-weight: 700;
+    }
+}
+
+// ---- send the receipt on WhatsApp ------------------------------------------
+// WhatsApp's own green, because the button is recognised by colour before it
+// is read. Sits above the email row: at this counter a customer nearly always
+// has WhatsApp and nearly never gives an email address.
+.pos-retail-whatsapp {
+    background-color: #25d366;
+    border-color: #25d366;
+    color: #fff;
+    font-weight: 600;
+
+    &:hover,
+    &:focus {
+        background-color: #1da851;
+        border-color: #1da851;
+        color: #fff;
+    }
+
+    .fa-whatsapp {
+        font-size: 1.25em;
+        vertical-align: -.06em;
+    }
+}
