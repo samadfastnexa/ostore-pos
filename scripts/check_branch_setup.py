@@ -189,6 +189,28 @@ for b in branches:
           "as %s: sees %s, owns %s (+%s shared)"
           % (tester.login, seen, own, shared))
 
+# --- 5b. a register must be wired entirely inside its own company ------------
+# Third class of cross-company leak, found after partners and employees: the
+# branch-1 register was created while the shell's active company was the
+# parent, so pos.config's DEFAULT picked the parent's PoS picking type -- and
+# every user scoped to the branch got "Access Error: Picking Type" on screens
+# that touch it. Sweep every stored many2one on every register; create_uid and
+# write_uid are audit metadata and exempt.
+print(chr(10) + "REGISTER WIRING (every part of a till must belong to its company)")
+cfg_bad = []
+for c in Config.with_context(active_test=False).search([]):
+    for fname, f in c._fields.items():
+        if f.type != 'many2one' or not f.store or fname in ('create_uid', 'write_uid'):
+            continue
+        val = c[fname]
+        if val and 'company_id' in val._fields and val.company_id and val.company_id != c.company_id:
+            cfg_bad.append((c.name, fname, val.display_name, val.company_id.name))
+check("every register is wired inside its own company", not cfg_bad,
+      "" if not cfg_bad else "%s: e.g. %s.%s -> %s [%s]"
+      % (len(cfg_bad), cfg_bad[0][0], cfg_bad[0][1], cfg_bad[0][2][:24], cfg_bad[0][3]))
+for name, fname, disp, co in cfg_bad[:6]:
+    print("         %s.%s -> '%s' owned by %s" % (name, fname, disp[:30], co))
+
 # --- 6. nobody should land in a company that does not trade ------------------
 # Once the parent stops trading it owns nothing, so a user whose DEFAULT
 # company is the parent opens an empty session in which half the interface
