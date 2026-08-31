@@ -367,6 +367,35 @@ class PosConfig(models.Model):
 class ResConfigSettings(models.TransientModel):
     _inherit = 'res.config.settings'
 
+    pos_retail_company_summary = fields.Char(
+        string="Companies and Branches",
+        compute='_compute_pos_retail_company_summary',
+    )
+
+    @api.depends_context('company')
+    def _compute_pos_retail_company_summary(self):
+        """Count companies and branches separately.
+
+        Core counts every res.company row with an empty domain
+        (base_setup/models/res_config_settings.py, _compute_company_count) and
+        prints "3 Companies", while the Manage Companies action right beside it
+        filters [('parent_id','=',False)] and lists ONE. Both numbers are
+        defensible and together they are simply wrong: the shop has one company
+        with two branches, and the screen says three of something and shows one
+        of it.
+
+        Counting the two separately is the only reading that matches what the
+        owner actually has.
+        """
+        Company = self.env['res.company'].sudo()
+        companies = Company.search_count([('parent_id', '=', False)])
+        branches = Company.search_count([('parent_id', '!=', False)])
+        label = "%s %s" % (companies, "Company" if companies == 1 else "Companies")
+        if branches:
+            label += ", %s %s" % (branches, "Branch" if branches == 1 else "Branches")
+        for record in self:
+            record.pos_retail_company_summary = label
+
     pos_return_policy = fields.Text(
         related='pos_config_id.return_policy',
         readonly=False,
