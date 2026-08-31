@@ -48,10 +48,11 @@ class ResPartner(models.Model):
                 "payments are recorded against them. Deleting the contact "
                 "would leave those entries with no customer or vendor on "
                 "them.\n\n"
-                "Archive the contact instead: open it, click the gear icon "
-                "next to the name and choose Archive. It then disappears from "
-                "the customer and vendor lists and from the POS, while the "
-                "accounting history stays intact.",
+                "Hide the contact instead: open it, click the gear icon next "
+                "to the name and choose Hide. It then disappears from the "
+                "customer and vendor lists and from the POS, while the "
+                "accounting history stays intact. You can unhide it at any "
+                "time.",
                 names=", ".join(blocked.mapped('display_name')),
             ))
         return super().unlink()
@@ -627,3 +628,31 @@ class ResPartner(models.Model):
             ],
             'context': {'default_move_type': 'in_invoice', 'default_partner_id': self.id},
         }
+
+    def pos_retail_khata_lines(self):
+        """The customer's khata as a running statement, for the PDF report.
+
+        Receivable journal items, posted only, oldest first, with a running
+        balance -- the same lines _compute_pos_credit_figures sums into
+        pos_outstanding_balance, so the statement's closing figure always
+        matches the balance shown in the POS and on receipts. Scoped to the
+        companies in the current environment, so a branch prints its own book.
+        """
+        self.ensure_one()
+        lines = self.env['account.move.line'].search([
+            ('partner_id', '=', self.id),
+            ('account_id.account_type', '=', 'asset_receivable'),
+            ('parent_state', '=', 'posted'),
+            ('company_id', 'in', self.env.companies.ids),
+        ], order='date, id')
+        rows, balance = [], 0.0
+        for line in lines:
+            balance += line.debit - line.credit
+            rows.append({
+                'date': line.date,
+                'name': line.move_id.name or line.name or '',
+                'debit': line.debit,
+                'credit': line.credit,
+                'balance': balance,
+            })
+        return rows

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- "Send on WhatsApp" across the documents a shop actually sends people:
+         quotation, invoice, purchase order, payment receipt, delivery slip and
+         the khata statement. One widget (backend/whatsapp_widget.js), told
+         which PDF to attach per view. Every report_name below was verified to
+         render against real records before shipping; a wrong name here fails
+         only at click time, silently. -->
+
+    <record id="view_order_form_whatsapp" model="ir.ui.view">
+        <field name="name">sale.order.form.whatsapp</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <widget name="pos_retail_whatsapp" report="sale.report_saleorder" title="Quotation"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="purchase_order_form_whatsapp" model="ir.ui.view">
+        <field name="name">purchase.order.form.whatsapp</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <widget name="pos_retail_whatsapp" report="purchase.report_purchaseorder" title="Purchase Order"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_move_form_whatsapp" model="ir.ui.view">
+        <field name="name">account.move.form.whatsapp</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <!-- The with-payments variant, so a partly-paid invoice shows
+                     what is left rather than restating the full amount. Hidden
+                     on anything unposted: sharing a draft invites paying it. -->
+                <widget name="pos_retail_whatsapp" report="account.report_invoice_with_payments"
+                        title="Invoice" invisible="state != 'posted'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_account_payment_form_whatsapp" model="ir.ui.view">
+        <field name="name">account.payment.form.whatsapp</field>
+        <field name="model">account.payment</field>
+        <field name="inherit_id" ref="account.view_account_payment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <widget name="pos_retail_whatsapp" report="account.report_payment_receipt"
+                        title="Payment Receipt" invisible="state not in ('paid', 'in_process')"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_picking_form_whatsapp" model="ir.ui.view">
+        <field name="name">stock.picking.form.whatsapp</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <widget name="pos_retail_whatsapp" report="stock.report_deliveryslip" title="Delivery Slip"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- The khata statement, on the customer form's own header, beside the
+         Receive Payment and Khata Adjustment buttons pos_retail already put
+         there: the statement lives where the khata is worked. -->
+    <record id="view_partner_form_whatsapp" model="ir.ui.view">
+        <field name="name">res.partner.form.whatsapp</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="pos_retail.view_partner_form_pos_retail_customer_ledger"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <widget name="pos_retail_whatsapp" report="pos_retail.report_khata_statement" title="Khata Statement"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

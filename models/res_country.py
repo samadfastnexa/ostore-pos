@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class ResCountry(models.Model):
@@ -19,3 +19,11 @@ class ResCountry(models.Model):
              "their country and you can bring one back with the Archived "
              "filter.",
     )
+
+    @api.model
+    def _load_pos_data_fields(self, config):
+        # phone_code is needed to turn a locally-written number such as
+        # "0322 4846103" into the international form WhatsApp requires
+        # (923224846103). Core loads res.country into the POS but only
+        # id/name/code/vat_label, so the dialling code has to be asked for.
+        return super()._load_pos_data_fields(config) + ['phone_code']

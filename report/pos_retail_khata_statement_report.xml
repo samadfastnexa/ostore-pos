@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The khata statement: one customer's credit book as a PDF.
+
+         "How much do I owe?" is the most-asked question on a credit book, and
+         until now the only answers were a number on the POS screen or a
+         backend list view the customer never sees. This is the document that
+         answers it: every posted receivable entry for the customer, oldest
+         first, with a running balance whose closing figure is by construction
+         the same pos_outstanding_balance the POS shows, because it sums the
+         same lines (see res_partner.pos_retail_khata_lines).
+
+         Built on res.partner rather than any single order, since the
+         statement is about the person, not a transaction. -->
+
+    <template id="report_khata_statement_document">
+        <t t-call="web.external_layout">
+            <div class="page">
+                <h2>Khata Statement</h2>
+                <div class="row mt-3 mb-4">
+                    <div class="col-6">
+                        <strong t-field="doc.name"/>
+                        <div t-if="doc.phone" t-field="doc.phone"/>
+                        <div t-if="doc.mobile and doc.mobile != doc.phone" t-field="doc.mobile"/>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div>Date: <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y')"/></div>
+                    </div>
+                </div>
+
+                <t t-set="rows" t-value="doc.pos_retail_khata_lines()"/>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Reference</th>
+                            <th class="text-end">Purchases</th>
+                            <th class="text-end">Payments</th>
+                            <th class="text-end">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="rows" t-as="row">
+                            <td><span t-esc="row['date'].strftime('%d/%m/%Y')"/></td>
+                            <td><span t-esc="row['name']"/></td>
+                            <td class="text-end">
+                                <span t-if="row['debit']" t-esc="row['debit']"
+                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-if="row['credit']" t-esc="row['credit']"
+                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-esc="row['balance']"
+                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                            </td>
+                        </tr>
+                        <tr t-if="not rows">
+                            <td colspan="5" class="text-center text-muted">No credit entries.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="row mt-3">
+                    <div class="col-6 offset-6">
+                        <table class="table table-sm">
+                            <tr class="fw-bold fs-5">
+                                <td>Balance Due</td>
+                                <td class="text-end">
+                                    <span t-esc="rows and rows[-1]['balance'] or 0.0"
+                                          t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_khata_statement">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="pos_retail.report_khata_statement_document"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_khata_statement" model="ir.actions.report">
+        <field name="name">Khata Statement</field>
+        <field name="model">res.partner</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_khata_statement</field>
+        <field name="report_file">pos_retail.report_khata_statement</field>
+        <field name="print_report_name">'Khata - %s' % (object.name or '').replace('/', '-')</field>
+        <field name="binding_model_id" ref="base.model_res_partner"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

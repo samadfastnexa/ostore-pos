@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- A WhatsApp button on the receipt screen, above the email row.
+
+         Email is the only sharing route core offers, and a walk-in at a
+         hardware counter almost never has an email address on file. They do
+         have WhatsApp, and their number is usually already on the customer
+         record for the khata, so this is one tap in the common case.
+
+         Placed ABOVE the email input rather than beside it: the two are not
+         alternatives of equal likelihood here, and the one that will be used
+         nearly every time should be the one the hand reaches first. Full
+         width and in WhatsApp's own green so it is recognised rather than
+         read. -->
+    <t t-inherit="point_of_sale.ReceiptScreen" t-inherit-mode="extension">
+        <!-- Deliberately axis-free. An earlier version anchored on the email
+             input with `/parent::div`, which resolves correctly when tested
+             against the template on its own but is evaluated client-side with
+             doc.evaluate over the WHOLE parsed document, where `//input` can
+             reach an input in another template first and FIRST_ORDERED_NODE
+             then takes the wrong node. A plain child step off a
+             uniquely-classed container has no such ambiguity.
+
+             This lands the button directly under the print row, above the
+             email box: at this counter a customer nearly always has WhatsApp
+             and nearly never gives an email address, so it should be the one
+             the hand reaches first. -->
+        <xpath expr="//div[hasclass('receipt-options')]/div[1]" position="after">
+            <button class="pos-retail-whatsapp btn btn-lg w-100 py-3"
+                    t-on-click="() => this.posRetailShareOnWhatsapp()">
+                <i class="fa fa-whatsapp me-2"/>Send on WhatsApp
+            </button>
+        </xpath>
+    </t>
+
+</templates>

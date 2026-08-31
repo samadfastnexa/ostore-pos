@@ -23,12 +23,14 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.4.0.1',
+    'version': '19.0.6.0.3',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
         # Depending on them here makes `-i pos_retail` install the whole stack.
         'point_of_sale',
+        'base_setup',       # General Settings; the Companies block is inherited
+                            # to count companies and branches separately
         'contacts',
         'pos_loyalty',      # promotions, coupons, gift cards, loyalty points in POS
         'pos_discount',     # order-level % discount button in POS (product-screen);
@@ -68,6 +70,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/pos_retail_discount_log_views.xml',
         'report/pos_retail_discount_log_report.xml',
         'report/pos_retail_receipt_report.xml',
+        'report/pos_retail_khata_statement_report.xml',
         'report/pos_retail_goods_receipt_report.xml',
         'report/pos_retail_quotation_report.xml',
         # After the report: the template attaches the A4 report by xmlid.
@@ -93,10 +96,12 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/ir_module_views.xml',
         'views/res_country_views.xml',
         'views/res_partner_views.xml',
+        'views/whatsapp_share_views.xml',
         'views/pos_config_views.xml',
         'views/pos_retail_dashboard_views.xml',
         'views/pos_retail_access_role_views.xml',
         'views/pos_retail_access_permission_views.xml',
+        'views/pos_retail_logging_views.xml',
         'views/pos_retail_menus.xml',
         'views/res_users_views.xml',
         'views/login_templates.xml',
@@ -114,6 +119,10 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/backend/chatter.xml',
             'pos_retail/static/src/backend/form_save_button.xml',
             'pos_retail/static/src/backend/about.xml',
+            'pos_retail/static/src/backend/rename_archive.js',
+            'pos_retail/static/src/backend/whatsapp_widget.js',
+            'pos_retail/static/src/backend/whatsapp_widget.xml',
+            'pos_retail/static/src/backend/cog_menu.xml',
             'pos_retail/static/src/backend/hide_messaging.js',
             'pos_retail/static/src/backend/hide_odoo_links.js',
             'pos_retail/static/src/backend/import_button.js',
@@ -151,6 +160,10 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/negative_stock_warning.js',
             'pos_retail/static/src/overrides/order_discount.js',
             'pos_retail/static/src/overrides/order_discount.xml',
+            'pos_retail/static/src/overrides/whatsapp_receipt.js',
+            'pos_retail/static/src/overrides/whatsapp_receipt.xml',
+            'pos_retail/static/src/overrides/refund_button.js',
+            'pos_retail/static/src/overrides/refund_button.xml',
             'pos_retail/static/src/overrides/round_off.js',
             'pos_retail/static/src/overrides/round_off.xml',
             'pos_retail/static/src/overrides/opening_control.js',
