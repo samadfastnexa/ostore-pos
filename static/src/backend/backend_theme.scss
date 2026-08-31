@@ -85,7 +85,15 @@ $zx-muted: #6b6790;
     // !important is required, not decorative: core puts Bootstrap's `min-w-0`
     // utility class on the breadcrumb, and Bootstrap utilities ship with
     // !important, so a plain rule loses however specific it is.
-    .o_control_panel .o_breadcrumb {
+    // Scoped to the DRILLED-IN breadcrumb only (the variant containing an
+    // <ol class="breadcrumb">, i.e. "Customers / abc" on a form). Applied to
+    // every o_breadcrumb it also hit top-level LIST views, where the title is
+    // short and never truncates, forcing ~110px of dead space into a left
+    // block whose container is overflow:visible -- the block spilled under
+    // the centred search bar and the Actions button sat beneath the search
+    // input. Measured, not guessed: breadcrumb box 176px for 66px of text,
+    // group right edge 665px, search starting at 681px.
+    .o_control_panel .o_breadcrumb:has(.breadcrumb) {
         min-width: 11rem !important;
     }
 
@@ -106,7 +114,25 @@ $zx-muted: #6b6790;
 
         // The cog acts on the record whose name it follows, so it belongs
         // WITH the name -- just not touching it.
-        .o_cp_action_menus { margin-inline-start: .4rem; }
+        //
+        // .4rem was tuned when this was a bare 16px icon. It now carries a
+        // border and the word "Actions" (see backend/cog_menu.xml), and at the
+        // old margin the box butted straight against the last letter of the
+        // record name, reading as one run-on control.
+        .o_cp_action_menus { margin-inline-start: .9rem; }
+
+        // Deliberately outline rather than solid: this is a menu of things you
+        // MIGHT do to the record, sitting beside New and Import which are the
+        // things you came to do. Solid grey gave it the same weight as those
+        // and made the row read as three equal buttons.
+        // Plain properties, not Bootstrap's --bs-btn-* custom properties: the
+        // prefix is a Bootstrap SCSS variable that is not reliably in scope in
+        // an addon stylesheet, and an undefined variable fails the whole
+        // bundle compile rather than just this rule.
+        .o_cp_action_menus .pos-retail-cog {
+            border-color: $zx-line;
+            font-weight: 400;
+        }
 
         // Separate the identity of the record from the actions on it.
         .o_control_panel_main { column-gap: 1.4rem; }
@@ -114,6 +140,28 @@ $zx-muted: #6b6790;
         // The pager is a different kind of control again; keep it clear of
         // the smart buttons it sits beside.
         .o_cp_pager { margin-inline-start: .6rem; }
+    }
+
+    // ---- stop the left control-panel block sliding under the search -------
+    // Core gives the breadcrumbs block and the navigation block `flex: 1 1 0%`
+    // -- equal shares of the row regardless of content -- and the breadcrumbs
+    // block is overflow:visible. On a list view with three buttons (New,
+    // Import, Upload) plus a title plus the labelled Actions button, the
+    // content exceeds its share and the excess silently slides UNDER the
+    // centred search bar; the title truncates ("Credit ...") and the Actions
+    // button disappears beneath the search input. Seen on Invoices and Credit
+    // Notes; measured before fixing.
+    //
+    // Sized by content instead (`0 1 auto`): the search simply starts after
+    // the last button, and on a squeezed form view the block can still shrink
+    // because the breadcrumb itself carries min-w-0/text-truncate. Scoped to
+    // lg-and-up, where the row is nowrap; below that core wraps the row and
+    // the problem cannot occur.
+    @media (min-width: 992px) {
+        .o_control_panel_main > .o_control_panel_breadcrumbs {
+            flex: 0 1 auto;
+            min-width: 0;
+        }
     }
 
     .o_control_panel .o_searchview {
@@ -261,4 +309,20 @@ $zx-muted: #6b6790;
 .app_settings_block h2:has(+ h3.o_setting_tip + .o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label))))),
 .app_settings_block h3.o_setting_tip:has(+ .o_settings_container:has(.o_enterprise_label):not(:has(.o_setting_box:not(:has(.o_enterprise_label))))) {
     display: none !important;
+}
+
+// ---- WhatsApp share on backend documents -----------------------------------
+// WhatsApp's green, same as the POS receipt button, so it reads as the same
+// action wherever it appears.
+.pos-retail-whatsapp-backend {
+    background-color: #25d366;
+    border-color: #25d366;
+    color: #fff;
+
+    &:hover,
+    &:focus {
+        background-color: #1da851;
+        border-color: #1da851;
+        color: #fff;
+    }
 }

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Make the record's action menu look like a button and say what it is.
+
+         Core renders it on desktop as `lh-sm p-0 border-0`: a bare cog with no
+         border, no background and no text. The word "Actions" exists only as a
+         tooltip and an aria-label, so it reaches a screen reader and nobody
+         else. Next to a record title it reads as decoration rather than a
+         control, which matters because it is the ONLY route to Duplicate,
+         Hide and Export.
+
+         PATCHED FOUR TIMES, NOT ONCE. web.CogMenu is the base, but no view
+         renders it: list, form and kanban each derive their own copy with
+         `t-inherit="web.CogMenu"` and NO t-inherit-mode, which defaults to
+         PRIMARY. A primary inheritance snapshots the base, so an extension of
+         web.CogMenu alone reaches a template nothing displays: the button
+         stays a bare cog on every screen while the override looks correct in
+         the bundle. Each rendered template has to be extended in its own
+         right. Calendar, graph and pivot do render web.CogMenu directly, so
+         that one is still needed.
+
+         The label is hidden below the md breakpoint, where the bare icon is
+         genuinely the right call. -->
+
+    <t t-inherit="web.CogMenu" t-inherit-mode="extension">
+        <xpath expr="//button[@data-hotkey='u']" position="attributes">
+            <attribute name="t-att-class">env.isSmall ? 'btn-secondary' : 'btn-outline-secondary btn-sm pos-retail-cog'</attribute>
+        </xpath>
+        <xpath expr="//button[@data-hotkey='u']/i" position="after">
+            <span class="d-none d-md-inline ms-1">Actions</span>
+        </xpath>
+    </t>
+
+    <t t-inherit="web.ListCogMenu" t-inherit-mode="extension">
+        <xpath expr="//button[@data-hotkey='u']" position="attributes">
+            <attribute name="t-att-class">env.isSmall ? 'btn-secondary' : 'btn-outline-secondary btn-sm pos-retail-cog'</attribute>
+        </xpath>
+        <xpath expr="//button[@data-hotkey='u']/i" position="after">
+            <span class="d-none d-md-inline ms-1">Actions</span>
+        </xpath>
+    </t>
+
+    <t t-inherit="web.FormCogMenu" t-inherit-mode="extension">
+        <xpath expr="//button[@data-hotkey='u']" position="attributes">
+            <attribute name="t-att-class">env.isSmall ? 'btn-secondary' : 'btn-outline-secondary btn-sm pos-retail-cog'</attribute>
+        </xpath>
+        <xpath expr="//button[@data-hotkey='u']/i" position="after">
+            <span class="d-none d-md-inline ms-1">Actions</span>
+        </xpath>
+    </t>
+
+    <t t-inherit="web.KanbanCogMenu" t-inherit-mode="extension">
+        <xpath expr="//button[@data-hotkey='u']" position="attributes">
+            <attribute name="t-att-class">env.isSmall ? 'btn-secondary' : 'btn-outline-secondary btn-sm pos-retail-cog'</attribute>
+        </xpath>
+        <xpath expr="//button[@data-hotkey='u']/i" position="after">
+            <span class="d-none d-md-inline ms-1">Actions</span>
+        </xpath>
+    </t>
+
+</templates>
