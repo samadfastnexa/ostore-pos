@@ -84,9 +84,16 @@ if ALSO_ADOPT_PARENT_OWNED:
 #    Searched with active_test=False because the discount product is commonly
 #    ARCHIVED while still being every register's discount_product_id -- an
 #    active-only search reports a protection it is not actually applying.
-#  * Anything that is not physical stock. Down Payment, Gift Card, Top-up
-#    eWallet and the discount line are cross-company plumbing, not goods on a
-#    shelf, and no branch should own them.
+#  * Anything that is not GOODS. Down Payment, Gift Card, Top-up eWallet and
+#    the discount line are services -- cross-company plumbing, not stock on a
+#    shelf -- and no branch should own them.
+#
+#    Tested on `type`, NOT on is_storable. is_storable means "inventory is
+#    tracked", which is a different question entirely: a shop can sell Elbow
+#    45 and Socket 1/2 without tracking their counts, and those are still very
+#    much goods. An earlier version tested is_storable and left six real
+#    hardware lines shared, which is exactly the symptom this migration exists
+#    to remove.
 #
 # What gets adopted is what the shop actually sells.
 pinned = Template.browse()
@@ -105,11 +112,11 @@ if 'loyalty.program' in env:
         for tr in getattr(prog, 'trigger_product_ids', Template.browse()):
             pinned |= tr.product_tmpl_id
 
-keep = (shared & pinned) | shared.filtered(lambda t: not t.is_storable)
+keep = (shared & pinned) | shared.filtered(lambda t: t.type != 'consu')
 todo = shared - keep
 print("  shared products: %s   kept shared on purpose: %s" % (len(shared), len(keep)))
 for t in keep:
-    why = "referenced by a register or programme" if t in pinned else "not physical stock"
+    why = "referenced by a register or programme" if t in pinned else "a service, not goods"
     print("      keep %-26s (%s)" % (t.name[:26], why))
 
 assigned, copied, failed = [], [], []
