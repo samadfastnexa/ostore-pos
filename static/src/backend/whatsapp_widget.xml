@@ -2,8 +2,14 @@
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.WhatsappWidget">
-        <button class="btn pos-retail-whatsapp-backend" t-on-click="() => this.onClick()">
-            <i class="fa fa-whatsapp me-1"/>WhatsApp
+        <button class="btn pos-retail-whatsapp-backend" t-att-disabled="wa.busy"
+                t-on-click="() => this.onClick()">
+            <t t-if="wa.busy">
+                <i class="fa fa-circle-o-notch fa-spin me-1"/>Preparing...
+            </t>
+            <t t-else="">
+                <i class="fa fa-whatsapp me-1"/>WhatsApp
+            </t>
         </button>
     </t>
 

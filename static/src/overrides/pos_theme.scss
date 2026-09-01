@@ -846,3 +846,16 @@ $o_retail_blue: #2563eb;
         vertical-align: -.06em;
     }
 }
+
+// ---- the in-cart quantity badge --------------------------------------------
+// Core anchors it bottom-right of the card, which was fine when the card ended
+// at the price. This module adds the min-max range and the stock line below,
+// so "bottom right" now lands ON that text (the black "1" sat over
+// "370.00 - 460.00"). Top-right of the image instead: always empty space,
+// and where a shopper's eye expects a count marker.
+// !important is required: Bootstrap's bottom-0/end-0 utilities ship with
+// !important, so a plain rule loses regardless of specificity.
+.product-cart-qty {
+    top: 0 !important;
+    bottom: auto !important;
+}

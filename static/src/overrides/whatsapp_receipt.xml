@@ -28,8 +28,14 @@
              the hand reaches first. -->
         <xpath expr="//div[hasclass('receipt-options')]/div[1]" position="after">
             <button class="pos-retail-whatsapp btn btn-lg w-100 py-3"
+                    t-att-disabled="posRetailWa.busy"
                     t-on-click="() => this.posRetailShareOnWhatsapp()">
-                <i class="fa fa-whatsapp me-2"/>Send on WhatsApp
+                <t t-if="posRetailWa.busy">
+                    <i class="fa fa-circle-o-notch fa-spin me-2"/>Preparing the PDF...
+                </t>
+                <t t-else="">
+                    <i class="fa fa-whatsapp me-2"/>Send on WhatsApp
+                </t>
             </button>
         </xpath>
     </t>

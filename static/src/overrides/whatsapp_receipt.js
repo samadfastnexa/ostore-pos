@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import { patch } from "@web/core/utils/patch";
+import { useState } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
 import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
 
@@ -17,6 +18,15 @@ import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt
 // at all. Plain text arrives intact on every phone and can be searched later
 // in the chat, which is what a customer actually does with a receipt.
 patch(ReceiptScreen.prototype, {
+    setup() {
+        super.setup(...arguments);
+        // Rendering the PDF takes wkhtmltopdf a few seconds, during which the
+        // button used to sit inert -- so people clicked it again and again,
+        // queueing a render per click. Reactive busy flag: the template swaps
+        // in a spinner and disables the button until the share sheet closes.
+        this.posRetailWa = useState({ busy: false });
+    },
+
     /**
      * The customer's number in the international form wa.me needs: digits
      * only, country code first, no plus sign.
@@ -161,6 +171,20 @@ patch(ReceiptScreen.prototype, {
     },
 
     async posRetailShareOnWhatsapp() {
+        if (this.posRetailWa.busy) {
+            return;
+        }
+        this.posRetailWa.busy = true;
+        try {
+            await this._posRetailShareOnWhatsapp();
+        } finally {
+            // navigator.share resolves when the sheet closes, so busy covers
+            // the whole interaction, not just the fetch.
+            this.posRetailWa.busy = false;
+        }
+    },
+
+    async _posRetailShareOnWhatsapp() {
         // Decided BEFORE any await. window.open called after an await has left
         // the user-gesture window and is blocked as a pop-up, so when this
         // browser cannot share files at all the text route has to be taken

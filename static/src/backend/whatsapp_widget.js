@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { Component } from "@odoo/owl";
+import { Component, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
@@ -32,6 +32,9 @@ export class PosRetailWhatsappWidget extends Component {
     setup() {
         this.orm = useService("orm");
         this.notification = useService("notification");
+        // The PDF render takes seconds; without feedback the button looks
+        // dead and gets clicked repeatedly, queueing a render per click.
+        this.wa = useState({ busy: false });
     }
 
     /** International digits for wa.me: country code first, no plus. */
@@ -122,6 +125,18 @@ export class PosRetailWhatsappWidget extends Component {
     }
 
     async onClick() {
+        if (this.wa.busy) {
+            return;
+        }
+        this.wa.busy = true;
+        try {
+            await this._onClick();
+        } finally {
+            this.wa.busy = false;
+        }
+    }
+
+    async _onClick() {
         const rec = this.props.record;
         // An unsaved document has no id to render a PDF from.
         if (!rec.resId) {
