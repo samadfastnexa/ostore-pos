@@ -28,7 +28,8 @@ Run:
     venv/Scripts/python.exe odoo/odoo-bin shell -c odoo.conf -d <db> --no-http         < custom_addons/pos_retail/scripts/adopt_shared_catalogue.py
 """
 
-TARGET_COMPANY_ID = None   # None = the first branch (company with a parent)
+TARGET_COMPANY_ID = None      # None = the first branch (company with a parent)
+ALSO_ADOPT_PARENT_OWNED = True  # products the PARENT owns move to the branch too
 DRY_RUN = True
 
 Company = env['res.company'].sudo()
@@ -63,6 +64,17 @@ if not wh:
 print("  branch warehouse: %s" % wh.name)
 
 shared = Template.search([('company_id', '=', False)])
+
+# Products the parent company owns are adopted as well, so the branch ends up
+# holding everything the shop actually sells and the parent is left as the
+# legal shell it is meant to be. Same two-path treatment: reassign when
+# nothing blocks it, archive-and-copy when stock moves do.
+if ALSO_ADOPT_PARENT_OWNED:
+    parents = Company.search([('parent_id', '=', False)])
+    parent_owned = Template.search([('company_id', 'in', parents.ids)])
+    if parent_owned:
+        print("  parent-owned products also being adopted: %s" % len(parent_owned))
+    shared |= parent_owned
 
 # What must STAY shared, learned by rehearsing this on a copy of the data:
 #
