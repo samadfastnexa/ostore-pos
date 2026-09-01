@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- An "All" button at the head of the category bar.
+
+         Core does let you clear a category, by tapping the one that is already
+         selected a second time (pos_store.js setSelectedCategory: the same id
+         resets the selection to category 0). Nothing on screen says so, so a
+         cashier who taps Hardware is stuck inside Hardware and starts hunting
+         for a way back to the full grid.
+
+         Same handler, made visible: setSelectedCategory(0) is exactly what
+         core's toggle falls back to. Highlighted whenever no category is
+         active, so the bar always shows where you are. -->
+    <t t-inherit="point_of_sale.CategorySelector" t-inherit-mode="extension">
+        <xpath expr="//t[@t-foreach]" position="before">
+            <button class="category-button pos-retail-all-categories p-1 btn btn-light d-flex justify-content-around align-items-center rounded-3 gap-1"
+                    t-att-class="{ 'opacity-75 border-0': pos.selectedCategory and pos.selectedCategory.id,
+                                   'justify-content-center': ui.isSmall }"
+                    t-on-click="() => this.pos.setSelectedCategory(0)">
+                <div class="line-clamp-3 w-100">
+                    <span class="text-center">All</span>
+                </div>
+            </button>
+        </xpath>
+    </t>
+
+</templates>
