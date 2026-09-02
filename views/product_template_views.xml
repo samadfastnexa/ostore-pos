@@ -103,7 +103,14 @@
                        options="{'no_create': True}"
                        domain="[('id', 'in', linked_vendor_ids)]"
                        invisible="type == 'combo' or (not is_product_variant and (product_variant_count &gt; 1 or (product_variant_count == 0 and is_dynamically_created)))"/>
-                <span class="text-muted fst-italic" invisible="vendor_count != 0 or type == 'combo'">
+                <!-- colspan="2" is required: this <span> is a direct child of the
+                     group, and a non-field child without it consumes ONE grid cell.
+                     That knocked the label/field pairing out of step for every row
+                     below it, so Category/Reference/Barcode/Brand/Company each sat
+                     one row above their input and clicking a field focused the
+                     next one. -->
+                <span class="text-muted fst-italic" colspan="2"
+                      invisible="vendor_count != 0 or type == 'combo'">
                     No vendors linked yet — add one in the Vendors tab below.
                 </span>
             </div>
