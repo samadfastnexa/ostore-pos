@@ -214,4 +214,39 @@
         </field>
     </record>
 
+    <!-- A warning on Odoo's own Cash Rounding setting.
+
+         Its purpose is sound and clearly explained: "the smallest coinage of
+         the currency used to pay by cash": if the smallest coin is 5 rupees
+         you physically cannot give 2 back, so the bill is rounded. But it
+         rounds EVERY cash sale the same way, decided by configuration, and
+         this shop asked for the opposite: the cashier chooses per sale,
+         because one customer hands over 240 for a 238 bill without blinking
+         and the next counts out the exact amount.
+
+         Switch both on and they compound. Odoo rounds automatically, then
+         the cashier's Round to buttons adjust again on top, and the receipt
+         carries a rounding line AND a discount line for one transaction.
+         Nothing in core says so, and the setting is one click away from a
+         person who has never seen the payment screen, so the warning goes
+         where the decision is made. -->
+    <record id="res_config_settings_view_form_pos_retail_cash_rounding_note" model="ir.ui.view">
+        <field name="name">res.config.settings.pos.retail.cash.rounding.note</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='pos_cash_rounding']" position="before">
+                <div class="alert alert-warning mb-2" role="alert">
+                    <strong>This shop already rounds at the till.</strong>
+                    The payment screen offers the cashier a <em>Round to</em> button either
+                    side of the total, so rounding is decided per sale rather than for every
+                    sale. Leave this OFF unless you want automatic rounding instead &#8212;
+                    switching both on applies two roundings to the same order and prints two
+                    adjustment lines on the receipt. To swap to automatic, enable this and
+                    set <em>Round-Off Step</em> to 0 further down this page.
+                </div>
+            </xpath>
+        </field>
+    </record>
+
 </odoo>
