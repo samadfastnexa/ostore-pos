@@ -1,5 +1,7 @@
 from odoo import _, api, fields, models
 
+from .res_company import TRADING_COMPANY_DOMAIN
+
 
 class PosCategory(models.Model):
     _inherit = 'pos.category'
@@ -10,7 +12,7 @@ class PosCategory(models.Model):
     # layout. Empty still means "every branch", so nothing has to be configured
     # on a single-shop install.
     company_id = fields.Many2one(
-        'res.company', string="Branch", index=True,
+        'res.company', string="Branch", domain=TRADING_COMPANY_DOMAIN, index=True,
         help="Branch this till section belongs to. Leave empty to show it at "
              "every branch.",
     )

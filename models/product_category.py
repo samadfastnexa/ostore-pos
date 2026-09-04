@@ -1,5 +1,7 @@
 from odoo import _, api, fields, models
 
+from .res_company import TRADING_COMPANY_DOMAIN
+
 
 class ProductCategory(models.Model):
     _inherit = 'product.category'
@@ -13,7 +15,7 @@ class ProductCategory(models.Model):
     # expense and stock-valuation account per branch. Scoping only decides who
     # sees the category in a list.
     company_id = fields.Many2one(
-        'res.company', string="Branch", index=True,
+        'res.company', string="Branch", domain=TRADING_COMPANY_DOMAIN, index=True,
         help="Branch this category belongs to. Leave empty to use it at every "
              "branch, which suits any category both shops stock.",
     )

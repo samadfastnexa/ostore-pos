@@ -1,6 +1,8 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+from .res_company import TRADING_COMPANY_DOMAIN
+
 
 class PosRetailLedgerAdjustment(models.TransientModel):
     """Khata adjustment: change what a customer owes WITHOUT faking history.
@@ -59,7 +61,7 @@ class PosRetailLedgerAdjustment(models.TransientModel):
              "\"Old khata balance brought forward\".",
     )
     company_id = fields.Many2one(
-        'res.company', string="Branch",
+        'res.company', string="Branch", domain=TRADING_COMPANY_DOMAIN,
         compute='_compute_company_id', store=True, readonly=False,
         help="Branch whose books the entry is posted in. Taken from the "
              "customer, since a customer belongs to one branch.",

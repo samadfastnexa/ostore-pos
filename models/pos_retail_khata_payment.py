@@ -1,6 +1,8 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+from .res_company import TRADING_COMPANY_DOMAIN
+
 
 class PosRetailKhataPayment(models.TransientModel):
     """Receive money against a customer's khata.
@@ -30,7 +32,7 @@ class PosRetailKhataPayment(models.TransientModel):
              "their account and their Amount Owed drops immediately.",
     )
     company_id = fields.Many2one(
-        'res.company', string="Branch",
+        'res.company', string="Branch", domain=TRADING_COMPANY_DOMAIN,
         compute='_compute_company_id', store=True, readonly=False, precompute=True,
         help="Branch receiving the money. Taken from the customer, since a "
              "customer belongs to one branch.",

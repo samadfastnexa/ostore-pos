@@ -1,5 +1,5 @@
 from odoo import api, models, tools
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, UserError
 from odoo.tools.translate import _
 
 
@@ -67,6 +67,59 @@ class ResUsers(models.Model):
         if not self.env.user._is_system():
             raise AccessError(_("Only the Super Admin can set or reset a password. Please contact them."))
         super()._change_password(new_passwd)
+
+    def unlink(self):
+        """Keep at least one way back into the system.
+
+        Core protects four accounts by xmlid -- __system__, base.user_admin,
+        and the portal/public templates -- and nothing else. The account that
+        actually administers THIS database was created by hand, so it carries
+        no xmlid and core will delete it without a word. Nobody notices until
+        the next login, and by then the only account left holding Settings is
+        __system__, which has no usable password. That is a locked door with
+        the key on the inside.
+
+        Two ways in are shut here: deleting the last administrator, and
+        deleting the account you are signed in as. Both are recoverable only
+        from a database shell.
+
+        Written as unlink() rather than @api.ondelete deliberately: ondelete
+        methods have no guaranteed order between modules, so whichever fires
+        first decides the wording. unlink() runs before all of them and the
+        message is always this one.
+        """
+        if self.env.uid in self.ids:
+            raise UserError(_(
+                "You cannot delete the account you are signed in as. Ask "
+                "another administrator to do it after you have signed out, or "
+                "hide it instead."))
+
+        admin_group = self.env.ref('base.group_system', raise_if_not_found=False)
+        if admin_group:
+            doomed_admins = self.filtered(lambda u: admin_group in u.all_group_ids)
+            if doomed_admins:
+                # SUPERUSER_ID is excluded on purpose: it is Odoo's internal
+                # account for updates and module installs, has no password
+                # anyone can sign in with, and so is no way back in.
+                survivors = self.sudo().with_context(active_test=False).search_count([
+                    ('id', 'not in', self.ids + [api.SUPERUSER_ID]),
+                    ('all_group_ids', 'in', admin_group.id),
+                    ('share', '=', False),
+                ])
+                if not survivors:
+                    raise UserError(_(
+                        "%(names)s cannot be deleted, because that would leave "
+                        "nobody who can open Settings, add users or set "
+                        "passwords. You would be locked out of your own "
+                        "system, and only a technician with database access "
+                        "could let you back in.\n\n"
+                        "Give another user administrator rights first, then "
+                        "delete this one. Or just hide it: it stops being able "
+                        "to sign in, and its history stays intact.",
+                        names=", ".join(doomed_admins.mapped('login')),
+                    ))
+
+        return super().unlink()
 
     @tools.ormcache('self.id', 'fname')
     def _pos_retail_can_edit_price_field(self, fname):

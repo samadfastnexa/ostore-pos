@@ -1,5 +1,7 @@
 from odoo import api, fields, models
 
+from .res_company import TRADING_COMPANY_DOMAIN
+
 
 class ProductBrand(models.Model):
     _name = 'product.brand'
@@ -23,7 +25,7 @@ class ProductBrand(models.Model):
              "two brands may share the same name.",
     )
     company_id = fields.Many2one(
-        'res.company', string="Branch", index=True,
+        'res.company', string="Branch", domain=TRADING_COMPANY_DOMAIN, index=True,
         help="Branch that stocks this brand. Leave empty to offer it at every "
              "branch, which is right for most brands.",
     )

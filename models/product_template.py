@@ -1,6 +1,8 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
+from .res_company import TRADING_COMPANY_DOMAIN
+
 
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
@@ -16,7 +18,7 @@ class ProductTemplate(models.Model):
     )
     pos_retail_branch_ids = fields.Many2many(
         'res.company', 'pos_retail_product_branch_rel', 'product_tmpl_id', 'company_id',
-        string="Sell in Branches",
+        string="Sell in Branches", domain=TRADING_COMPANY_DOMAIN,
         help="Which branches offer this item at the till. Leave EMPTY to sell it "
              "everywhere, which is what most stock should be. Naming branches "
              "here hides it from the registers of every other branch -- use it "
