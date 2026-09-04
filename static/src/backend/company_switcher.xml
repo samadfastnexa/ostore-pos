@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!--
+        Show the last remaining company as locked on rather than as a checkbox
+        that quietly empties the session. The greyed .btn.disabled also stops
+        the click landing at all; company_switcher.js refuses the toggle anyway,
+        so the keyboard route is covered too.
+    -->
+    <t t-name="pos_retail.SwitchCompanyItem"
+       t-inherit="web.SwitchCompanyItem" t-inherit-mode="extension">
+
+        <xpath expr="//div[@role='menuitemcheckbox']" position="attributes">
+            <attribute name="t-att-class">{ 'border-primary': isCompanySelected, 'disabled': !isCompanyAllowed || posRetailIsLocked }</attribute>
+            <attribute name="t-att-title">posRetailIsLocked ? 'You are working in ' + props.company.name + '. Turn another company on before you can turn this one off.' : (isCompanySelected ? 'Hide ' : 'Show ') + props.company.name + ' content.'</attribute>
+        </xpath>
+
+        <xpath expr="//div[@role='menuitemcheckbox']/span" position="attributes">
+            <attribute name="t-att-class">isCompanyAllowed &amp;&amp; !posRetailIsLocked ? 'btn-link text-primary' : 'disabled'</attribute>
+        </xpath>
+
+    </t>
+
+</templates>

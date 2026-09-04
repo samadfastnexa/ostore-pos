@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.6.4.0',
+    'version': '19.0.6.5.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -123,6 +123,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/backend/whatsapp_widget.js',
             'pos_retail/static/src/backend/whatsapp_widget.xml',
             'pos_retail/static/src/backend/cog_menu.xml',
+            'pos_retail/static/src/backend/company_switcher.js',
+            'pos_retail/static/src/backend/company_switcher.xml',
             'pos_retail/static/src/backend/hide_messaging.js',
             'pos_retail/static/src/backend/hide_odoo_links.js',
             'pos_retail/static/src/backend/import_button.js',
