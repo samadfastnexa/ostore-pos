@@ -52,6 +52,10 @@
                 <attribute name="help">The name this person types to sign in. It does NOT have to be an email address: a plain name such as ali or cashier1 works, and is quicker to type at a busy counter. It only has to be different from every other user's. Adding an email as well is optional, and is what lets them reset their own password.</attribute>
             </xpath>
 
+            <xpath expr="//field[@name='company_id']" position="attributes">
+                <attribute name="domain">[('child_ids', '=', False)]</attribute>
+            </xpath>
+
         </field>
     </record>
 
@@ -67,6 +71,23 @@
             <xpath expr="//field[@name='login']" position="attributes">
                 <attribute name="placeholder">e.g. ali (an email is not needed)</attribute>
                 <attribute name="help">The name this person types to sign in. It does NOT have to be an email address: a plain name such as ali or cashier1 works, and is quicker to type at a busy counter. It only has to be different from every other user's. Adding an email as well is optional, and is what lets them reset their own password.</attribute>
+            </xpath>
+
+            <!-- Companies: offer the shops. The holding company sells nothing,
+                 so putting a person "in" it gives them a screen with no
+                 products, no till and no customers.
+
+                 Default Company is narrowed to the ones this user has been
+                 given above, which is what the field means and what Odoo's own
+                 constraint requires: your landing company has to be one you are
+                 allowed into. That alone keeps the holding company out of the
+                 New User form, because a new user starts with a shop. -->
+            <xpath expr="//field[@name='company_ids']" position="attributes">
+                <attribute name="domain">[('child_ids', '=', False)]</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='company_id']" position="attributes">
+                <attribute name="domain">[('id', 'in', company_ids)]</attribute>
             </xpath>
 
         </field>
