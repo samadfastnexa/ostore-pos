@@ -17,4 +17,59 @@
         </field>
     </record>
 
+    <!-- Say what the sign-in name really is.
+
+         The field on both user forms is `login`, not `email`. It is required
+         because nobody can sign in without one, but it is never checked for an
+         @ sign: a cashier called "ali" logs in perfectly well. The New dialog
+         dresses it as an email anyway, with an envelope icon and a placeholder
+         computed from the company's mail domain, so it reads as though an
+         email address is compulsory. Shop staff do not all have one, and
+         inventing fake addresses to get past a form is how you end up unable
+         to tell who is who.
+
+         Nothing about what is stored or required changes. Only the icon,
+         placeholder and tooltip, so whoever fills the form knows a plain name
+         is allowed. An email can still be added, and is what lets that person
+         reset their own password later. -->
+
+    <!-- The New dialog (base.view_users_simple_form). -->
+    <record id="view_users_simple_form_pos_retail_login" model="ir.ui.view">
+        <field name="name">res.users.simple.form.pos.retail.login</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_simple_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='email_domain_placeholder']/preceding-sibling::i[1]"
+                   position="attributes">
+                <attribute name="class">fa fa-fw me-1 fa-user text-primary</attribute>
+                <attribute name="title">Sign-in name</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='login']" position="attributes">
+                <attribute name="options">{}</attribute>
+                <attribute name="placeholder">e.g. ali (an email is not needed)</attribute>
+                <attribute name="help">The name this person types to sign in. It does NOT have to be an email address: a plain name such as ali or cashier1 works, and is quicker to type at a busy counter. It only has to be different from every other user's. Adding an email as well is optional, and is what lets them reset their own password.</attribute>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- The full user form (base.view_users_form). Core already labels this one
+         "Login" and swaps in a key icon when it is not an email, so only the
+         placeholder and the tooltip need saying more plainly. -->
+    <record id="view_users_form_pos_retail_login" model="ir.ui.view">
+        <field name="name">res.users.form.pos.retail.login</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='login']" position="attributes">
+                <attribute name="placeholder">e.g. ali (an email is not needed)</attribute>
+                <attribute name="help">The name this person types to sign in. It does NOT have to be an email address: a plain name such as ali or cashier1 works, and is quicker to type at a busy counter. It only has to be different from every other user's. Adding an email as well is optional, and is what lets them reset their own password.</attribute>
+            </xpath>
+
+        </field>
+    </record>
+
 </odoo>

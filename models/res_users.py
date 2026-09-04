@@ -1,10 +1,35 @@
-from odoo import api, models, tools
+from odoo import api, fields, models, tools
 from odoo.exceptions import AccessError, UserError
 from odoo.tools.translate import _
 
 
 class ResUsers(models.Model):
     _inherit = 'res.users'
+
+    def _pos_retail_default_company(self):
+        """Land a new user in a shop rather than the holding company.
+
+        Core defaults both company fields to self.env.company, so a user
+        created while the owner happens to be switched to MURSHID Company is
+        put there too -- a company with no till, no shelves and next to no
+        products. The new cashier then signs in to an empty screen and nothing
+        explains it.
+
+        The parent is still offered in the dropdown on purpose. It holds the
+        chart of accounts, the NTN and the taxes, so somebody has to be able to
+        work in it; filtering it out would make the legal entity impossible to
+        administer. Only the starting point moves.
+        """
+        company = self.env.company
+        if not company.child_ids:
+            return company                      # already a shop, or a plain single company
+        shops = self.env.user.company_ids.filtered(lambda c: not c.child_ids)
+        return shops[0] if shops else company
+
+    company_id = fields.Many2one(
+        default=lambda self: self._pos_retail_default_company().id)
+    company_ids = fields.Many2many(
+        default=lambda self: self._pos_retail_default_company().ids)
 
     @api.model_create_multi
     def create(self, vals_list):
