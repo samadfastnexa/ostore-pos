@@ -1,6 +1,10 @@
 import { patch } from "@web/core/utils/patch";
 import { user } from "@web/core/user";
-import { CompanySelector } from "@web/webclient/switch_company_menu/switch_company_menu";
+import {
+    CompanySelector,
+    SwitchCompanyMenu,
+    systrayItem,
+} from "@web/webclient/switch_company_menu/switch_company_menu";
 import { SwitchCompanyItem } from "@web/webclient/switch_company_menu/switch_company_item";
 
 /**
@@ -82,5 +86,38 @@ patch(CompanySelector.prototype, {
 patch(SwitchCompanyItem.prototype, {
     get posRetailIsLocked() {
         return this.companySelector.posRetailIsLastStanding(this.props.company.id);
+    },
+});
+
+/**
+ * Take the switcher away entirely from anyone who works in one shop.
+ *
+ * Core decides "nothing to switch between" by counting
+ * allowedCompaniesWithAncestors, and that includes
+ * disallowed_ancestor_companies -- the parent, carried along purely so the
+ * tree has a heading. A cashier granted one branch therefore counts as two, so
+ * the control stays live and opens on MURSHID Company sitting above their
+ * shop: a company they cannot select, cannot use, and have no reason to know
+ * exists.
+ *
+ * Disabling the button is not enough on its own. The component also registers
+ * a "Switch Company" command on alt+shift+u (switch_company_menu.js:211) whose
+ * action calls dropdown.open() directly, and that path never consults
+ * isSingleCompany -- so the dropdown opens anyway from the keyboard or the
+ * command palette, greyed button or not.
+ *
+ * Not mounting the component closes every route at once: no button, no hotkey,
+ * no command-palette entry, because useCommand only registers on mount.
+ * Mutating isDisplayed is how core itself drops a systray item
+ * (navbar.js:82), and navbar.js:111 re-reads it on every render.
+ *
+ * The mobile burger menu needs nothing: it already guards on
+ * allowedCompanies.length > 1 (burger_menu.xml:26), which is the correct test.
+ */
+systrayItem.isDisplayed = () => user.allowedCompanies.length > 1;
+
+patch(SwitchCompanyMenu.prototype, {
+    get isSingleCompany() {
+        return user.allowedCompanies.length <= 1;
     },
 });

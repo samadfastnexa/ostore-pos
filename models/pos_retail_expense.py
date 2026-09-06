@@ -1,6 +1,8 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
+from .res_company import TRADING_COMPANY_DOMAIN, pos_retail_trading_company
+
 EXPENSE_CATEGORIES = [
     ('rent', 'Rent'),
     ('electricity', 'Electricity'),
@@ -74,10 +76,15 @@ class PosRetailExpense(models.Model):
              "printed for a customer.",
     )
     company_id = fields.Many2one(
-        'res.company', default=lambda self: self.env.company, required=True,
-        help="The company whose books this expense is recorded against. It only "
-             "matters if you run more than one company in the system; otherwise "
-             "leave it as it is.",
+        'res.company', string="Branch", required=True,
+        domain=TRADING_COMPANY_DOMAIN,
+        default=lambda self: pos_retail_trading_company(self.env),
+        help="The branch that paid for this. Rent, electricity, salaries and "
+             "fuel are a shop's costs, so they belong to a shop.\n\n"
+             "This matters more than it looks: an expense booked against the "
+             "parent company shows up in neither branch's expense list and in "
+             "neither branch's profit, because each branch only sees its own. "
+             "Money spent, recorded, and then invisible.",
     )
     active = fields.Boolean(
         default=True,

@@ -1,6 +1,10 @@
+import re
+
 from odoo import api, fields, models, tools
 from odoo.exceptions import AccessError, UserError
 from odoo.tools.translate import _
+
+from .res_company import TRADING_COMPANY_DOMAIN, pos_retail_trading_company
 
 
 class ResUsers(models.Model):
@@ -13,23 +17,137 @@ class ResUsers(models.Model):
         created while the owner happens to be switched to MURSHID Company is
         put there too -- a company with no till, no shelves and next to no
         products. The new cashier then signs in to an empty screen and nothing
-        explains it.
+        explains it. Only the starting point moves; see
+        pos_retail_assignable_company_ids for what may still be chosen.
 
-        The parent is still offered in the dropdown on purpose. It holds the
-        chart of accounts, the NTN and the taxes, so somebody has to be able to
-        work in it; filtering it out would make the legal entity impossible to
-        administer. Only the starting point moves.
+        prefer_member_shop, because this default also has to sit inside
+        pos_retail_assignable_company_ids -- falling back to the holding
+        company here would put a value in the field that its own dropdown
+        refuses to offer.
         """
-        company = self.env.company
-        if not company.child_ids:
-            return company                      # already a shop, or a plain single company
-        shops = self.env.user.company_ids.filtered(lambda c: not c.child_ids)
-        return shops[0] if shops else company
+        return pos_retail_trading_company(self.env, prefer_member_shop=True)
 
     company_id = fields.Many2one(
         default=lambda self: self._pos_retail_default_company().id)
     company_ids = fields.Many2many(
         default=lambda self: self._pos_retail_default_company().ids)
+
+    pos_retail_assignable_company_ids = fields.Many2many(
+        'res.company', string="Assignable Companies", compute_sudo=True,
+        compute='_compute_pos_retail_assignable_company_ids',
+        help="Technical: the companies the Companies field may offer for this "
+             "person. Shops for everyone; administrators may also be put in "
+             "the holding company, since that is where the chart of accounts "
+             "and the taxes are maintained.")
+
+    @api.depends('all_group_ids')
+    def _compute_pos_retail_assignable_company_ids(self):
+        """Offer shops to everyone, and the holding company to administrators.
+
+        A flat "shops only" rule here is a one-way door, and a bad one. There
+        is no other way back in: res.company.user_ids appears on no company
+        form, My Profile carries no company field, and the users list exposes
+        Companies only as a search filter. env.company comes from
+        allowed_company_ids, which comes from this very field, so a holding
+        company nobody holds is a holding company nobody can administer -- no
+        taxes, no chart of accounts, no year end. Remove it from the last
+        administrator by accident and only a database shell puts it back.
+
+        Nothing is lost by leaving it out for everyone else: branches already
+        reach the parent's journals, accounts, taxes and fiscal positions
+        through core's parent_of rules WITHOUT holding it, so a cashier gains
+        nothing from the parent and only stands to be dropped into a company
+        with no till.
+        """
+        Company = self.env['res.company'].sudo()
+        shops = Company.search(TRADING_COMPANY_DOMAIN)
+        holdings = Company.search([('child_ids', '!=', False)])
+        for user in self:
+            # has_group(), not `group in all_group_ids`: on a record still
+            # being filled in on screen the membership test has to resolve the
+            # pending Role radio, and comparing recordsets does not -- flipping
+            # Role to Administrator would leave the holding company hidden.
+            extra = holdings if user.has_group('base.group_system') else Company.browse()
+            user.pos_retail_assignable_company_ids = shops | extra
+
+    def _pos_retail_login_from_name(self, name, taken=()):
+        """Build a sign-in name out of a person's name: "Cashier Ali" -> cashier.ali.
+
+        Anything that is not a letter or a digit becomes a dot, so Urdu-English
+        spellings, double spaces and stray punctuation all land on something
+        typeable at a counter. If the result is already taken a number is
+        appended, checked against hidden users too -- a login stays reserved
+        after someone is hidden, and colliding with one raises a database error
+        that says nothing useful.
+
+        `taken` carries the names handed out earlier in the same create() batch.
+        Without it two people called Ali imported together both derive "ali",
+        because neither is in the database yet when the other is worked out, and
+        the whole import dies on a bare psycopg2 unique violation naming a
+        constraint rather than either person.
+        """
+        base = re.sub(r'[^a-z0-9]+', '.', (name or '').strip().lower()).strip('.')
+        if not base:
+            return False
+        Users = self.env['res.users'].sudo().with_context(active_test=False)
+        taken = set(taken)
+        candidate, n = base, 1
+        while candidate in taken or Users.search_count([('login', '=', candidate)]):
+            n += 1
+            candidate = '%s%s' % (base, n)
+        return candidate
+
+    def _pos_retail_apply_password(self, password):
+        """Store a password the way core's own wizard finally does.
+
+        Straight to the hash, skipping the compute/inverse pair entirely, so
+        there is nothing left to race. Same guards core applies: only an
+        administrator may set one, and never your own -- changing the password
+        of the session you are sitting in logs you out mid-request, which is
+        why core routes that through its wizard instead.
+        """
+        self.ensure_one()
+        if not self.env.user._is_system():
+            raise AccessError(_(
+                "Only the Super Admin can set or reset a password. Please contact them."))
+        if self.id == self.env.uid:
+            raise UserError(_(
+                "To change your own password, use Change Password on your own "
+                "profile. Setting it here would sign you out halfway through."))
+        self.sudo()._set_encrypted_password(
+            self.id, self._crypt_context().hash(password))
+
+    def write(self, vals):
+        # Same handling as create(): take the password out and apply it after,
+        # because core's new_password inverse silently does nothing here. A
+        # password typed on an existing user's form would otherwise look saved
+        # and change nothing at all, which is worse than not offering the box.
+        password = (vals.pop('new_password', '') or '').strip()
+        res = super().write(vals)
+        if password:
+            for user in self:
+                user._pos_retail_apply_password(password)
+        return res
+
+    @api.onchange('name')
+    def _pos_retail_onchange_name_fills_login(self):
+        """Fill the sign-in name in as the person's name is typed.
+
+        `login` is required by the model, and a view cannot relax that -- the
+        web client blocks Save with "Missing required fields" and reddens a box
+        wearing an envelope icon, which reads as "an email address is
+        compulsory". It is not, but the form gives no way to learn that.
+
+        Filling it here rather than only in create() means the value appears on
+        screen while the form is still open, so it can be seen, corrected or
+        replaced before saving instead of being decided invisibly. Anything
+        already typed is left alone, so this only ever helps an empty box.
+        """
+        for user in self:
+            if user.name and not (user.login or '').strip():
+                derived = user._pos_retail_login_from_name(user.name)
+                if derived:
+                    user.login = derived
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -42,8 +160,52 @@ class ResUsers(models.Model):
         managers only" over an empty screen -- every time, forever. Deciding
         per user at create time is the fix; a blanket default cannot know
         which groups the user ended up in.
+
+        It also fills in a missing sign-in name. `login` is required by the
+        model, so leaving it blank stopped the save dead with "Missing required
+        fields", pointing at a box wearing an envelope icon -- which reads as
+        "an email address is compulsory", and it is not. Shop staff do not all
+        have an email, and typing one for every cashier is friction at a
+        counter with a queue. Type the person's name, press Save, and the login
+        comes from the name; type a login yourself and it is left alone.
         """
+        # Taken out of the values and applied after the record exists. Core's
+        # own new_password field is unreliable through a form save: it shares
+        # _compute_password with `password`, and that compute blanks BOTH. On a
+        # full create the compute wins the race against _set_new_password, which
+        # then reads an empty string and skips -- the form sends the password,
+        # the server accepts the save, and the person still cannot sign in.
+        # Verified against the real payload: new_password arrives with its
+        # value, and nothing is stored. Applying it ourselves is deterministic.
+        passwords = [(vals.pop('new_password', '') or '').strip() for vals in vals_list]
+
+        # Names handed out in this batch are not in the database yet, so they
+        # have to be remembered here or two people with the same name collide.
+        taken = set()
+        for vals in vals_list:
+            if (vals.get('login') or '').strip():
+                taken.add(vals['login'].strip())
+                continue
+            derived = self._pos_retail_login_from_name(vals.get('name'), taken=taken)
+            if derived:
+                vals['login'] = derived
+                taken.add(derived)
+            else:
+                # Only reachable when the name is blank or has no letters or
+                # digits in it at all -- an import, say. Left alone this is a
+                # not-null violation on a column nobody has heard of.
+                raise UserError(_(
+                    "Give this person a name, or a sign-in name of your own. "
+                    "The sign-in name is normally made from the name, but "
+                    "%(name)r leaves nothing to make one out of.",
+                    name=vals.get('name') or ""))
+
         users = super().create(vals_list)
+
+        for user, password in zip(users, passwords):
+            if password:
+                user._pos_retail_apply_password(password)
+
         dashboard = self.env.ref('pos_retail.action_pos_retail_dashboard',
                                  raise_if_not_found=False)
         if not dashboard:

@@ -25,4 +25,20 @@
         </xpath>
     </template>
 
+    <!-- The sign-in box asks for a login, not an email, and never checks for an
+         @ sign. Counter staff sign in as "ali" or "cashier"; only the owner's
+         account happens to be an email address. Labelling it Email tells every
+         cashier the shop has, twice a day, that they are missing something they
+         do not need, and pushes whoever sets them up towards inventing fake
+         addresses to satisfy the form. Once that starts, nobody can tell who is
+         who. Say what the box actually wants. -->
+    <template id="login_username_label" inherit_id="web.login" name="OStore Login Username Label">
+        <xpath expr="//input[@name='login']/preceding-sibling::label[1]" position="replace">
+            <label for="login" class="form-label d-flex justify-content-between">Username</label>
+        </xpath>
+        <xpath expr="//input[@name='login']" position="attributes">
+            <attribute name="placeholder">Your username, or your email</attribute>
+        </xpath>
+    </template>
+
 </odoo>

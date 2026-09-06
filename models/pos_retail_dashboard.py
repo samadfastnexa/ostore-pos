@@ -92,15 +92,32 @@ class PosRetailDashboard(models.AbstractModel):
         # queries: allowed_company_ids is what the multi-company record rules
         # actually read, and with_company fixes the currency the totals are
         # expressed in.
+        # The access check runs against everything this user holds, NOT the
+        # filtered shop list below. A stale branch id sitting in a browser tab
+        # must not start raising "no access" about a company they demonstrably
+        # do have.
         branches = self.env.user.company_ids
+        shops = branches.filtered(lambda c: not c.child_ids)
+        selected = branches.browse()
         if company_id:
             branch = branches.filtered(lambda c: c.id == int(company_id))
+            selected = branch
             if not branch:
                 # Never fall back to "all branches" here: silently widening the
                 # scope would show a manager takings from a branch they were
                 # not granted, which is exactly what company_ids exists to stop.
                 raise AccessError(_("You do not have access to that branch."))
             self = self.with_company(branch).with_context(allowed_company_ids=branch.ids)
+        # With no branch picked the environment is deliberately left ALONE, so
+        # the figures cover exactly what the company switcher has on. An
+        # earlier attempt forced the scope to the shop list here, and it went
+        # wrong three ways at once: MURSHID still holds two closed-till sales
+        # and the only stock scrap in the database, so a total labelled the
+        # whole business quietly lost them; every drill-through opened under
+        # the switcher instead and so disagreed with the tile above it; and
+        # pinning env.company to one shop valued stock from all shops against
+        # that one company's cost book, since standard_price is
+        # company-dependent. Naming the scope honestly costs none of that.
 
         if period not in ('today', 'week', 'month', 'custom'):
             period = 'month'
@@ -128,11 +145,25 @@ class PosRetailDashboard(models.AbstractModel):
             'period_end': fields.Datetime.to_string(end) if end else False,
             'drill': self._get_drill_targets(start, end, movement),
             'currency_id': self.env.company.currency_id.id,
-            'company_name': self.env.company.name,
+            # Name what the figures below ACTUALLY cover. With no branch
+            # chosen that is every company currently switched on, which is not
+            # always every branch -- so say which ones rather than printing a
+            # single shop's name, or a blanket "All Branches" that a narrowed
+            # switcher would turn into a quiet lie.
+            'company_name': selected.name if selected
+                            else ", ".join(self.env.companies.mapped('name')),
             # Drives the branch dropdown. Only the branches this user may see,
-            # so the list itself never leaks the existence of others.
-            'company_id': self.env.company.id,
-            'branches': [{'id': c.id, 'name': c.name} for c in branches],
+            # so the list itself never leaks the existence of others -- and
+            # only the ones that actually trade. The holding company has no
+            # till, no shelves and no expenses, so choosing it returned a
+            # screen of zeroes with nothing to say why.
+            #
+            # False means no branch is chosen, which the dropdown shows as
+            # "All Branches" and which every figure below is already scoped to.
+            # That consolidated view is the whole-business number, and it is
+            # the one the dashboard opens on.
+            'company_id': selected.id if selected else False,
+            'branches': [{'id': c.id, 'name': c.name} for c in shops],
             'kpis': kpis,
             'trend': self._get_trend(period, start, end, today_local, kpis),
             'sales_trend': self._get_sales_trend(trend_start),

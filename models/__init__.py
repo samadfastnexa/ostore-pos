@@ -32,3 +32,5 @@ from . import pos_retail_dashboard
 from . import pos_retail_ledger_adjustment
 from . import pos_retail_khata_payment
 from . import res_users
+from . import branch_company_pickers
+from . import auditlog_patch

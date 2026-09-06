@@ -40,6 +40,10 @@ How to use: switch Today/Week/Month/Custom above to change the period; click any
                     <select class="form-select form-select-sm w-auto"
                             t-if="state.data and state.data.branches and state.data.branches.length > 1"
                             t-on-change="(ev) => this.setBranch(ev.target.value)">
+                        <!-- The whole business added together, and what the
+                             dashboard opens on. Without it the only way back
+                             from a single branch would be a page reload. -->
+                        <option value="" t-att-selected="!state.data.company_id">All Branches</option>
                         <option t-foreach="state.data.branches" t-as="branch" t-key="branch.id"
                                 t-att-value="branch.id"
                                 t-att-selected="branch.id === state.data.company_id">

@@ -41,9 +41,12 @@ export class PosRetailDashboard extends Component {
         this.state.data = await this.orm.call(
             "pos.retail.dashboard", "get_dashboard_data", [this.state.period], kwargs
         );
-        // First load has no branch chosen yet; adopt whichever one the server
-        // resolved so the dropdown opens on the branch actually being shown.
-        if (!this.state.branchId) {
+        // First load asks for no particular branch and the server answers with
+        // the whole business, so leave branchId null and let the dropdown show
+        // "All Branches". Only adopt a server-resolved branch when there is
+        // actually one, or the null would be overwritten with false and the
+        // All option could never be re-selected.
+        if (!this.state.branchId && this.state.data.company_id) {
             this.state.branchId = this.state.data.company_id;
         }
         this.state.trend = this.state.data.trend || {};
@@ -51,8 +54,12 @@ export class PosRetailDashboard extends Component {
     }
 
     setBranch(value) {
-        const branchId = parseInt(value, 10);
-        if (!branchId || branchId === this.state.branchId) {
+        // An empty value is the "All Branches" option, and null is how load()
+        // says "send no company_id". Treating a falsy id as "ignore this",
+        // which the old guard did, made All unreachable once a branch had been
+        // picked: there was no way back to the whole-business figures.
+        const branchId = value ? parseInt(value, 10) : null;
+        if (branchId === this.state.branchId) {
             return;
         }
         this.state.branchId = branchId;

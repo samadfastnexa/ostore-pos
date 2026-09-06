@@ -56,6 +56,14 @@
                 <attribute name="domain">[('child_ids', '=', False)]</attribute>
             </xpath>
 
+            <xpath expr="//field[@name='phone']/.." position="after">
+                <div class="d-flex align-items-baseline w-100" invisible="id == uid">
+                    <i class="fa fa-fw me-1 fa-lock text-primary" title="Password"/>
+                    <field name="new_password" password="True" class="w-100"
+                           placeholder="Set a password"/>
+                </div>
+            </xpath>
+
         </field>
     </record>
 
@@ -70,20 +78,64 @@
 
             <xpath expr="//field[@name='login']" position="attributes">
                 <attribute name="placeholder">e.g. ali (an email is not needed)</attribute>
-                <attribute name="help">The name this person types to sign in. It does NOT have to be an email address: a plain name such as ali or cashier1 works, and is quicker to type at a busy counter. It only has to be different from every other user's. Adding an email as well is optional, and is what lets them reset their own password.</attribute>
+                <attribute name="help">The name this person types to sign in. It does NOT have to be an email address: a plain name such as ali or cashier1 works, and is quicker to type at a busy counter. Leave it blank and it is made from the person's name. It only has to be different from every other user's. Adding an email as well is optional, and is what lets them reset their own password.</attribute>
             </xpath>
 
-            <!-- Companies: offer the shops. The holding company sells nothing,
-                 so putting a person "in" it gives them a screen with no
-                 products, no till and no customers.
+            <!-- Core shows an envelope whenever login equals email, and on a
+                 blank new record both are empty, so a form that has never seen
+                 an email address still announces itself with one. Selected by
+                 position, two icons back from the login box, because Odoo does
+                 not allow title or class as an inheritance selector. -->
+            <xpath expr="//field[@name='login']/preceding-sibling::i[2]"
+                   position="attributes">
+                <attribute name="class">fa fa-fw fa-user me-1 text-primary</attribute>
+                <attribute name="title">Sign-in name</attribute>
+            </xpath>
 
-                 Default Company is narrowed to the ones this user has been
-                 given above, which is what the field means and what Odoo's own
-                 constraint requires: your landing company has to be one you are
-                 allowed into. That alone keeps the holding company out of the
-                 New User form, because a new user starts with a shop. -->
+            <!-- Companies: shops for everyone, plus the holding company for
+                 administrators. Filtering the parent out for EVERY user would
+                 be a one-way door: there is no other screen anywhere that can
+                 grant a company back, and without it in Companies the legal
+                 entity cannot be administered at all. See
+                 _compute_pos_retail_assignable_company_ids.
+
+                 Default Company is narrowed to the ones this person has
+                 actually been given above, which is what the field means and
+                 what Odoo's own constraint requires: your landing company has
+                 to be one you are allowed into. That alone keeps the holding
+                 company off the New User form, because a new user starts in a
+                 shop. -->
+            <!-- Set the password while creating the person, not afterwards.
+
+                 Core's only password control lives on the Security page, which
+                 carries invisible="not id", so it does not exist until the
+                 record has been saved. So making a cashier was: fill the form,
+                 save, hunt for Actions or the Security tab, open a dialog, type
+                 the password, confirm. Five steps to hand someone a till.
+
+                 `new_password` is core's own field for this, and its help says
+                 so: "Specify a value only when creating a user or if you're
+                 changing the user's password". It was simply never put on a
+                 form. Blank is ignored silently, so it costs nothing when
+                 editing someone for another reason.
+
+                 Hidden on your own record, where core requires the wizard so
+                 the running session keeps working. -->
+            <xpath expr="//field[@name='phone']/.." position="after">
+                <h5 name="pos_retail_h5_password" class="d-flex flex-wrap align-items-baseline mb-0"
+                    invisible="id == uid">
+                    <i class="fa fa-fw fa-lock me-1 text-primary" title="Password"/>
+                    <field name="new_password" password="True" class="w-75"
+                           placeholder="Set a password"/>
+                </h5>
+            </xpath>
+
+            <xpath expr="//field[@name='company_ids']" position="before">
+                <field name="pos_retail_assignable_company_ids" invisible="1"/>
+            </xpath>
+
             <xpath expr="//field[@name='company_ids']" position="attributes">
-                <attribute name="domain">[('child_ids', '=', False)]</attribute>
+                <attribute name="domain">[('id', 'in', pos_retail_assignable_company_ids)]</attribute>
             </xpath>
 
             <xpath expr="//field[@name='company_id']" position="attributes">
