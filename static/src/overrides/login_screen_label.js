@@ -11,11 +11,14 @@ import { LoginScreen } from "@point_of_sale/app/screens/login_screen/login_scree
 //
 // "Back Office" replaced it and was rejected too, which is the useful part:
 // that is retail-software jargon, and someone who has not worked in retail
-// software does not know what is behind it either. "Admin Panel" is the
-// phrase the people using this shop actually say, so it is the one that
-// belongs on the button -- not the one that reads best to whoever wrote it.
+// software does not know what is behind it either.
+//
+// Both names now, because the shop asked for both and the reason is sound:
+// staff here do not share one vocabulary, and a button on a lock screen has
+// to be recognised by whoever is standing at it, not be elegant. Two familiar
+// words beat one word half of them would have to guess at.
 patch(LoginScreen.prototype, {
     get backBtnName() {
-        return _t("Admin Panel");
+        return _t("Admin Panel / Control Center");
     },
 });
