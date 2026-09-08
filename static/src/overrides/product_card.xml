@@ -25,10 +25,10 @@
                      sets no position of its own, so top-0/start-0 still
                      measure from the whole card, not from partway down the
                      text column. -->
-                <span t-if="posRetailInfo.campaignPercent"
+                <span t-if="posRetailInfo.campaignBadge"
                       class="pos-retail-card-campaign position-absolute top-0 start-0 m-1 px-2 rounded-pill text-white fw-bolder"
-                      t-attf-title="{{posRetailInfo.campaignPercent}}% off right now">
-                    <t t-esc="posRetailInfo.campaignPercent"/>% OFF
+                      t-attf-title="{{posRetailInfo.campaignBadge}} right now">
+                    <t t-esc="posRetailInfo.campaignBadge"/>
                 </span>
                 <div class="pos-retail-card-price">
                     <t t-esc="posRetailInfo.price"/><small t-if="posRetailInfo.priceSuffix"

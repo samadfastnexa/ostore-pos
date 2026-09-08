@@ -88,25 +88,26 @@ patch(ProductCard.prototype, {
             && product.pos_retail_measurement_type !== "piece";
         const uom = measured ? product.uom_id?.name || "" : "";
 
-        // A live brand campaign, so a cashier sees the offer sitting on the
-        // shelf grid -- not just as a smaller number after it is already rung
-        // up. Percent only: this badge names the OFFER, not the arithmetic
-        // that later folds it into one combined "Discount" line on the bill.
-        const campaignPercent = this.env.services?.pos?.posRetailCampaignPercentForProduct?.(
-            product
-        ) || 0;
+        // A live promotion, so a cashier sees the offer sitting on the shelf
+        // grid -- not just as a smaller number after it is already rung up.
+        // The badge names the OFFER ("10% OFF", "Rs 50 OFF", a fixed price),
+        // not the arithmetic that later folds it into one combined "Discount"
+        // line on the bill. Built in the store rather than here because what
+        // it should read depends on which of the three kinds of promotion
+        // wins for this product.
+        const campaignBadge = this.env.services?.pos?.posRetailCampaignBadge?.(product) || "";
 
         return {
             price: this.posRetailCardPrice(product, format),
             uom,
             priceSuffix: uom ? ` / ${uom}` : "",
+            campaignBadge,
             hasRange,
             range,
             isStorable: Boolean(product.is_storable),
             qty,
             // Stock in the unit it is actually counted in: "125 m", not "125".
             qtyLabel: uom ? `${qty} ${uom}` : String(qty),
-            campaignPercent,
         };
     },
 });

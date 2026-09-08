@@ -63,58 +63,103 @@ patch(PosStore.prototype, {
         return (order.lines || []).filter((line) => line.product_id?.id === product.id);
     },
 
-    /** Campaigns whose window actually covers today, at THIS branch. */
+    /** Promotions whose window covers this MOMENT, at THIS branch.
+     *
+     *  Compared against the clock, not against midnight: the shop can start
+     *  an offer at 6pm or end it at closing time, and rounding either end to
+     *  a whole day would run it early and leave it running late. */
     get posRetailLiveCampaigns() {
         const model = this.models["pos.retail.brand.campaign"];
         if (!model) {
             return [];
         }
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return model.getAll().filter((campaign) => {
-            const start = campaign.date_start ? new Date(campaign.date_start) : null;
-            const end = campaign.date_end ? new Date(campaign.date_end) : null;
-            return (!start || start <= today) && (!end || end >= today);
+        const now = new Date();
+        return model.getAll().filter((promo) => {
+            if (promo.active === false) {
+                return false;
+            }
+            const start = promo.date_start ? new Date(promo.date_start) : null;
+            const end = promo.date_end ? new Date(promo.date_end) : null;
+            return (!start || start <= now) && (!end || end >= now);
         });
     },
 
     /**
-     * product.template id -> the best (largest) live discount percent for it.
+     * product.template id -> the promotion that wins for it.
      *
-     * "Best" rather than "summed": two suppliers running campaigns on the same
-     * item at once is not something this shop asked for, and adding them
-     * together would silently discount a product further than either offer
-     * actually promises. The customer gets the better of the two, not both.
+     * "Wins" rather than "all of them applied": two offers covering the same
+     * item at once is not something a shop asks for, and adding them together
+     * would discount further than either promise. Compared on what each is
+     * actually worth for one unit at the CURRENT price, because that is the
+     * only way to rank a percentage against a flat amount against a fixed
+     * price without pretending they are the same kind of number.
      */
-    get posRetailCampaignPercentByTemplate() {
-        const map = new Map();
-        for (const campaign of this.posRetailLiveCampaigns) {
-            const pct = campaign.discount_percent || 0;
-            if (pct <= 0) {
+    posRetailCampaignFor(tmplId, unitPrice) {
+        let best = null;
+        let bestOff = 0;
+        for (const promo of this.posRetailLiveCampaigns) {
+            if (!(promo._product_tmpl_ids || []).includes(tmplId)) {
                 continue;
             }
-            for (const tmplId of campaign._product_tmpl_ids || []) {
-                if (!map.has(tmplId) || map.get(tmplId) < pct) {
-                    map.set(tmplId, pct);
-                }
+            const off = this.posRetailUnitDiscount(promo, unitPrice);
+            if (off > bestOff) {
+                best = promo;
+                bestOff = off;
             }
         }
-        return map;
+        return best ? { promo: best, unitOff: bestOff } : null;
     },
 
-    /** The live campaign percent for one product, or 0 if none applies. Used
-     *  by the catalogue badge so a cashier can see an offer before it is even
-     *  on a bill.
+    /**
+     * What one promotion takes off ONE unit at a given price.
+     *
+     * A fixed selling price is expressed as the difference from the normal
+     * price, not by rewriting the line: the receipt then shows what the item
+     * normally costs and what was saved, which is the whole reason this shop
+     * wanted one combined discount line rather than quietly cheaper prices.
+     * Never negative -- an offer that would RAISE a price is not an offer, so
+     * it takes nothing off rather than charging extra.
+     */
+    posRetailUnitDiscount(promo, unitPrice) {
+        const value = promo.discount_value || 0;
+        if (value <= 0) {
+            return 0;
+        }
+        if (promo.discount_type === "percent") {
+            return (unitPrice || 0) * (value / 100);
+        }
+        if (promo.discount_type === "amount") {
+            return Math.min(value, unitPrice || 0);
+        }
+        if (promo.discount_type === "fixed_price") {
+            return Math.max(0, (unitPrice || 0) - value);
+        }
+        return 0;
+    },
+
+    /** What the catalogue badge should say for a product, or "" for none.
      *
      *  Takes a product.template -- what the ProductCard is actually given
      *  (see product_card.js's own comment) -- so `product.id` IS the template
      *  id already; no `.product_tmpl_id` hop, unlike an order line's
      *  product.product variant. */
-    posRetailCampaignPercentForProduct(product) {
+    posRetailCampaignBadge(product) {
         if (!product) {
-            return 0;
+            return "";
         }
-        return this.posRetailCampaignPercentByTemplate.get(product.id) || 0;
+        const price = product.list_price ?? product.lst_price ?? 0;
+        const hit = this.posRetailCampaignFor(product.id, price);
+        if (!hit) {
+            return "";
+        }
+        const promo = hit.promo;
+        if (promo.discount_type === "percent") {
+            return `${promo.discount_value}% OFF`;
+        }
+        if (promo.discount_type === "fixed_price") {
+            return this.env.utils.formatCurrency(promo.discount_value);
+        }
+        return `${this.env.utils.formatCurrency(promo.discount_value)} OFF`;
     },
 
     /**
@@ -142,11 +187,7 @@ patch(PosStore.prototype, {
      * right.
      */
     posRetailCampaignDiscountAmount(order) {
-        if (!order) {
-            return 0;
-        }
-        const percentByTemplate = this.posRetailCampaignPercentByTemplate;
-        if (!percentByTemplate.size) {
+        if (!order || !this.posRetailLiveCampaigns.length) {
             return 0;
         }
         const discountLines = this.posRetailDiscountLines(order);
@@ -157,12 +198,24 @@ patch(PosStore.prototype, {
                 continue; // never discount a discount line
             }
             const tmplId = line.product_id?.product_tmpl_id?.id;
-            const pct = tmplId ? percentByTemplate.get(tmplId) : undefined;
-            if (!pct) {
+            if (!tmplId) {
                 continue;
             }
-            const included = byUuid[line.uuid]?.tax_details?.total_included || 0;
-            amount += included * (pct / 100);
+            const qty = line.getQuantity ? line.getQuantity() : line.qty || 0;
+            if (qty <= 0) {
+                continue; // a refund line is not an opportunity to discount
+            }
+            // Per UNIT, at the price actually being charged on this line --
+            // not the catalogue price. The cashier may have keyed a different
+            // figure through the price popup, and a promotion has to come off
+            // what the customer is really being asked to pay, or a percentage
+            // and a fixed price disagree about the same sale.
+            const lineTotal = byUuid[line.uuid]?.tax_details?.total_included || 0;
+            const unitPrice = lineTotal / qty;
+            const hit = this.posRetailCampaignFor(tmplId, unitPrice);
+            if (hit) {
+                amount += hit.unitOff * qty;
+            }
         }
         return amount;
     },

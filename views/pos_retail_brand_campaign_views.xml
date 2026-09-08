@@ -2,15 +2,16 @@
 <odoo>
 
     <record id="pos_retail_brand_campaign_view_list" model="ir.ui.view">
-        <field name="name">pos.retail.brand.campaign.list</field>
+        <field name="name">pos.retail.promotion.list</field>
         <field name="model">pos.retail.brand.campaign</field>
         <field name="arch" type="xml">
-            <list string="Brand Discount Campaigns" decoration-muted="state == 'finished'"
+            <list string="Promotions" decoration-muted="state == 'finished'"
                   decoration-info="state == 'scheduled'">
                 <field name="name"/>
-                <field name="brand_id"/>
-                <field name="product_count"/>
-                <field name="discount_percent" string="Discount %"/>
+                <field name="scope" string="Applies To"/>
+                <field name="product_count" string="Products"/>
+                <field name="discount_type" string="Type"/>
+                <field name="discount_value" string="Value"/>
                 <field name="date_start"/>
                 <field name="date_end"/>
                 <field name="company_id" string="Branch" optional="show"/>
@@ -23,13 +24,11 @@
     </record>
 
     <record id="pos_retail_brand_campaign_view_form" model="ir.ui.view">
-        <field name="name">pos.retail.brand.campaign.form</field>
+        <field name="name">pos.retail.promotion.form</field>
         <field name="model">pos.retail.brand.campaign</field>
         <field name="arch" type="xml">
-            <form string="Brand Discount Campaign">
+            <form string="Promotion">
                 <header>
-                    <field name="state" widget="statusbar" statusbar_visible="scheduled,running,finished"
-                           invisible="1"/>
                     <span class="o_stat_text">
                         <field name="state" widget="badge"
                                decoration-success="state == 'running'"
@@ -38,16 +37,19 @@
                     </span>
                 </header>
                 <sheet>
+                    <widget name="web_ribbon" title="Inactive" bg_color="text-bg-danger"
+                            invisible="active"/>
                     <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
                         <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
                         <div>
-                            <strong>Purpose:</strong> a supplier's own offer on their brand, e.g.
-                            "Sonex, 10% off, for 15 days" -- applied automatically at the till for
-                            every sale in that window, no cashier action needed.<br/>
-                            <strong>How to use:</strong> pick the brand, a percentage, and how long
-                            it runs -- tap 15 Days or 1 Month and the end date is set for you. It
-                            shows as one "Discount" line on the receipt, folded together with
-                            anything the cashier discounts on top -- never one line per product.
+                            An offer that runs itself: it applies at every till, to every matching
+                            item, until the moment it ends, with nobody switching it on or off.
+                            <br/>
+                            It shows on the receipt as ONE "Discount" line, folded together with
+                            anything the cashier takes off, never one line per product. A fixed
+                            selling price works the same way: the line keeps the normal price and
+                            the difference joins the discount, so the customer can see what they
+                            saved.
                         </div>
                     </div>
                     <div class="oe_button_box" name="button_box">
@@ -61,21 +63,49 @@
                         <label for="name"/>
                         <h1><field name="name" placeholder="e.g. Sonex winter 10%"/></h1>
                     </div>
+
                     <group>
-                        <group>
-                            <field name="brand_id" options="{'no_create': True}"/>
-                            <field name="product_ids" widget="many2many_tags"
-                                   options="{'no_create': True}"
-                                   placeholder="All products of this brand"/>
-                            <field name="discount_percent"/>
+                        <group string="Discount">
+                            <field name="discount_type" widget="radio"/>
+                            <label for="discount_value" string="Percentage off"
+                                   invisible="discount_type != 'percent'"/>
+                            <label for="discount_value" string="Amount off, per item"
+                                   invisible="discount_type != 'amount'"/>
+                            <label for="discount_value" string="Sell at this price"
+                                   invisible="discount_type != 'fixed_price'"/>
+                            <field name="discount_value" nolabel="1"/>
                         </group>
-                        <group>
+                        <group string="When">
                             <field name="date_start"/>
-                            <field name="duration_preset" widget="radio" options="{'horizontal': true}"/>
+                            <field name="duration_preset" widget="radio"
+                                   options="{'horizontal': true}"/>
                             <field name="date_end"/>
                             <field name="company_id" placeholder="Every branch"/>
-                            <field name="active" invisible="1"/>
+                            <field name="active" widget="boolean_toggle"/>
                         </group>
+                    </group>
+
+                    <group string="Apply To">
+                        <field name="scope" widget="radio" nolabel="1"/>
+                    </group>
+                    <group>
+                        <field name="brand_id" options="{'no_create': True}"
+                               invisible="scope not in ('brand', 'brand_products')"
+                               required="scope in ('brand', 'brand_products')"/>
+                        <field name="product_ids" widget="many2many_tags"
+                               options="{'no_create': True}"
+                               invisible="scope not in ('products', 'brand_products')"
+                               required="scope in ('products', 'brand_products')"
+                               domain="scope == 'brand_products' and [('brand_id', '=', brand_id)] or []"/>
+                        <field name="categ_ids" widget="many2many_tags"
+                               options="{'no_create': True}"
+                               invisible="scope != 'category'" required="scope == 'category'"/>
+                        <field name="tag_ids" widget="many2many_tags"
+                               invisible="scope != 'tags'" required="scope == 'tags'"/>
+                        <div class="text-muted" colspan="2" invisible="scope != 'all'">
+                            Every product in the catalogue is covered. Check the Products count
+                            above before saving.
+                        </div>
                     </group>
                 </sheet>
             </form>
@@ -83,15 +113,19 @@
     </record>
 
     <record id="pos_retail_brand_campaign_view_search" model="ir.ui.view">
-        <field name="name">pos.retail.brand.campaign.search</field>
+        <field name="name">pos.retail.promotion.search</field>
         <field name="model">pos.retail.brand.campaign</field>
         <field name="arch" type="xml">
-            <search string="Brand Discount Campaigns">
+            <search string="Promotions">
                 <field name="name"/>
                 <field name="brand_id"/>
-                <filter name="running" string="Running Now" domain="[('date_start', '&lt;=', context_today().strftime('%Y-%m-%d')), ('date_end', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <field name="product_ids"/>
+                <filter name="running" string="Running Now"
+                        domain="[('date_start', '&lt;=', context_today().strftime('%Y-%m-%d %H:%M:%S')), ('date_end', '&gt;=', context_today().strftime('%Y-%m-%d %H:%M:%S'))]"/>
                 <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
                 <group>
+                    <filter name="group_scope" string="Applies To" context="{'group_by': 'scope'}"/>
+                    <filter name="group_type" string="Discount Type" context="{'group_by': 'discount_type'}"/>
                     <filter name="group_brand" string="Brand" context="{'group_by': 'brand_id'}"/>
                     <filter name="group_branch" string="Branch" context="{'group_by': 'company_id'}"/>
                 </group>
@@ -100,19 +134,20 @@
     </record>
 
     <record id="pos_retail_brand_campaign_action" model="ir.actions.act_window">
-        <field name="name">Brand Discount Campaigns</field>
+        <field name="name">Promotions &amp; Discounts</field>
         <field name="res_model">pos.retail.brand.campaign</field>
         <field name="view_mode">list,form</field>
         <field name="context">{'search_default_running': 1}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Set up your first brand campaign</p>
-            <p>A time-boxed offer from a supplier, e.g. "Sonex, 10% off, for 15 days" -- applies
-               by itself at every till until the day it ends, with nothing to switch off.</p>
+            <p class="o_view_nocontent_smiling_face">Set up your first promotion</p>
+            <p>A time-boxed offer: a percentage, a fixed amount off each item, or a fixed
+               selling price, aimed at one product, a brand, a category or a tag. It applies
+               by itself at every till until the moment it ends.</p>
         </field>
     </record>
 
-    <!-- Point of Sale > Configuration > Brand Discount Campaigns -->
-    <menuitem id="pos_retail_menu_brand_campaign" name="Brand Discount Campaigns"
+    <!-- Point of Sale > Configuration > Promotions &amp; Discounts -->
+    <menuitem id="pos_retail_menu_brand_campaign" name="Promotions &amp; Discounts"
         parent="point_of_sale.menu_point_config_product" action="pos_retail_brand_campaign_action"
         sequence="65"
         groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
