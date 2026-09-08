@@ -11,5 +11,6 @@ class PosSession(models.Model):
                  # Required, not optional: product_product._load_pos_data_fields
                  # ships brand_id, and a many2one whose comodel is missing from
                  # this list reaches the client as a dangling relation.
-                 'product.brand']
+                 'product.brand',
+                 'pos.retail.brand.campaign']
         return data

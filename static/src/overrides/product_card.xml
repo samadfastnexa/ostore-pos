@@ -14,6 +14,22 @@
         <xpath expr="//div[hasclass('product-content')]" position="inside">
             <t t-if="!props.isComboPopup" t-set="posRetailInfo" t-value="posRetailPriceInfo"/>
             <t t-if="!props.isComboPopup and posRetailInfo">
+                <!-- A live brand campaign, so a cashier sees the offer sitting
+                     on the grid before it is ever on a bill. Top-start is the
+                     one corner nothing else claims: core keeps the combo
+                     extra-price badge top-end, and this file's own quantity
+                     badge fix above already moved the cart-count marker there
+                     too. Positioned absolute against the outer article element
+                     itself (the nearest position-relative ancestor), even
+                     though this span lives inside product-content: that div
+                     sets no position of its own, so top-0/start-0 still
+                     measure from the whole card, not from partway down the
+                     text column. -->
+                <span t-if="posRetailInfo.campaignPercent"
+                      class="pos-retail-card-campaign position-absolute top-0 start-0 m-1 px-2 rounded-pill text-white fw-bolder"
+                      t-attf-title="{{posRetailInfo.campaignPercent}}% off right now">
+                    <t t-esc="posRetailInfo.campaignPercent"/>% OFF
+                </span>
                 <div class="pos-retail-card-price">
                     <t t-esc="posRetailInfo.price"/><small t-if="posRetailInfo.priceSuffix"
                         class="pos-retail-card-uom" t-esc="posRetailInfo.priceSuffix"/>

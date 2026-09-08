@@ -34,3 +34,4 @@ from . import pos_retail_khata_payment
 from . import res_users
 from . import branch_company_pickers
 from . import auditlog_patch
+from . import pos_retail_brand_campaign

@@ -569,6 +569,17 @@ $o_retail_blue: #2563eb;
             opacity: 1;
         }
     }
+
+    // A live brand campaign (pos.retail.brand.campaign), so the offer is
+    // visible on the shelf grid itself, before anything is on a bill. Small
+    // and in the one free corner: see product_card.xml for why top-start,
+    // rather than top-end where the combo/quantity badges already sit.
+    .pos-retail-card-campaign {
+        font-size: .64rem;
+        line-height: 1.4;
+        background-color: $o_retail_red;
+        z-index: 1; // sits above the product image directly below it
+    }
 }
 
 // ---- Add a customer straight from the search box ---------------------------

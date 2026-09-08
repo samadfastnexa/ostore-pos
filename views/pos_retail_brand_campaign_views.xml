@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_retail_brand_campaign_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.brand.campaign.list</field>
+        <field name="model">pos.retail.brand.campaign</field>
+        <field name="arch" type="xml">
+            <list string="Brand Discount Campaigns" decoration-muted="state == 'finished'"
+                  decoration-info="state == 'scheduled'">
+                <field name="name"/>
+                <field name="brand_id"/>
+                <field name="product_count"/>
+                <field name="discount_percent" string="Discount %"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="company_id" string="Branch" optional="show"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'running'"
+                       decoration-info="state == 'scheduled'"
+                       decoration-muted="state == 'finished'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_brand_campaign_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.brand.campaign.form</field>
+        <field name="model">pos.retail.brand.campaign</field>
+        <field name="arch" type="xml">
+            <form string="Brand Discount Campaign">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="scheduled,running,finished"
+                           invisible="1"/>
+                    <span class="o_stat_text">
+                        <field name="state" widget="badge"
+                               decoration-success="state == 'running'"
+                               decoration-info="state == 'scheduled'"
+                               decoration-muted="state == 'finished'"/>
+                    </span>
+                </header>
+                <sheet>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Purpose:</strong> a supplier's own offer on their brand, e.g.
+                            "Sonex, 10% off, for 15 days" -- applied automatically at the till for
+                            every sale in that window, no cashier action needed.<br/>
+                            <strong>How to use:</strong> pick the brand, a percentage, and how long
+                            it runs -- tap 15 Days or 1 Month and the end date is set for you. It
+                            shows as one "Discount" line on the receipt, folded together with
+                            anything the cashier discounts on top -- never one line per product.
+                        </div>
+                    </div>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_products" type="object"
+                                class="oe_stat_button" icon="fa-cubes"
+                                invisible="not product_count">
+                            <field name="product_count" widget="statinfo" string="Products"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Sonex winter 10%"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="brand_id" options="{'no_create': True}"/>
+                            <field name="product_ids" widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="All products of this brand"/>
+                            <field name="discount_percent"/>
+                        </group>
+                        <group>
+                            <field name="date_start"/>
+                            <field name="duration_preset" widget="radio" options="{'horizontal': true}"/>
+                            <field name="date_end"/>
+                            <field name="company_id" placeholder="Every branch"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_brand_campaign_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.brand.campaign.search</field>
+        <field name="model">pos.retail.brand.campaign</field>
+        <field name="arch" type="xml">
+            <search string="Brand Discount Campaigns">
+                <field name="name"/>
+                <field name="brand_id"/>
+                <filter name="running" string="Running Now" domain="[('date_start', '&lt;=', context_today().strftime('%Y-%m-%d')), ('date_end', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_brand" string="Brand" context="{'group_by': 'brand_id'}"/>
+                    <filter name="group_branch" string="Branch" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_brand_campaign_action" model="ir.actions.act_window">
+        <field name="name">Brand Discount Campaigns</field>
+        <field name="res_model">pos.retail.brand.campaign</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_running': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Set up your first brand campaign</p>
+            <p>A time-boxed offer from a supplier, e.g. "Sonex, 10% off, for 15 days" -- applies
+               by itself at every till until the day it ends, with nothing to switch off.</p>
+        </field>
+    </record>
+
+    <!-- Point of Sale > Configuration > Brand Discount Campaigns -->
+    <menuitem id="pos_retail_menu_brand_campaign" name="Brand Discount Campaigns"
+        parent="point_of_sale.menu_point_config_product" action="pos_retail_brand_campaign_action"
+        sequence="65"
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
+
+</odoo>

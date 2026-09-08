@@ -88,6 +88,14 @@ patch(ProductCard.prototype, {
             && product.pos_retail_measurement_type !== "piece";
         const uom = measured ? product.uom_id?.name || "" : "";
 
+        // A live brand campaign, so a cashier sees the offer sitting on the
+        // shelf grid -- not just as a smaller number after it is already rung
+        // up. Percent only: this badge names the OFFER, not the arithmetic
+        // that later folds it into one combined "Discount" line on the bill.
+        const campaignPercent = this.env.services?.pos?.posRetailCampaignPercentForProduct?.(
+            product
+        ) || 0;
+
         return {
             price: this.posRetailCardPrice(product, format),
             uom,
@@ -98,6 +106,7 @@ patch(ProductCard.prototype, {
             qty,
             // Stock in the unit it is actually counted in: "125 m", not "125".
             qtyLabel: uom ? `${qty} ${uom}` : String(qty),
+            campaignPercent,
         };
     },
 });

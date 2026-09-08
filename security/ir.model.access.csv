@@ -25,3 +25,5 @@ access_pos_retail_ledger_adjustment_invoice,pos.retail.ledger.adjustment.invoice
 access_pos_retail_ledger_adjustment_admin,pos.retail.ledger.adjustment.admin,model_pos_retail_ledger_adjustment,base.group_system,1,1,1,1
 access_pos_retail_khata_payment_invoice,pos.retail.khata.payment.invoice,model_pos_retail_khata_payment,account.group_account_invoice,1,1,1,1
 access_pos_retail_khata_payment_admin,pos.retail.khata.payment.admin,model_pos_retail_khata_payment,base.group_system,1,1,1,1
+access_pos_retail_brand_campaign_user,pos.retail.brand.campaign.user,model_pos_retail_brand_campaign,base.group_user,1,0,0,0
+access_pos_retail_brand_campaign_manager,pos.retail.brand.campaign.manager,model_pos_retail_brand_campaign,point_of_sale.group_pos_manager,1,1,1,1
