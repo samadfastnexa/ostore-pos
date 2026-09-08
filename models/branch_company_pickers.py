@@ -91,9 +91,25 @@ class ProductTemplate(models.Model):
 
     # Optional, and core ships no default: blank means "visible to all", which
     # is the sensible answer for a catalogue line. Only the dropdown needed
-    # narrowing. This is the ownership field, separate from the
-    # pos_retail_branch_ids "Sell in Branches" list.
-    company_id = fields.Many2one(domain=TRADING_COMPANY_DOMAIN)
+    # narrowing.
+    #
+    # Relabelled "Owned By Branch" because next to a field called "Sell in
+    # Branches" a field called "Company" reads like the same question asked
+    # twice, and someone looking for "which branches sell this" reasonably
+    # tried this one -- then found it would only take a single value. They
+    # are genuinely different: this is ownership, one branch or nobody
+    # (shared), and Odoo's product model has no multi-company field to make
+    # it a list. Which branches SELL it is pos_retail_branch_ids, which does
+    # take several.
+    company_id = fields.Many2one(
+        domain=TRADING_COMPANY_DOMAIN, string="Owned By Branch",
+        help="Who the product record belongs to. Leave EMPTY -- the usual "
+             "answer -- and every branch shares this one catalogue line.\n\n"
+             "This is NOT where you choose which shops sell it: that is "
+             "\"Sell in Branches\" below, and it takes as many branches as "
+             "you like. A product can only be OWNED by one branch, because "
+             "Odoo gives a product a single company.",
+    )
 
 
 class ResPartner(models.Model):
