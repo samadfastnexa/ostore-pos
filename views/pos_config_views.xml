@@ -70,8 +70,20 @@
                             <field name="pos_retail_receipt_show_sku"/>
                         </div>
                         <div class="row mt8">
-                            <label string="Show QR Code" for="pos_retail_receipt_show_qr" class="col-lg-4 o_light_label"/>
+                            <label string="Show Receipt QR Code" for="pos_retail_receipt_show_qr" class="col-lg-4 o_light_label"/>
                             <field name="pos_retail_receipt_show_qr"/>
+                        </div>
+                        <!-- There are TWO QR codes on a POS receipt and only one
+                             of them is this one. Switching this off and still
+                             seeing a QR wastes a real afternoon, so say where
+                             the other switch lives rather than leaving someone
+                             to find out. -->
+                        <div class="row">
+                            <div class="col text-muted small ps-3">
+                                Not the "Need an invoice?" QR: that one belongs to the whole
+                                company, and lives in this same Settings page under
+                                <b>Bills &amp; Receipts &gt; Use QR code on ticket</b>.
+                            </div>
                         </div>
                         <div class="row mt8">
                             <label string="Show Reference Barcode" for="pos_retail_receipt_show_ref_barcode" class="col-lg-4 o_light_label"/>
