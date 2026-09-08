@@ -55,3 +55,30 @@ class HrEmployee(models.Model):
         if 'pos_discount_role_id' not in result:
             result.append('pos_discount_role_id')
         return result
+
+
+class HrEmployeePublic(models.Model):
+    """Expose the discount role on the public employee profile.
+
+    Without this, no cashier could open the till at all.
+
+    POS serves employees to anyone without HR rights through
+    hr.employee.public, and hr.employee._check_private_fields
+    (hr/models/hr_employee.py:1150) calls a field private simply because it is
+    absent from that model. Adding pos_discount_role_id to the POS payload above
+    therefore made every employee read raise AccessError for a cashier.
+
+    The failure was almost impossible to read. pos_session.load_data catches
+    AccessError per model and quietly substitutes an empty list, so pos.config
+    arrived empty; pos_loyalty then did data['pos.config'][0] and the browser
+    showed "Cannot read properties of undefined (reading 'currency_id')" --
+    naming neither the field, the model, nor the access check that started it.
+
+    Declared the same way core declares job_title and phone here: related to
+    employee_id, not stored, so the SQL view behind this model is untouched.
+    """
+    _inherit = 'hr.employee.public'
+
+    pos_discount_role_id = fields.Many2one(
+        'pos.retail.discount.role', string="POS Discount Role",
+        related='employee_id.pos_discount_role_id', readonly=True)
