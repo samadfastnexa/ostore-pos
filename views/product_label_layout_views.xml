@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The switch itself, next to Copies and Format where the choice is made. -->
+    <record id="product_label_layout_form_pos_retail" model="ir.ui.view">
+        <field name="name">product.label.layout.form.pos.retail.barcode</field>
+        <field name="model">product.label.layout</field>
+        <field name="inherit_id" ref="product.product_label_layout_form"/>
+        <field name="arch" type="xml">
+            <field name="custom_quantity" position="after">
+                <field name="pos_retail_print_barcode" widget="boolean_toggle"/>
+                <field name="pos_retail_print_price" widget="boolean_toggle"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Hide the barcode image itself, in every layout that draws one.
+         Each of these is the same one-line change: the div stays where it is
+         and simply does not render, so the label keeps its spacing and the
+         name and price sit exactly where they always did.
+
+         Worth knowing WHY this matters beyond preference: a barcode is drawn
+         by reportlab through rlPyCairo or a compiled _rl_renderPM, and where
+         neither is installed every one of these templates dies with a
+         RenderPMError, so the shop cannot print any label at all. That is
+         what happened on the live server. With the barcode off, the same
+         templates print fine on the same machine. -->
+    <template id="report_simple_label2x7_pos_retail" inherit_id="product.report_simple_label2x7">
+        <xpath expr="//div[@t-out='barcode']" position="attributes">
+            <attribute name="t-if">pos_retail_print_barcode</attribute>
+        </xpath>
+    </template>
+
+    <template id="report_simple_label4x7_pos_retail" inherit_id="product.report_simple_label4x7">
+        <xpath expr="//div[@t-out='barcode']" position="attributes">
+            <attribute name="t-if">pos_retail_print_barcode</attribute>
+        </xpath>
+    </template>
+
+    <template id="report_simple_label4x12_pos_retail" inherit_id="product.report_simple_label4x12">
+        <xpath expr="//div[@t-out='barcode']" position="attributes">
+            <attribute name="t-if">pos_retail_print_barcode</attribute>
+        </xpath>
+    </template>
+
+    <template id="report_simple_label4x12_no_price_pos_retail"
+              inherit_id="product.report_simple_label4x12_no_price">
+        <xpath expr="//div[@t-out='barcode']" position="attributes">
+            <attribute name="t-if">pos_retail_print_barcode</attribute>
+        </xpath>
+    </template>
+
+    <template id="report_simple_label_dymo_pos_retail" inherit_id="product.report_simple_label_dymo">
+        <xpath expr="//div[@t-out='barcode']" position="attributes">
+            <attribute name="t-if">pos_retail_print_barcode</attribute>
+        </xpath>
+    </template>
+
+    <!-- Price off, at any size. Core only ships a no-price layout for 4 x 12,
+         which is why "without price" was missing everywhere else: the other
+         templates print the price with nothing to gate it. Making it a switch
+         rather than doubling the format list keeps one entry per SIZE and
+         lets any size be printed with or without a price, or without a
+         barcode, or with neither. The price element differs by layout
+         (o_label_price, _medium, _small), hence one rule each. -->
+    <template id="report_simple_label2x7_price_pos_retail" inherit_id="product.report_simple_label2x7">
+        <xpath expr="//strong[hasclass('o_label_price')]" position="attributes">
+            <attribute name="t-if">pos_retail_print_price</attribute>
+        </xpath>
+    </template>
+
+    <template id="report_simple_label4x7_price_pos_retail" inherit_id="product.report_simple_label4x7">
+        <xpath expr="//strong[hasclass('o_label_price_medium')]" position="attributes">
+            <attribute name="t-if">pos_retail_print_price</attribute>
+        </xpath>
+    </template>
+
+    <template id="report_simple_label4x12_price_pos_retail" inherit_id="product.report_simple_label4x12">
+        <xpath expr="//div[hasclass('o_label_price_medium')]" position="attributes">
+            <attribute name="t-if">pos_retail_print_price</attribute>
+        </xpath>
+    </template>
+
+    <template id="report_simple_label_dymo_price_pos_retail" inherit_id="product.report_simple_label_dymo">
+        <xpath expr="//strong[hasclass('o_label_price_small')]" position="attributes">
+            <attribute name="t-if">pos_retail_print_price</attribute>
+        </xpath>
+    </template>
+
+</odoo>

@@ -9,6 +9,7 @@ from . import pos_retail_price_reason
 from . import pos_retail_access_permission
 from . import pos_retail_access_role
 from . import pos_retail_discount_log
+from . import product_label_layout
 from . import product_template
 from . import product_product
 from . import product_measurement
