@@ -42,6 +42,8 @@ Journal = env['account.journal'].sudo()
 Method = env['pos.payment.method'].sudo()
 Config = env['pos.config'].sudo()
 Employee = env['hr.employee'].sudo()
+PickingType = env['stock.picking.type'].sudo()
+Warehouse = env['stock.warehouse'].sudo()
 User = env['res.users'].sudo()
 
 problems = []
@@ -165,6 +167,60 @@ elif not DRY_RUN:
         'pos_discount.product_product_consumable', raise_if_not_found=False)
     if discount_product:
         vals['discount_product_id'] = discount_product.id
+
+    # Stock has to leave the NEW branch's warehouse. Left to its own devices
+    # a fresh register defaults to whichever picking type comes first, which
+    # on this database is the PARENT's "Cash & Carry: PoS Orders" -- so every
+    # sale would move goods out of a warehouse the shop does not own, and
+    # carry the valuation with it. Worse than the journal version of this bug,
+    # and silent.
+    def pos_picking_for(company):
+        return PickingType.search([
+            ('company_id', '=', company.id), ('code', '=', 'outgoing'),
+            ('name', 'ilike', 'pos')], limit=1) or PickingType.search([
+            ('company_id', '=', company.id), ('code', '=', 'outgoing')], limit=1)
+
+    own_picking = pos_picking_for(dst)
+    if not own_picking:
+        # A company created in the UI does not necessarily come with a
+        # warehouse, and without one it has no picking types, and the register
+        # then silently borrows the parent's. A shop that holds stock needs
+        # its own warehouse anyway -- the whole architecture rests on each
+        # branch owning its own goods -- so make it rather than warn and
+        # leave the till wired into someone else's shelves.
+        code = ''.join(ch for ch in dst.name.upper() if ch.isalnum())[:5] or 'WH'
+        suffix = 1
+        while Warehouse.with_context(active_test=False).search_count(
+                [('code', '=', code)]):
+            suffix += 1
+            code = '%s%s' % (code[:4], suffix)
+        warehouse = Warehouse.create({
+            'name': '%s Warehouse' % dst.name, 'code': code, 'company_id': dst.id,
+        })
+        own_picking = pos_picking_for(dst)
+        print("    created warehouse %r (code %s) so stock leaves this branch's"
+              % (warehouse.name, code))
+        print("    own shelves rather than the parent's")
+
+    if own_picking:
+        vals['picking_type_id'] = own_picking.id
+    else:
+        print("    WARNING: %s still has no outgoing picking type. The register"
+              % dst.name)
+        print("             would fall back to another company's -- check the")
+        print("             warehouse before trading.")
+
+    # Shop policy the model register carries and a bare one does not.
+    # module_pos_hr is the important one: with it off there is no cashier
+    # selection and no PIN prompt at all, which is the entire way anyone gets
+    # into a till here. The rest are this shop's own limits and layout.
+    for fname in ('module_pos_hr', 'only_round_cash_method',
+                  'pos_retail_max_percentage_discount',
+                  'pos_retail_max_roundoff_amount',
+                  'pos_retail_receipt_style'):
+        if fname in model_cfg._fields:
+            vals[fname] = model_cfg[fname]
+
     cfg = Config.create(vals)
     # A register that cannot load a product cannot sell anything, so prove it.
     loadable = env['product.template'].sudo().search_count(
