@@ -229,9 +229,16 @@ patch(PaymentScreen.prototype, {
         const taxKey = (taxIds) => taxIds.map((tax) => tax.id).sort((a, b) => a - b).join("_");
         const product = this.pos.config.discount_product_id;
         if (!product) {
+            // The old wording was pos_discount's: "seems misconfigured ...
+            // flagged as 'Can be Sold' and 'Available in Point of Sale'". It
+            // sent a live shop hunting through product flags when the field
+            // is simply empty -- and on a working database that product has
+            // Available in Point of Sale switched OFF, so the advice pointed
+            // at a setting that must NOT be changed. Say what is actually
+            // wrong and where it is set.
             this.notification.add(
                 _t(
-                    "The discount product seems misconfigured. Make sure it is flagged as 'Can be Sold' and 'Available in Point of Sale'."
+                    "This register has no discount product set, so a discount cannot be added to the order. Set one under Point of Sale > Configuration > Settings, then reopen the register."
                 ),
                 { type: "danger" }
             );

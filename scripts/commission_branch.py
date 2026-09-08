@@ -155,6 +155,16 @@ elif not DRY_RUN:
     if inv_j:
         vals['invoice_journal_id'] = inv_j.id
         vals['journal_id'] = inv_j.id
+    # Without this the new till opens fine and then fails the first time
+    # anyone discounts anything: a discount is rung up as a line on a
+    # product, and a register with no discount_product_id has nothing to
+    # write it onto. The error a cashier sees blames the product's flags,
+    # which sends you looking in the wrong place entirely. The product is
+    # shared across companies, so the model register's one is reusable.
+    discount_product = model_cfg.discount_product_id or env.ref(
+        'pos_discount.product_product_consumable', raise_if_not_found=False)
+    if discount_product:
+        vals['discount_product_id'] = discount_product.id
     cfg = Config.create(vals)
     # A register that cannot load a product cannot sell anything, so prove it.
     loadable = env['product.template'].sudo().search_count(
