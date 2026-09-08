@@ -78,10 +78,14 @@ patch(PaymentScreen.prototype, {
 
     async posRetailRoundTo(target) {
         const order = this.currentOrder;
-        const product = this.pos.config.discount_product_id;
+        // Same lookup as the discount buttons: rounding rides on the same
+        // product, so it fails in the same way when the relation does not
+        // resolve. posRetailDiscountProduct lives on this same PaymentScreen
+        // patch chain (order_discount.js) and falls back to the raw id.
+        const product = this.posRetailDiscountProduct();
         if (!product) {
             this.notification.add(
-                _t("No discount product is set on this register, so there is nothing to carry the rounding."),
+                _t("Could not round: this register's discount product is not available in the till, and rounding is carried on it. Reopen the register."),
                 { type: "danger" }
             );
             return;

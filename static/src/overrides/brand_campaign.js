@@ -20,6 +20,49 @@ import { PosStore } from "@point_of_sale/app/services/pos_store";
 // loyalty.program's date_from/date_to, rather than trusting a filtered list
 // that a long-open session may never be told to refresh.
 patch(PosStore.prototype, {
+    /**
+     * The product every discount line is rung up on, found however it can be.
+     *
+     * Both discounts this shop gives -- the cashier knocking money off, and a
+     * brand campaign running to a date -- write onto this one product, so
+     * when it cannot be found NEITHER works. That is what a live till hit
+     * while every server-side check passed: config.discount_product_id set,
+     * product active and sellable, and the template, the variant AND the
+     * config field all measurably reaching the payload, loaded as the till
+     * user without sudo. The relation still came back empty in the browser.
+     *
+     * So take the id the server demonstrably sends and look the record up.
+     * `raw` is core's own accessor for the unresolved server value --
+     * pos_config.js reads this.raw.invoice_journal_id exactly this way -- so
+     * this is a documented path, not a way around the model layer.
+     */
+    posRetailDiscountProduct() {
+        return (
+            this.config.discount_product_id ||
+            (this.config.raw?.discount_product_id
+                ? this.models["product.product"].get(this.config.raw.discount_product_id)
+                : undefined)
+        );
+    },
+
+    /**
+     * The order's discount lines, resilient to the same failure.
+     *
+     * Core's own getter is `line.product_id.id === this.config.discount_product_id?.id`
+     * (pos_order.js). When that relation is empty the comparison is against
+     * undefined, so it matches nothing and returns [] -- which reads as "no
+     * discount on this order" and makes every "replace the existing discount"
+     * path add a second line instead. Same resolution, so the same answer
+     * whichever way the relation went.
+     */
+    posRetailDiscountLines(order) {
+        const product = this.posRetailDiscountProduct();
+        if (!order || !product) {
+            return [];
+        }
+        return (order.lines || []).filter((line) => line.product_id?.id === product.id);
+    },
+
     /** Campaigns whose window actually covers today, at THIS branch. */
     get posRetailLiveCampaigns() {
         const model = this.models["pos.retail.brand.campaign"];
@@ -106,7 +149,7 @@ patch(PosStore.prototype, {
         if (!percentByTemplate.size) {
             return 0;
         }
-        const discountLines = order.discountLines || [];
+        const discountLines = this.posRetailDiscountLines(order);
         const byUuid = order.prices?.baseLineByLineUuids || {};
         let amount = 0;
         for (const line of order.lines || []) {

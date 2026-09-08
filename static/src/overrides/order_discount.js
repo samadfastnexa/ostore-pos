@@ -70,7 +70,7 @@ patch(PaymentScreen.prototype, {
             // The only discount left standing was the campaign's, and it just
             // ran out (or the line that earned it was removed) -- take the
             // line away rather than leave a 0.00 "Discount" on the receipt.
-            for (const line of order.discountLines || []) {
+            for (const line of this.pos.posRetailDiscountLines(order)) {
                 if (!this.posRetailRoundingLines(order).includes(line)) {
                     order.removeOrderline(line);
                 }
@@ -88,7 +88,7 @@ patch(PaymentScreen.prototype, {
      *  separate mechanism (tax-free, deliberately) and must not be folded into
      *  the discount arithmetic below. */
     posRetailRoundingLines(order) {
-        return (order.discountLines || []).filter((line) => line.pos_retail_is_roundoff);
+        return (this.pos.posRetailDiscountLines(order)).filter((line) => line.pos_retail_is_roundoff);
     },
 
     /**
@@ -128,7 +128,7 @@ patch(PaymentScreen.prototype, {
 
     /** Order-level discount already applied, as a positive magnitude. */
     posRetailAppliedDiscount(order) {
-        return (order.discountLines || [])
+        return (this.pos.posRetailDiscountLines(order))
             .filter((line) => !line.pos_retail_is_roundoff)
             .reduce((sum, line) => sum + Math.abs(this.posRetailLineAmount(order, line)), 0);
     },
@@ -219,7 +219,7 @@ patch(PaymentScreen.prototype, {
     // item is added -- so the practical effect was harmless, but it was not
     // what either this comment or that one claimed was happening.
     posRetailComputeSubtotal(order) {
-        const discountLines = order.discountLines || [];
+        const discountLines = this.pos.posRetailDiscountLines(order);
         return (order.lines || [])
             .filter((line) => !discountLines.includes(line))
             .reduce((sum, line) => sum + this.posRetailLineAmount(order, line), 0);
@@ -227,18 +227,21 @@ patch(PaymentScreen.prototype, {
 
     async posRetailApplyDiscountLines(kind, amount, order) {
         const taxKey = (taxIds) => taxIds.map((tax) => tax.id).sort((a, b) => a - b).join("_");
-        const product = this.pos.config.discount_product_id;
+        const product = this.pos.posRetailDiscountProduct();
         if (!product) {
-            // The old wording was pos_discount's: "seems misconfigured ...
-            // flagged as 'Can be Sold' and 'Available in Point of Sale'". It
-            // sent a live shop hunting through product flags when the field
-            // is simply empty -- and on a working database that product has
-            // Available in Point of Sale switched OFF, so the advice pointed
-            // at a setting that must NOT be changed. Say what is actually
-            // wrong and where it is set.
+            // Deliberately says what was looked for and what was found, rather
+            // than naming a cause. Two earlier versions of this message each
+            // asserted a cause -- "misconfigured, check Can be Sold" and "this
+            // register has no discount product set" -- and on the live shop
+            // both were false: the field was set, the product active and
+            // sellable, and the template, variant and config field all
+            // measurably reached the till. A message that guesses sends people
+            // to the wrong screen, which is worse than one that just reports.
+            const rawId = this.pos.config.raw?.discount_product_id;
             this.notification.add(
                 _t(
-                    "This register has no discount product set, so a discount cannot be added to the order. Set one under Point of Sale > Configuration > Settings, then reopen the register."
+                    "Could not add the discount: this register's discount product (id %s) is not available in the till. Reopen the register; if it persists, tell whoever set the shop up.",
+                    rawId || "not set"
                 ),
                 { type: "danger" }
             );
@@ -250,7 +253,7 @@ patch(PaymentScreen.prototype, {
         // tax key. Held aside and left alone.
         const roundingLines = this.posRetailRoundingLines(order);
         const discountLinesMap = {};
-        (order.discountLines || [])
+        (this.pos.posRetailDiscountLines(order))
             .filter((line) => !roundingLines.includes(line))
             .forEach((line) => {
                 discountLinesMap[taxKey(line.tax_ids)] = line;
