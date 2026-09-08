@@ -63,6 +63,41 @@ class PosOrder(models.Model):
              "to show the limit in force on the day.",
     )
 
+    pos_retail_on_account = fields.Monetary(
+        string="On Account", currency_field='currency_id',
+        compute='_compute_pos_retail_on_account', store=True,
+        help="How much of this sale went onto the customer's khata instead of "
+             "being paid at the till.",
+    )
+
+    # Depends on journal_id, not on payment_method_id.type: `type` is itself
+    # computed and not stored, so it cannot appear in a stored field's
+    # dependency chain. It derives from the journal (pos_payment_method.py's
+    # _compute_type -- no cash/bank journal means pay_later), so following the
+    # journal keeps a stored value correct if a payment method is ever
+    # reconfigured, which naming `type` here would not.
+    @api.depends('payment_ids.amount', 'payment_ids.payment_method_id',
+                 'payment_ids.payment_method_id.journal_id')
+    def _compute_pos_retail_on_account(self):
+        """What the customer still owes on this sale.
+
+        Exists because the order's own Status does not answer the question a
+        shop actually asks. A sale settled entirely on the khata still reads
+        "Paid", then "Posted" once the session closes -- correctly, because
+        those describe the ORDER's life, not whether money came in. Read as
+        plain English at a glance they say the opposite of the truth, and that
+        misreading is worth money.
+
+        The receivable was right all along (partner.credit matched the khata
+        exactly on the live database). Only the reading was wrong, so this
+        surfaces the figure rather than changing any behaviour.
+        """
+        for order in self:
+            order.pos_retail_on_account = sum(
+                payment.amount for payment in order.payment_ids
+                if payment.payment_method_id.type == 'pay_later'
+            )
+
     return_reason_id = fields.Many2one(
         'pos.retail.return.reason', string="Return Reason",
         help="Why the goods came back, picked by the cashier from the list your "

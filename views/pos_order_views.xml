@@ -140,4 +140,34 @@
         </field>
     </record>
 
+    <!-- Status answers "where is this order in its life", not "did the money
+         arrive". A sale put entirely on a customer's khata still reads Paid,
+         then Posted once the session closes, which is correct and reads as the
+         opposite of the truth to anyone scanning the list for what is owed.
+         The khata figure was never wrong; it just was not visible here. -->
+    <record id="view_pos_order_tree_on_account" model="ir.ui.view">
+        <field name="name">pos.order.list.pos.retail.on.account</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='amount_total']" position="after">
+                <field name="pos_retail_on_account" string="On Account"
+                       sum="On Account" optional="show"
+                       decoration-danger="pos_retail_on_account &gt; 0"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_pos_order_filter_on_account" model="ir.ui.view">
+        <field name="name">pos.order.search.pos.retail.on.account</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <filter name="pos_retail_on_account" string="On Account (Khata)"
+                        domain="[('pos_retail_on_account', '&gt;', 0)]"/>
+            </xpath>
+        </field>
+    </record>
+
 </odoo>
