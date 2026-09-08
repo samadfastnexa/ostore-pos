@@ -68,3 +68,44 @@ for config in Config.search([('pos_retail_kiosk_user_id', '!=', False)]):
 without = Config.search([('pos_retail_kiosk_user_id', '=', False)])
 if without:
     print("Still off (no kiosk account set): %s" % without.mapped('name'))
+    print()
+    print("-" * 78)
+    print("WHAT THIS DATABASE ACTUALLY HAS")
+    print("-" * 78)
+    print("Names differ between databases, so the map at the top of this file")
+    print("has to match THIS one. Copy from the lists below, then re-run.")
+    print()
+    print("  registers still without a kiosk account:")
+    for config in without:
+        print("      register %-28r  company %r" % (config.name, config.company_id.name))
+    print()
+    print("  accounts each of those companies could sign in as")
+    print("  (internal users with Point of Sale access, newest last):")
+    pos_user_group = env.ref('point_of_sale.group_pos_user', raise_if_not_found=False)
+    for company in without.mapped('company_id'):
+        candidates = Users.search([
+            ('company_ids', 'in', company.id),
+            ('share', '=', False),
+            ('active', '=', True),
+        ])
+        if pos_user_group:
+            candidates = candidates.filtered(
+                lambda u: u.has_group('point_of_sale.group_pos_user'))
+        print("      %r:" % company.name)
+        for user in candidates:
+            manager = user.has_group('point_of_sale.group_pos_manager')
+            settings = user.has_group('base.group_system')
+            # Flagged rather than filtered out: the shop decides, but a kiosk
+            # link hands whoever holds it that account, so an account that can
+            # reach Settings is the wrong one to leave lying on a counter.
+            note = " <- avoid, this one can reach Settings" if settings else (
+                " (manager)" if manager else "")
+            print("          %-28r%s" % (user.login, note))
+        if not candidates:
+            print("          (none -- create a till account for this branch first)")
+    print()
+    print("  then edit TILL_LOGIN_BY_COMPANY at the top of this file, e.g.")
+    print("      TILL_LOGIN_BY_COMPANY = {")
+    for company in without.mapped('company_id'):
+        print("          %r: 'the-login-from-above'," % company.name)
+    print("      }")
