@@ -5,6 +5,7 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 import { standardWidgetProps } from "@web/views/widgets/standard_widget_props";
+import { formatMonetary } from "@web/views/fields/formatters";
 
 // "Send on WhatsApp" for backend documents: quotations, purchase orders,
 // invoices, payment receipts, delivery slips and the khata statement.
@@ -104,10 +105,39 @@ export class PosRetailWhatsappWidget extends Component {
     get shareText() {
         const rec = this.props.record;
         const lines = ["*" + this.shareTitle + "*"];
-        if (rec.data.amount_total !== undefined && rec.fields.amount_total) {
-            lines.push(_t("Total: %s", String(rec.data.amount_total)));
+
+        // Only amount_total was ever looked for, which a customer record does
+        // not have -- so a khata statement sent to a customer said nothing but
+        // "Khata Statement Ahmed Khan", with no figure at all. The one number
+        // that message exists to carry was the one missing from it.
+        //
+        // Ordered most specific first: on a customer the money owed is the
+        // point; on an order or invoice it is the total. Whichever the record
+        // actually carries is the one sent.
+        const candidates = [
+            ["pos_outstanding_balance", _t("Amount owed")],
+            ["amount_residual", _t("Still due")],
+            ["amount_total", _t("Total")],
+        ];
+        for (const [field, label] of candidates) {
+            const value = rec.data[field];
+            if (rec.fields[field] && value !== undefined && value !== null) {
+                lines.push(`${label}: ${this.formatAmount(value)}`);
+                break;
+            }
         }
         return lines.join("\n");
+    }
+
+    /** The figure as the shop writes it, falling back to the bare number if
+     *  the record carries no currency to format against. */
+    formatAmount(value) {
+        const currencyId = this.props.record.data.currency_id?.[0];
+        try {
+            return formatMonetary(value, { currencyId });
+        } catch {
+            return String(value);
+        }
     }
 
     openTextFallback(number) {
