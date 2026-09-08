@@ -40,6 +40,9 @@ Session = env['pos.session'].sudo()
 Order = env['pos.order'].sudo()
 Company = env['res.company'].sudo()
 
+archived_count = 0
+blocked_count = 0
+
 parents = Company.search([('child_ids', '!=', False)])
 if not parents:
     print("no parent companies -- nothing to retire")
@@ -65,14 +68,18 @@ for parent in parents:
               % (len(orders), round(total, 2)))
 
         if open_sessions:
+            blocked_count += 1
             print("      BLOCKED  : %s session(s) still open (%s)."
                   % (len(open_sessions), ', '.join(open_sessions.mapped('name'))))
             print("                 Close the till properly first -- counting the")
             print("                 cash is a person's job, not a script's.")
+            print("                 In Odoo: Point of Sale > Orders > Sessions,")
+            print("                 open that session and close it.")
             continue
 
         if APPLY:
             config.active = False
+            archived_count += 1
             print("      done     : archived. New sales can no longer land here.")
         else:
             print("      would    : archive this register. Nothing else changes.")
@@ -80,7 +87,18 @@ for parent in parents:
 if APPLY:
     env.cr.commit()
     print()
-    print("Written. Re-run check_branch_setup.py to confirm.")
+    # Saying "Written" after archiving nothing -- which an earlier version did
+    # when every register was blocked by an open session -- reads as success
+    # and sends someone off to re-run the check wondering why it still fails.
+    if archived_count:
+        print("Archived %s register(s). Re-run check_branch_setup.py to confirm."
+              % archived_count)
+    if blocked_count:
+        print("NOTHING was archived for %s register(s): a session is still open."
+              % blocked_count)
+        print("Close it at the till, then run this again.")
+    if not archived_count and not blocked_count:
+        print("Nothing needed changing.")
 else:
     print()
     print("=" * 78)
