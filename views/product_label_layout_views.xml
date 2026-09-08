@@ -11,6 +11,15 @@
                 <field name="pos_retail_print_barcode" widget="boolean_toggle"/>
                 <field name="pos_retail_print_price" widget="boolean_toggle"/>
             </field>
+            <!-- Before the printer, not after a wasted sheet. Deliberately
+                 not the primary button: Print stays the obvious action, and
+                 the dialog stays open so a format or a switch can be changed
+                 and looked at again. -->
+            <xpath expr="//footer/button[@name='process']" position="before">
+                <button name="action_pos_retail_preview" string="Preview" type="object"
+                        class="btn-secondary"
+                        title="Open the sheet on screen first. Layout is a close guide rather than exact millimetres, so print one sheet before committing a roll."/>
+            </xpath>
         </field>
     </record>
 
