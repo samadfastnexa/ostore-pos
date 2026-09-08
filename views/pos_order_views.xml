@@ -19,6 +19,14 @@
                 <button name="action_email_receipt_pdf" type="object"
                         string="Email Receipt" icon="fa-envelope-o"
                         invisible="state == 'draft'"/>
+                <!-- The till can WhatsApp a receipt at the moment of sale, but
+                     nothing could once the customer had walked out, which is
+                     when they actually ask for it. Same widget already used on
+                     quotations, purchase orders and invoices, pointed at this
+                     module's own thermal receipt. -->
+                <widget name="pos_retail_whatsapp"
+                        report="pos_retail.action_report_pos_receipt_thermal"
+                        title="Receipt"/>
             </xpath>
         </field>
     </record>
@@ -37,6 +45,10 @@
                 <field name="account_move" string="Invoice" optional="hide"/>
                 <field name="nb_print" string="Prints" optional="hide"/>
                 <field name="amount_total" string="Total" sum="Total"/>
+                <field name="pos_retail_on_account" string="Unpaid (Khata)"
+                       sum="Unpaid (Khata)" optional="show"
+                       decoration-danger="pos_retail_on_account &gt; 0"
+                       decoration-muted="pos_retail_on_account == 0"/>
                 <field name="state"/>
             </list>
         </field>
@@ -151,9 +163,14 @@
         <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='amount_total']" position="after">
-                <field name="pos_retail_on_account" string="On Account"
-                       sum="On Account" optional="show"
-                       decoration-danger="pos_retail_on_account &gt; 0"/>
+                <!-- Labelled "Unpaid (Khata)" rather than "On Account": the
+                     shop asks "kitna udhaar hai", not "what is on account",
+                     and the whole point of the column is that someone
+                     scanning it should not have to work anything out. -->
+                <field name="pos_retail_on_account" string="Unpaid (Khata)"
+                       sum="Unpaid (Khata)" optional="show"
+                       decoration-danger="pos_retail_on_account &gt; 0"
+                       decoration-muted="pos_retail_on_account == 0"/>
             </xpath>
         </field>
     </record>
@@ -164,7 +181,7 @@
         <field name="inherit_id" ref="point_of_sale.view_pos_order_filter"/>
         <field name="arch" type="xml">
             <xpath expr="//search" position="inside">
-                <filter name="pos_retail_on_account" string="On Account (Khata)"
+                <filter name="pos_retail_on_account" string="Unpaid on Khata"
                         domain="[('pos_retail_on_account', '&gt;', 0)]"/>
             </xpath>
         </field>

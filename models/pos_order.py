@@ -64,10 +64,11 @@ class PosOrder(models.Model):
     )
 
     pos_retail_on_account = fields.Monetary(
-        string="On Account", currency_field='currency_id',
+        string="Unpaid (Khata)", currency_field='currency_id',
         compute='_compute_pos_retail_on_account', store=True,
-        help="How much of this sale went onto the customer's khata instead of "
-             "being paid at the till.",
+        help="How much of this sale the customer still owes: the part put on "
+             "their khata instead of paid at the till. Zero means it was "
+             "paid in full.",
     )
 
     # Depends on journal_id, not on payment_method_id.type: `type` is itself
