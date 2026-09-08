@@ -77,17 +77,41 @@ if model_cfg.invoice_journal_id:
                    model_cfg.invoice_journal_id.code))
 print("    needed: %s" % [w[0] for w in wanted])
 
+def named_for_destination(name):
+    """Carry the model's journal NAME across, but not its branch's name.
+
+    Copying verbatim gave the new branch a journal called "Cash Murshid
+    Bahria Branch" -- a second shop's till pointing at something named after
+    the first, which reads as a mistake in every accounting report it ever
+    appears in. Journals with a generic name ("Sales", "Bank") are left alone.
+
+    Both the company AND the register name are checked, because a cash
+    journal is usually named after the REGISTER, and the two are not
+    reliably spelled the same: on the live database the company is "Murshad
+    Bahria Branch" while its register and journal say "Murshid". Matching
+    only the company name silently did nothing there.
+    """
+    for source in (model_co.name, model_cfg.name):
+        if source and source in name:
+            return name.replace(source, dst.name)
+    return name
+
+
 journals = {}
 for name, jtype, code in wanted:
-    existing = Journal.search([('company_id', '=', dst.id), ('name', '=', name)], limit=1)
+    target_name = named_for_destination(name)
+    existing = Journal.search(
+        [('company_id', '=', dst.id), ('name', 'in', (target_name, name))], limit=1)
     if existing:
         journals[name] = existing
         continue
     if DRY_RUN:
+        if target_name != name:
+            print("    %r will be created here as %r" % (name, target_name))
         continue
     # Journal codes are unique per company, so the model's code can be reused.
     journals[name] = Journal.create({
-        'name': name, 'type': jtype, 'code': code, 'company_id': dst.id,
+        'name': target_name, 'type': jtype, 'code': code, 'company_id': dst.id,
     })
 if not DRY_RUN:
     verify("journals", len(journals) == len(set(w[0] for w in wanted)),
@@ -145,7 +169,21 @@ print("\n[4] Staff")
 # Employees linked to a user are left alone: moving one to a company its user
 # cannot access is refused by res.partner.
 movable = Employee.search([('company_id', '=', model_co.id), ('user_id', '=', False)])
-print("    cashiers to move: %s" % movable.mapped('name'))
+if MOVE_EMPLOYEES:
+    # Said plainly: this TAKES them off the model branch. That is right when
+    # commissioning the first branch out of a parent that is being retired,
+    # and wrong when adding a second shop beside one already trading, which
+    # would leave the working shop with nobody able to open its till.
+    print("    cashiers to MOVE OFF %s: %s"
+          % (model_co.name, movable.mapped('name') or 'none'))
+else:
+    # Reporting "cashiers to move" while MOVE_EMPLOYEES is False, as an
+    # earlier version did, describes something that is not going to happen --
+    # and the thing it describes is destructive, so being wrong about it in
+    # a dry run is how someone applies a change they thought they had refused.
+    print("    MOVE_EMPLOYEES is off, so nobody is moved. %s keeps: %s"
+          % (model_co.name, movable.mapped('name') or 'none'))
+    print("    %s will need its own staff added separately." % dst.name)
 if not DRY_RUN and MOVE_EMPLOYEES and movable:
     moved, stuck = [], []
     for emp in movable:
