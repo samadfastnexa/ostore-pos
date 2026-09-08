@@ -45,8 +45,43 @@ print("=" * 78)
 
 for config in present:
     product = config.discount_product_id
-    print("  [OK]   %-28s uses %r (company: %s)"
+    print("  [SET]  %-28s uses %r (company: %s)"
           % (config.name, product.display_name, product.company_id.name or 'shared'))
+
+    # Having the field filled in is NOT the same as the till being able to use
+    # it, and an earlier version of this script stopped at the field and
+    # printed [OK] -- which sent a live shop looking in the wrong place while
+    # the register kept refusing discounts. The till resolves
+    # config.discount_product_id against the products it was SENT, so the only
+    # answer that settles anything is whether the product is in that payload.
+    print("      active=%s  sale_ok=%s  available_in_pos=%s"
+          % (product.active, product.sale_ok, product.available_in_pos))
+    print("      (available_in_pos False is normal -- a working shop has it off;"
+          " the product travels as a 'special product', not as catalogue)")
+
+    specials = config._get_special_products()
+    in_specials = product in specials
+    survives = product in specials.filtered(
+        lambda p: not p.sudo().company_id or p.sudo().company_id == env.company)
+    print("      listed as a special product: %s" % in_specials)
+    print("      survives the company filter: %s   (env.company=%r)"
+          % (survives, env.company.name))
+
+    session = env['pos.session'].sudo().search(
+        [('config_id', '=', config.id)], order='id desc', limit=1)
+    if not session:
+        print("      no session ever opened here, so the loader cannot be run")
+        continue
+    try:
+        # empty list loads every model: product.template's loader reads
+        # data['pos.config'], so it cannot be fetched on its own
+        payload = session.load_data([])
+        tmpl_ids = {row['id'] for row in payload.get('product.template', [])}
+        reached = product.product_tmpl_id.id in tmpl_ids
+        print("      IN THE TILL'S PAYLOAD: %s   (%s products sent)"
+              % ("YES" if reached else "NO -- this is the fault", len(tmpl_ids)))
+    except Exception as exc:
+        print("      loader could not run here: %s" % str(exc)[:110])
 
 if not missing:
     print("  every register already has one -- nothing to do")
