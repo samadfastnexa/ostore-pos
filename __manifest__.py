@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.6.12.0',
+    'version': '19.0.6.13.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -99,6 +99,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/res_partner_views.xml',
         'views/whatsapp_share_views.xml',
         'views/pos_config_views.xml',
+        'views/pos_config_kiosk_views.xml',
         'views/pos_retail_dashboard_views.xml',
         'views/pos_retail_access_role_views.xml',
         'views/pos_retail_access_permission_views.xml',
@@ -106,6 +107,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/pos_retail_menus.xml',
         'views/res_users_views.xml',
         'views/login_templates.xml',
+        'views/kiosk_templates.xml',
         'views/layout_templates.xml',
     ],
     'demo': [

@@ -1,7 +1,7 @@
 import re
 
 from odoo import api, fields, models, tools
-from odoo.exceptions import AccessError, UserError
+from odoo.exceptions import AccessDenied, AccessError, UserError
 from odoo.tools.translate import _
 
 from .res_company import TRADING_COMPANY_DOMAIN, pos_retail_trading_company
@@ -208,13 +208,18 @@ class ResUsers(models.Model):
 
         dashboard = self.env.ref('pos_retail.action_pos_retail_dashboard',
                                  raise_if_not_found=False)
-        if not dashboard:
-            return users
+        # Lands a cashier in their own register instead of a menu they then
+        # have to find their way out of. Managers keep the dashboard: they open
+        # the back office far more often than a till.
+        open_register = self.env.ref('pos_retail.action_pos_retail_open_my_register',
+                                     raise_if_not_found=False)
         for user in users:
             if user.share or user.action_id:
                 continue                      # portal user, or a deliberate choice
-            if user.has_group('point_of_sale.group_pos_manager'):
+            if dashboard and user.has_group('point_of_sale.group_pos_manager'):
                 user.action_id = dashboard.id
+            elif open_register and user.has_group('point_of_sale.group_pos_user'):
+                user.action_id = open_register.id
         return users
 
     @api.model
@@ -341,3 +346,42 @@ class ResUsers(models.Model):
         if not roles:
             return True
         return any(roles.mapped(role_field))
+
+    def _check_credentials(self, credential, env):
+        """Sign in with a Kiosk Link token instead of a username and password.
+
+        Exists so a till device can be bookmarked once and reopened by
+        anyone at the counter with nothing to type but their own PIN
+        afterwards -- see pos.config.pos_retail_kiosk_user_id /
+        pos_retail_kiosk_token, and the controller at
+        controllers/kiosk.py that is the only thing that ever sends this
+        credential type.
+
+        Same shape as core's own auth_passkey override: check for the type
+        this method owns, handle it completely (raising AccessDenied on
+        failure, same as any other auth method), and hand everything else
+        to super so ordinary password logins keep working unchanged.
+
+        The token is bound to BOTH this user and one specific pos.config, not
+        to the user alone: it is not a general-purpose password replacement,
+        only a way onto whichever till it was issued for. It is looked up
+        with sudo() because the person attempting to sign in has, by
+        definition, no session yet to hold any rights of their own.
+        """
+        if credential.get('type') != 'pos_retail_kiosk':
+            return super()._check_credentials(credential, env)
+
+        self.ensure_one()
+        token = (credential.get('token') or '').strip()
+        matched = token and self.env['pos.config'].sudo().search_count([
+            ('pos_retail_kiosk_user_id', '=', self.id),
+            ('pos_retail_kiosk_token', '=', token),
+        ])
+        if not matched:
+            # AccessDenied specifically, matching core's own auth_passkey
+            # override -- this is an authentication failure (who are you?),
+            # not an authorization one (you can't do that), and _login's own
+            # except clause only catches AccessDenied to log the attempt and
+            # hand back a clean "login failed" rather than a raw error.
+            raise AccessDenied(_("Wrong or expired kiosk link."))
+        return {'uid': self.id, 'auth_method': 'pos_retail_kiosk', 'mfa': 'skip'}

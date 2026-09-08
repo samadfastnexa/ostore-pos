@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Point of Sale > Configuration > Point of Sales > (open a register) >
+         Kiosk Link tab.
+
+         A till login (username and password) and a cashier's PIN answer two
+         different questions: which device is this, and who is standing at
+         it. A shop moving fast at the counter should only ever be asked the
+         second one. A session cookie already makes the first a once-off in
+         steady state; this tab is for everything a cookie does not survive:
+         a new device, a cleared browser, a server update. Open the link once
+         on the till and bookmark it. From then on the ONLY thing anyone at
+         that counter ever types is their own PIN. -->
+    <record id="pos_config_view_form_kiosk" model="ir.ui.view">
+        <field name="name">pos.config.form.pos.retail.kiosk</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='checklist']" position="before">
+                <page string="Kiosk Link" name="pos_retail_kiosk">
+                    <group>
+                        <field name="pos_retail_kiosk_user_id"
+                               placeholder="Off, staff sign in with a username and password"
+                               options="{'no_create': True}"/>
+                    </group>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mt-2"
+                         role="alert" invisible="not pos_retail_kiosk_user_id">
+                        <i class="fa fa-info-circle mt-1" role="img" aria-label="Info" title="Info"/>
+                        <div>
+                            <strong>Open this on the till device, once, and bookmark it.</strong>
+                            From then on, opening the bookmark signs the device straight in and goes
+                            to this register. Nobody types a username or password again, only a
+                            PIN once the till is open.
+                            <div class="mt-2">
+                                <field name="pos_retail_kiosk_url" readonly="1" class="w-100 fw-bold"
+                                       decoration-muted="1"/>
+                            </div>
+                            <button name="action_pos_retail_generate_kiosk_token" type="object"
+                                    string="Regenerate Link" class="btn btn-sm btn-secondary mt-2"
+                                    confirm="The old link stops working the moment a new one is made. Any device still on it will need to reopen this page for a fresh bookmark. Use this only if a till device is lost or replaced."/>
+                        </div>
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

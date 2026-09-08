@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Shown only when a Kiosk Link is opened after its token has been
+         regenerated (a lost device replaced) or its register deleted. The
+         everyday case, a working link, never renders this at all: it goes
+         straight through to the till. Reuses the same branded card the
+         sign-in page itself uses, rather than a bare Odoo error page, so a
+         layman opening a stale bookmark sees something that still looks like
+         their own shop and tells them what to do next. -->
+    <template id="kiosk_link_invalid" name="Kiosk Link No Longer Valid">
+        <t t-call="web.login_layout">
+            <t t-set="disable_database_manager" t-value="True"/>
+            <div class="text-center">
+                <h4 class="mb-3">This link no longer works</h4>
+                <p class="text-muted mb-4">
+                    Ask whoever set up this till for a new Kiosk Link, it lives on the
+                    register's own settings page and only takes a moment to make.
+                </p>
+                <a class="btn btn-primary" href="/web/login">Sign In Instead</a>
+            </div>
+        </t>
+    </template>
+
+</odoo>

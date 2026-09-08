@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -235,6 +237,9 @@ class PosConfig(models.Model):
                 lambda c: c.limit_categories and not c.iface_available_categ_ids)
             if broken:
                 super(PosConfig, broken).write({'limit_categories': False})
+        if vals.get('pos_retail_kiosk_user_id'):
+            self.filtered(lambda c: not c.pos_retail_kiosk_token) \
+                .action_pos_retail_generate_kiosk_token()
         return res
 
     @api.model
@@ -362,6 +367,70 @@ class PosConfig(models.Model):
                 'available_pricelist_ids': [fields.Command.set(usable.ids)],
                 'pricelist_id': (default if default in usable else usable[0]).id,
             })
+
+    # ------------------------------------------------------------------
+    # Kiosk link: a bookmark that opens straight onto this register's PIN
+    # screen, with no username or password step in front of it.
+    # ------------------------------------------------------------------
+    pos_retail_kiosk_user_id = fields.Many2one(
+        'res.users', string="Kiosk Sign-in Account", ondelete='set null',
+        domain="[('company_ids', 'in', company_id), ('share', '=', False)]",
+        help="Set this to turn the Kiosk Link on. The link then signs "
+             "straight in as this account and opens this register -- nobody "
+             "has to type a username or password at the counter, only their "
+             "own PIN once the till is open.\n\n"
+             "Use the branch's own till account here (the one everybody at "
+             "this counter already shares), never a personal login: whoever "
+             "has the link can act as this account, the same as whoever is "
+             "standing at the till physically can today.",
+    )
+    pos_retail_kiosk_token = fields.Char(
+        string="Kiosk Link Token", copy=False, groups='point_of_sale.group_pos_manager',
+        help="The secret part of the Kiosk Link. Regenerating it breaks every "
+             "bookmark and QR code made from the old one -- do that if a till "
+             "device is lost or replaced.",
+    )
+
+    @api.depends('pos_retail_kiosk_token')
+    def _compute_pos_retail_kiosk_url(self):
+        base = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        for config in self:
+            config.pos_retail_kiosk_url = (
+                f"{base}/pos_retail/kiosk/{config.pos_retail_kiosk_token}"
+                if config.pos_retail_kiosk_token else False
+            )
+
+    pos_retail_kiosk_url = fields.Char(
+        string="Kiosk Link", compute='_compute_pos_retail_kiosk_url',
+        compute_sudo=True, groups='point_of_sale.group_pos_manager',
+        help="Open this on the till device and bookmark it, or turn it into "
+             "a QR code for a tablet. It always leads straight to this "
+             "register's PIN screen.\n\n"
+             "Anyone holding this link can sign in as the account named "
+             "above -- keep it the way you would keep a spare key, and use "
+             "Regenerate Link if a device carrying it is ever lost.",
+    )
+
+    def action_pos_retail_generate_kiosk_token(self):
+        """(Re)issue the token. Called from create()/write() below when a
+        kiosk user is set with none yet, and by the manual "Regenerate"
+        button for a lost device."""
+        for config in self:
+            config.pos_retail_kiosk_token = uuid4().hex
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        # Saving a brand-new register with the kiosk account already chosen on
+        # the same form goes through create(), not write() -- create() builds
+        # the INSERT directly from vals_list rather than calling write() on an
+        # empty record, so relying on the write() hook alone would leave that
+        # one, most realistic path (fill in a new register, set its kiosk
+        # account, hit Save) with a chosen account and no token to match it.
+        configs = super().create(vals_list)
+        configs.filtered(
+            lambda c: c.pos_retail_kiosk_user_id and not c.pos_retail_kiosk_token
+        ).action_pos_retail_generate_kiosk_token()
+        return configs
 
 
 class ResConfigSettings(models.TransientModel):
