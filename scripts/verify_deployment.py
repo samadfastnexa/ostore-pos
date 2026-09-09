@@ -86,7 +86,16 @@ renamed = pay_later and all(m.name == "Customer Credit" for m in pay_later)
 check('setup', "Pay-later method renamed to Customer Credit", bool(renamed),
       "" if renamed else "run scripts/rename_customer_account.py (close tills first)")
 
+parent_ids = env['res.company'].sudo().search([('child_ids', '!=', False)]).ids
+
 for cfg in Config.search([]):
+    # A register on the PARENT should be retired, not fitted out. Telling
+    # someone to give it a kiosk link while the next check says it should not
+    # exist is contradictory advice, and this script gave exactly that.
+    if cfg.company_id.id in parent_ids:
+        check('setup', "%s: on the parent, should be retired" % cfg.name[:28], False,
+              "close its session, then scripts/retire_parent_register.py")
+        continue
     check('setup', "%s: has a discount product" % cfg.name[:28],
           bool(cfg.discount_product_id),
           "" if cfg.discount_product_id else "run scripts/fix_discount_product.py")
