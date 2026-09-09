@@ -7,7 +7,7 @@ import { AlertDialog, ConfirmationDialog } from "@web/core/confirmation_dialog/c
 import { useService } from "@web/core/utils/hooks";
 import { posRetailRequestManagerPin } from "@pos_retail/utils/manager_pin";
 
-// Credit limit on Customer Account sales.
+// Credit limit on Customer Credit sales.
 //
 // Selling "on account" is the one payment method that sends a customer home
 // owing money, so it is the one place a limit belongs. The check runs before
@@ -55,7 +55,7 @@ patch(PaymentScreen.prototype, {
         // remainingDue, NOT getDue(): there is no getDue anywhere in Odoo 19
         // (pos_order_accounting.js:82 defines the getter), so the old call threw
         // a TypeError the moment anyone set a credit limit -- which silently
-        // killed the Customer Account button for exactly the customers the
+        // killed the Customer Credit button for exactly the customers the
         // limit was meant to control.
         const due = Math.max(order.remainingDue || 0, 0);
         const balance = partner.pos_outstanding_balance || 0;

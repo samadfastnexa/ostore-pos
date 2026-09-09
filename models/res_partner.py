@@ -234,7 +234,7 @@ class ResPartner(models.Model):
         # 'phone' is already loaded natively; add 'ref' so the receipt can show
         # a Customer ID. birthday/membership_level_id are for POS customer info.
         # The rest feed the in-POS customer profile card and the credit-limit
-        # check on Customer Account payments.
+        # check on Customer Credit payments.
         for fname in ('birthday', 'membership_level_id', 'ref',
                       'pos_total_spent', 'pos_avg_order_value',
                       'pos_last_purchase_date', 'pos_sales_order_count',

@@ -35,7 +35,7 @@ class PosOrder(models.Model):
     # against it, the same way discount approvals do.
     pos_retail_credit_manager_id = fields.Many2one(
         'hr.employee', string="Credit Approved By",
-        help="Set when a sale on Customer Account would have taken the customer "
+        help="Set when a sale on Customer Credit would have taken the customer "
              "past their credit limit and a manager approved it by PIN.",
     )
     pos_retail_credit_over_amount = fields.Monetary(
