@@ -411,6 +411,17 @@ class PosConfig(models.Model):
              "Regenerate Link if a device carrying it is ever lost.",
     )
 
+    pos_retail_kiosk_relock_on_logout = fields.Boolean(
+        string="Signing Out Disables the Link", default=True,
+        help="On by default, and the safer answer: when somebody signs out on "
+             "a device, the Kiosk Link stops working there until a password "
+             "is entered once. Without this, signing out is undone by simply "
+             "reopening the bookmark, because the link IS the password.\n\n"
+             "Turn it off for a counter where a till being locked out at "
+             "opening time would cost more than the risk, e.g. a device that "
+             "never leaves the shop floor.",
+    )
+
     def action_pos_retail_generate_kiosk_token(self):
         """(Re)issue the token. Called from create()/write() below when a
         kiosk user is set with none yet, and by the manual "Regenerate"

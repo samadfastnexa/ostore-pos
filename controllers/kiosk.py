@@ -2,6 +2,8 @@ from odoo import http
 from odoo.exceptions import AccessDenied
 from odoo.http import request
 
+from .kiosk_logout import KIOSK_BLOCK_COOKIE
+
 
 class PosRetailKiosk(http.Controller):
     """One bookmark, no username or password, straight to a till's PIN screen.
@@ -34,6 +36,16 @@ class PosRetailKiosk(http.Controller):
 
         if not config or not user:
             return request.render('pos_retail.kiosk_link_invalid', {})
+
+        # Somebody deliberately signed out on this browser. Without this the
+        # link undoes that instantly -- press Back and you are in again, no
+        # password -- which is what the shop reported twice and is fair: a
+        # link that signs you in is a password, and logging out cannot
+        # un-bookmark a password. Signing in once with a password clears the
+        # marker (see kiosk_logout.py) and the bookmark works again.
+        if (config.pos_retail_kiosk_relock_on_logout
+                and request.httprequest.cookies.get(KIOSK_BLOCK_COOKIE)):
+            return request.render('pos_retail.kiosk_link_signed_out', {})
 
         try:
             credential = {'type': 'pos_retail_kiosk', 'login': user.login, 'token': token}

@@ -23,6 +23,9 @@
                         <field name="pos_retail_kiosk_user_id"
                                placeholder="Off, staff sign in with a username and password"
                                options="{'no_create': True}"/>
+                        <field name="pos_retail_kiosk_relock_on_logout"
+                               widget="boolean_toggle"
+                               invisible="not pos_retail_kiosk_user_id"/>
                     </group>
                     <div class="alert alert-info d-flex align-items-start gap-2 mt-2"
                          role="alert" invisible="not pos_retail_kiosk_user_id">

@@ -22,4 +22,23 @@
         </t>
     </template>
 
+    <!-- Shown when this browser signed out deliberately and the register is
+         set to treat that as "lock the quick link". Deliberately says who can
+         undo it and how, because the person reading it is standing at a till
+         that will not open. -->
+    <template id="kiosk_link_signed_out" name="Kiosk Link Locked After Sign Out">
+        <t t-call="web.login_layout">
+            <t t-set="disable_database_manager" t-value="True"/>
+            <div class="text-center">
+                <h4 class="mb-3">Somebody signed out on this device</h4>
+                <p class="text-muted mb-4">
+                    The quick link is switched off here until a manager signs in once with a
+                    password. After that it works as before and nobody needs to type anything
+                    again.
+                </p>
+                <a class="btn btn-primary" href="/web/login">Sign In</a>
+            </div>
+        </t>
+    </template>
+
 </odoo>
