@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Two entries in the till's burger menu that a cashier should not be
+         offered.
+
+         "Backend" was not ungated: pos_hr already sets t-if="showBackend",
+         which is true when the cashier IS the signed-in user, and true for
+         everyone when employee login is switched off. That is a test of
+         SESSION OWNERSHIP, not of permission, which is why the parent
+         company's register (employee login off) showed it to anyone standing
+         at it.
+
+         So the two conditions are ANDed rather than swapped: core still
+         decides whether the door exists for this session, and this decides
+         whether the person is senior enough to walk through it. Replacing
+         showBackend outright would have thrown away the module_pos_hr case
+         core is handling.
+
+         Relabelled to match the lock screen too, because one place calling
+         it "Backend" and another "Admin Panel / Control Center" is how a
+         shop ends up with two names for one door.
+
+         "Create Product" is already gated on real product create rights, so
+         a cashier who can see it genuinely holds them, so the fix there is the
+         account rather than the menu. It is narrowed to managers as well so the
+         till agrees with how this shop is actually run: prices and new lines
+         are set in the office, where there is a full form, a cost, a brand
+         and a category, rather than mid-queue.
+
+         _role is core's own signal (pos_hr/hr_employee.py sets manager /
+         cashier / minimal, and res_users.py the same for a non-employee
+         login), which is what the neighbouring Install App and Cash In/Out
+         entries already test. -->
+    <t t-name="pos_retail.NavbarManagerOnly" t-inherit="point_of_sale.Navbar"
+       t-inherit-mode="extension">
+        <!-- Replaced whole rather than patched: the label is the element's
+             own text, and appending to it would read "Backend Admin Panel /
+             Control Center". -->
+        <xpath expr="//DropdownItem[@onSelected='() => pos.closePos()']" position="replace">
+            <DropdownItem t-if="showBackend and this.pos.cashier._role == 'manager'"
+                          onSelected="() => pos.closePos()">
+                Admin Panel / Control Center
+            </DropdownItem>
+        </xpath>
+        <xpath expr="//DropdownItem[@t-if='showCreateProductButton']" position="attributes">
+            <attribute name="t-if">showCreateProductButton and this.pos.cashier._role == 'manager'</attribute>
+        </xpath>
+    </t>
+
+</templates>
