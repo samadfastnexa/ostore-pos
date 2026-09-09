@@ -246,12 +246,16 @@
                          owes, defaults to clearing it, asks only cash-or-bank,
                          and settles the oldest debts first. The full payment form
                          is still there for accountants under Invoicing. -->
+                    <!-- Either full Invoicing access, as before, OR the
+                         narrower "Adjust Customer Khata" permission, so the
+                         person who settles udhaar at the counter can do it
+                         without also being handed the books. -->
                     <button name="action_open_khata_payment" type="object"
                             string="Receive Payment" class="btn-primary"
-                            groups="account.group_account_invoice"/>
+                            groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups"/>
                     <button name="action_open_ledger_adjustment" type="object"
                             string="Khata Adjustment"
-                            groups="account.group_account_invoice"/>
+                            groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups"/>
                 </header>
             </sheet>
         </field>

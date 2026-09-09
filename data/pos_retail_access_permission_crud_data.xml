@@ -705,4 +705,36 @@
         <field name="perm_unlink" eval="True"/>
     </record>
 
+    <!-- ============ Customer khata ============ -->
+
+    <!-- Adjusting a khata changes what a customer owes, so it was gated on
+         full Invoicing access: correct, and far more than a senior cashier
+         needs. As its own permission it can be given to the person who
+         actually settles udhaar at the counter without also handing them the
+         books. -->
+    <record id="perm_khata_adjust" model="pos.retail.access.permission">
+        <field name="name">Adjust Customer Khata</field>
+        <field name="category">accounting</field>
+        <field name="sequence">80</field>
+        <field name="description">Record a payment against a customer's khata and post a correction to what they owe. This changes a customer's balance and posts real accounting entries, so give it only to someone trusted with the money side of the counter. It does NOT grant the rest of Invoicing: no bills, no journal entries, no access to the books.</field>
+    </record>
+    <record id="access_perm_khata_adjust_payment" model="ir.model.access">
+        <field name="name">Permission Adjust Customer Khata: pos.retail.khata.payment</field>
+        <field name="model_id" ref="model_pos_retail_khata_payment"/>
+        <field name="group_id" ref="perm_khata_adjust_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_khata_adjust_ledger" model="ir.model.access">
+        <field name="name">Permission Adjust Customer Khata: pos.retail.ledger.adjustment</field>
+        <field name="model_id" ref="model_pos_retail_ledger_adjustment"/>
+        <field name="group_id" ref="perm_khata_adjust_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
 </odoo>
