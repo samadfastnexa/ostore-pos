@@ -112,9 +112,24 @@ check('setup', "Parent company has no active register", not stray,
       "" if not stray else "%s -- close its session, then retire_parent_register.py"
       % ", ".join(stray.mapped('name')))
 
-no_pin = env['hr.employee'].sudo().search([('pin', '=', False)])
-check('setup', "Every employee has a PIN", not no_pin,
-      "" if not no_pin else "%s without one -- run scripts/set_employee_pins.py" % len(no_pin))
+# Scoped to TRADING branches, matching set_employee_pins.py. Unscoped, this
+# counted somebody at the parent company -- who cannot open a till anyway --
+# and sent the shop to a script that then said everyone already had one.
+# Two of my own scripts disagreeing about the same question.
+trading = env['res.company'].sudo().search([('child_ids', '=', False)])
+no_pin = env['hr.employee'].sudo().search([
+    ('pin', '=', False), ('company_id', 'in', trading.ids)])
+check('setup', "Every till employee has a PIN", not no_pin,
+      "" if not no_pin else "%s -- run scripts/set_employee_pins.py"
+      % ", ".join(no_pin.mapped('name')))
+
+stranded = env['hr.employee'].sudo().search([
+    ('pin', '=', False), ('company_id', 'not in', trading.ids)])
+if stranded:
+    print("  [note] %s employee(s) sit at a non-trading company and have no PIN: %s"
+          % (len(stranded), ", ".join(stranded.mapped('name'))))
+    print("         They cannot open a till from there. Move them to a branch")
+    print("         if they should be selling; otherwise ignore this.")
 
 print()
 print("=" * 78)
