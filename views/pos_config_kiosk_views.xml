@@ -36,6 +36,16 @@
                                 <field name="pos_retail_kiosk_url" readonly="1" class="w-100 fw-bold"
                                        decoration-muted="1"/>
                             </div>
+                            <div class="alert alert-warning mt-2 mb-0 py-2">
+                                <strong>Signing out does not undo this link.</strong>
+                                The link IS the password, so on a device that has it, logging out
+                                and then opening the bookmark (or pressing Back) signs straight in
+                                again with nothing typed. That is the point on a till, and the
+                                reason not to open this link on an office computer or anyone's
+                                phone. If a device is lost or the link has gone somewhere it
+                                should not, press Regenerate Link: the old one stops working
+                                everywhere, immediately.
+                            </div>
                             <button name="action_pos_retail_generate_kiosk_token" type="object"
                                     string="Regenerate Link" class="btn btn-sm btn-secondary mt-2"
                                     confirm="The old link stops working the moment a new one is made. Any device still on it will need to reopen this page for a fresh bookmark. Use this only if a till device is lost or replaced."/>
