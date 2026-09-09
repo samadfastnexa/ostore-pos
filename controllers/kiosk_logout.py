@@ -29,20 +29,44 @@ class PosRetailSession(Session):
     password once clears it, which is the deliberate act that says this
     device is trusted again.
 
-    The cost is real and worth stating: a till that gets signed out, at
-    closing or by accident, needs somebody to type a password once before
-    the bookmark works again. That is the trade the shop asked for, and it
-    is why the register carries a switch to turn this off for a counter
-    where the quick link matters more.
+    Only a PERSON signing out locks the device. A till account signing out
+    is a till closing, and locking that would leave the counter needing a
+    manager's password to reopen -- with the till account having none, by
+    design. See the logout override below for why that distinction is the
+    whole feature.
+
+    The register also carries a switch to turn this off entirely, for a
+    counter where the quick link matters more than the lock.
     """
 
     @http.route()
     def logout(self, redirect='/odoo'):
+        # WHO is signing out decides whether this locks the device, and
+        # getting that wrong made the feature fight itself.
+        #
+        # The shop asked for two things that look contradictory: signing out
+        # should stop somebody walking back in without a password, AND a
+        # cashier should be able to open the till on their own. A first
+        # version locked on every logout, so a till signing out at closing
+        # left the counter needing a manager's password to reopen -- and the
+        # till account has none, by design.
+        #
+        # They are only contradictory if "signed out" is treated as one
+        # thing. The case worth locking is a PERSON with a real login signing
+        # out and the bookmark letting them straight back in. A till account
+        # signing out is just a till closing, and locking that helps nobody.
+        uid = request.session.uid
+        is_till_account = False
+        if uid:
+            is_till_account = bool(request.env['pos.config'].sudo().search_count(
+                [('pos_retail_kiosk_user_id', '=', uid)]))
+
         response = super().logout(redirect=redirect)
-        response.set_cookie(
-            KIOSK_BLOCK_COOKIE, '1',
-            max_age=KIOSK_BLOCK_MAX_AGE, samesite='Lax',
-        )
+        if not is_till_account:
+            response.set_cookie(
+                KIOSK_BLOCK_COOKIE, '1',
+                max_age=KIOSK_BLOCK_MAX_AGE, samesite='Lax',
+            )
         return response
 
 
