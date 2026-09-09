@@ -422,6 +422,45 @@ class PosConfig(models.Model):
              "never leaves the shop floor.",
     )
 
+    def get_limited_partners_loading(self, offset=0):
+        """Keep companies and staff out of the till's customer list.
+
+        Core's query takes EVERY res.partner in the company with no filter of
+        any kind (pos_config.py: "WHERE partner.company_id=%s OR ... IS NULL"),
+        so "Choose customer" offered the shop's own branches, the holding
+        company and the till account itself alongside real customers. On a
+        counter that is worse than untidy: picking one puts a sale on a
+        company's own account.
+
+        Two exclusions, both things that are never a customer of the shop:
+        a partner that IS a company record, and a partner belonging to an
+        internal user. Anything a person actually created as a contact is
+        untouched, including one with no orders yet, so this hides nothing a
+        cashier might legitimately be looking for.
+        """
+        rows = super().get_limited_partners_loading(offset=offset)
+        if not rows:
+            return rows
+
+        partner_ids = [row[0] for row in rows]
+        Partner = self.env['res.partner'].sudo()
+
+        company_partners = set(self.env['res.company'].sudo().search([]).partner_id.ids)
+        staff_partners = set(self.env['res.users'].sudo().with_context(
+            active_test=False).search([('share', '=', False)]).partner_id.ids)
+        hide = company_partners | staff_partners
+
+        # A partner already used on a real sale stays, whatever it is: hiding
+        # it would leave that order's customer unresolvable in the till.
+        used = set(self.env['pos.order'].sudo().search(
+            [('partner_id', 'in', list(hide))]).partner_id.ids)
+        hide -= used
+
+        kept = [row for row in rows if row[0] not in hide]
+        # Nothing to show would be worse than showing too much, so a filter
+        # that removes everything is treated as wrong and ignored.
+        return kept or rows
+
     def action_pos_retail_generate_kiosk_token(self):
         """(Re)issue the token. Called from create()/write() below when a
         kiosk user is set with none yet, and by the manual "Regenerate"
