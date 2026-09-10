@@ -214,15 +214,22 @@ else:
     print()
     print("  Deleting:")
 
-    def drop_references():
-        total = 0
-        for target, ids in (('pos.config', configs.ids), ('pos.order', orders.ids),
-                            ('pos.session', sessions.ids)):
-            for _model_name, _field_name, hits in referencing_records(target, ids):
-                total += len(hits)
-                hits.unlink()
-        return total
-    step("records pointing at those registers", drop_references)
+    # One savepoint PER MODEL, not one for the sweep as a whole.
+    #
+    # The live database turned up four referencing models, two of them
+    # accounting records that Odoo may well refuse to delete. Sharing a
+    # savepoint meant a refusal on the payment would also roll back the 13
+    # inventory-movement rows -- and those are the ones holding the register
+    # delete hostage, so a single refusal would have cascaded into the whole
+    # purge failing for an unrelated reason.
+    for _target, _ids in (('pos.config', configs.ids), ('pos.order', orders.ids),
+                          ('pos.session', sessions.ids)):
+        for model_name, field_name, hits in referencing_records(_target, _ids):
+            def drop_hits(records=hits):
+                n = len(records)
+                records.unlink()
+                return n
+            step("%s.%s" % (model_name, field_name), drop_hits)
 
     def drop_moves():
         n = len(moves)
