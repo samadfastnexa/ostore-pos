@@ -165,6 +165,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/default_customer.js',
             'pos_retail/static/src/overrides/negative_stock_warning.js',
             'pos_retail/static/src/overrides/login_screen_label.js',
+            'pos_retail/static/src/overrides/login_screen_details.xml',
+            'pos_retail/static/src/overrides/login_screen_details.scss',
             'pos_retail/static/src/overrides/navbar_menu.xml',
             'pos_retail/static/src/overrides/order_discount.js',
             'pos_retail/static/src/overrides/order_discount.xml',

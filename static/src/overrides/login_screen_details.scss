@@ -1,0 +1,92 @@
+// The branch and register block on the POS lock screen.
+//
+// The background behind it is a photographic gradient that varies wildly in
+// brightness, so nothing here relies on the backdrop for contrast: the text
+// carries its own shadow and the chips their own translucent panel. A plain
+// dark-on-light rule looked right on one install and was unreadable on the
+// next.
+.pos-retail-login-details {
+    margin: -0.5rem auto 0;
+    max-width: 46rem;
+    padding: 0 1rem;
+}
+
+.pos-retail-login-branch {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+    // A branch name can be long, and wrapping it is better than clipping it:
+    // the whole point of the line is that it is readable at a glance.
+    overflow-wrap: anywhere;
+}
+
+.pos-retail-login-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+
+    > span {
+        background: rgba(0, 0, 0, 0.42);
+        color: #fff;
+        border-radius: 999px;
+        padding: 0.2rem 0.75rem;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+}
+
+.pos-retail-login-status .fa-circle {
+    font-size: 0.55em;
+    vertical-align: middle;
+}
+
+.pos-retail-login-staff {
+    margin-top: 0.6rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pos-retail-login-staff-label {
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+    font-size: 0.85rem;
+}
+
+.pos-retail-login-staff-name {
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f1f1f;
+    border-radius: 999px;
+    padding: 0.1rem 0.6rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+// The case worth shouting about. A till with no staff assigned will refuse
+// every PIN typed at it, and the cashier has no way to know that from a
+// rejection message, so it is stated on the screen instead of being left to
+// be discovered.
+.pos-retail-login-staff-empty {
+    background: rgba(180, 30, 30, 0.85);
+    border-radius: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    text-shadow: none;
+}
+
+// Tablets: the header drops its clock, so this block becomes the first thing
+// on the screen and can afford a little more room above it.
+@media (max-width: 767px) {
+    .pos-retail-login-details {
+        margin-top: 0.5rem;
+    }
+
+    .pos-retail-login-branch {
+        font-size: 1.5rem;
+    }
+}

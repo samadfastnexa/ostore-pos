@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Say which shop and which till this is, on the lock screen.
+
+         The screen carried a clock, a PIN box and the company logo. For one
+         shop that is enough. For a chain where each branch owns its own
+         catalogue, customers and staff it is not: the logo is the same on
+         every till, so nothing told the cashier whether they were standing at
+         Bahria's counter or Uthal's.
+
+         It reads as cosmetic and it is not. Staff belong to one company, so a
+         register only ever offers its own company's employees, and a PIN that
+         is right at one till is unknown at another. Without the branch on
+         screen, a correct PIN at the wrong till reports nothing more useful
+         than "PIN not found".
+
+         Placed after the header rather than inside it: the header hides its
+         clock on small screens, so anything nested there would vanish on a
+         tablet, which is exactly where a cashier is most likely to be. -->
+    <t t-inherit="point_of_sale.LoginScreen" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('screen-login-header')]" position="after">
+            <div class="pos-retail-login-details text-center">
+
+                <div class="pos-retail-login-branch" t-esc="posRetailBranchName"/>
+
+                <div class="pos-retail-login-meta">
+                    <span class="pos-retail-login-register">
+                        <i class="fa fa-shopping-basket me-1" aria-hidden="true"/>
+                        <t t-esc="posRetailRegisterName"/>
+                    </span>
+                    <span class="pos-retail-login-status">
+                        <i class="fa fa-circle me-1" aria-hidden="true"/>
+                        <t t-esc="posRetailSessionState"/>
+                    </span>
+                </div>
+
+                <!-- Names only, never PINs. The list exists so somebody can
+                     see at a glance whether this till knows them at all, which
+                     is the question a rejected PIN actually raises. -->
+                <div class="pos-retail-login-staff" t-if="posRetailCashierNames.length">
+                    <span class="pos-retail-login-staff-label">Staff at this till:</span>
+                    <t t-foreach="posRetailCashierNames" t-as="cashierName" t-key="cashierName">
+                        <span class="pos-retail-login-staff-name" t-esc="cashierName"/>
+                    </t>
+                </div>
+                <div class="pos-retail-login-staff" t-else="">
+                    <span class="pos-retail-login-staff-label pos-retail-login-staff-empty">
+                        No staff are assigned to this till, so no PIN will be accepted here.
+                    </span>
+                </div>
+
+            </div>
+        </xpath>
+    </t>
+
+</templates>
