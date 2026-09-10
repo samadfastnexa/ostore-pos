@@ -737,4 +737,33 @@
         <field name="perm_unlink" eval="False"/>
     </record>
 
+    <!-- ============ Staff and their till PINs ============ -->
+
+    <!-- A cashier's PIN could only be seen or changed by a full administrator,
+         which is why every PIN change in this shop had to go through one
+         person. That is the wrong shape: a PIN is not a password and does not
+         protect the books. It says which of the people standing at a counter
+         rang up a sale, and the person who should set it is whoever runs that
+         counter.
+
+         Granted through hr's own officer group rather than through ir.model.access
+         rows of our own. The pin field itself is declared groups="hr.group_hr_user"
+         on hr.employee, so table permissions alone would leave the field
+         invisible: a role holder would reach the employee form and find no PIN
+         box on it. Implying the group is the only thing that actually reveals
+         the field.
+
+         Scope worth stating plainly: this covers employee records, not user
+         logins. Somebody with it can set PINs and manage the staff list for
+         the companies they are allowed into, and still cannot grant anybody
+         access to anything. Odoo's company record rules do the branch
+         limiting, so a branch manager sees their own branch's staff. -->
+    <record id="perm_manage_staff" model="pos.retail.access.permission">
+        <field name="name">Manage Staff &amp; PINs</field>
+        <field name="category">pos</field>
+        <field name="sequence">85</field>
+        <field name="description">Add and edit employee records and set the PIN each person types at the till. Use this for whoever runs a counter day to day: it lets them add a new cashier and issue or reset a PIN without waiting for an administrator. A PIN identifies who rang up a sale; it is not a password and unlocks nothing outside the till. This does NOT let them create logins or grant anybody access to any part of the system, and they only see staff of the companies they are allowed into.</field>
+        <field name="implied_ids" eval="[(6, 0, [ref('hr.group_hr_user')])]"/>
+    </record>
+
 </odoo>
