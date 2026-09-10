@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Correct Stock and Today's Sales, in the Actions dialog.
+
+         Both belong at the counter for the same reason the shop gave for the
+         khata payment: the queue does not pause while a cashier opens another
+         browser and signs in. A stock figure that is wrong stops a sale with
+         the customer standing there, which is the worst possible moment to
+         send somebody to the back office.
+
+         Each is shown only to a cashier whose own login carries the matching
+         permission, and the server checks the same permission again when the
+         action runs. -->
+    <t t-name="pos_retail.TillActions" t-inherit="point_of_sale.ControlButtons"
+       t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <button t-if="posRetailCanAdjustStock"
+                    class="btn btn-secondary btn-lg py-5 pos-retail-stock-btn"
+                    t-on-click="() => this.onClickAdjustStock()">
+                <i class="fa fa-cubes me-1"/>Correct Stock
+            </button>
+            <button t-if="posRetailCanSeeDailySales"
+                    class="btn btn-secondary btn-lg py-5 pos-retail-daily-btn"
+                    t-on-click="() => this.onClickDailySales()">
+                <i class="fa fa-line-chart me-1"/>Today's Sales
+            </button>
+        </xpath>
+    </t>
+
+</templates>
