@@ -108,6 +108,7 @@ def _pos_retail_seed_till_capabilities(env):
     defaults = {
         'pos_retail.perm_khata_adjust': '_can_khata',
         'pos_retail.perm_pos_admin': '_can_admin_panel',
+        'pos_retail.perm_products_create': '_can_create_product',
     }
     for xmlid, capability in defaults.items():
         permission = env.ref(xmlid, raise_if_not_found=False)

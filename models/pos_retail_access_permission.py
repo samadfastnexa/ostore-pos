@@ -95,7 +95,8 @@ class PosRetailAccessPermission(models.Model):
     # button through two different roles without duplicating permissions.
     TILL_CAPABILITIES = [
         ('_can_khata', "Khata Payment button in the till's Actions"),
-        ('_can_admin_panel', "Admin Panel entry and Create Product in the till"),
+        ('_can_create_product', "New Product button in the till's Actions"),
+        ('_can_admin_panel', "Admin Panel entry in the till's menu"),
     ]
     till_capability = fields.Selection(
         TILL_CAPABILITIES, string="Unlocks at the Till",

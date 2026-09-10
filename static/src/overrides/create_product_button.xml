@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- "New Product" in the Actions dialog, beside Refund and Khata Payment.
+
+         Core offers product creation in the burger menu, which is where a
+         shopkeeper looks for settings rather than for something to do during
+         a sale. Everything a cashier actually performs belongs in one place:
+         the counter is busy and the person at it should not have to know
+         which of two menus hides which job.
+
+         The condition is resolved once when the dialog opens rather than read
+         on every render, because it costs a request to the server. -->
+    <t t-name="pos_retail.CreateProductButton" t-inherit="point_of_sale.ControlButtons"
+       t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <button t-if="posRetailProduct.canCreate"
+                    class="btn btn-secondary btn-lg py-5 pos-retail-new-product-btn"
+                    t-on-click="() => this.onClickCreateProduct()">
+                <i class="fa fa-plus-circle me-1"/>New Product
+            </button>
+        </xpath>
+    </t>
+
+</templates>

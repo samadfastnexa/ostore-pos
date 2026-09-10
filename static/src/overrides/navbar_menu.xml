@@ -55,7 +55,7 @@
             </DropdownItem>
         </xpath>
         <xpath expr="//DropdownItem[@t-if='showCreateProductButton']" position="attributes">
-            <attribute name="t-if">showCreateProductButton and this.pos.cashier._can_admin_panel</attribute>
+            <attribute name="t-if">showCreateProductButton and this.pos.cashier._can_create_product</attribute>
         </xpath>
     </t>
 

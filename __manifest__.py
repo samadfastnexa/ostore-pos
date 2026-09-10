@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.7.7.0',
+    'version': '19.0.7.8.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -176,6 +176,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/refund_button.js',
             'pos_retail/static/src/overrides/refund_button.xml',
             'pos_retail/static/src/overrides/khata_payment_button.js',
+            'pos_retail/static/src/overrides/create_product_button.js',
+            'pos_retail/static/src/overrides/create_product_button.xml',
             'pos_retail/static/src/overrides/khata_payment_button.xml',
             'pos_retail/static/src/overrides/all_products_button.xml',
             'pos_retail/static/src/overrides/round_off.js',
