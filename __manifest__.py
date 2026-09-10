@@ -175,6 +175,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/whatsapp_receipt.xml',
             'pos_retail/static/src/overrides/refund_button.js',
             'pos_retail/static/src/overrides/refund_button.xml',
+            'pos_retail/static/src/overrides/khata_payment_button.js',
+            'pos_retail/static/src/overrides/khata_payment_button.xml',
             'pos_retail/static/src/overrides/all_products_button.xml',
             'pos_retail/static/src/overrides/round_off.js',
             'pos_retail/static/src/overrides/round_off.xml',

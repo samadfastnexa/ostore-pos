@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Khata payment, in the Actions dialog beside Refund.
+
+         The shop asked for it here rather than in the back office, and the
+         reason was sound: the customer paying off their udhaar is standing at
+         the counter with a queue behind them, and the cashier is not going to
+         open a second browser and sign in to record it.
+
+         Shown only to a cashier whose own login carries the "Adjust Customer
+         Khata" permission. That is a courtesy rather than the control: the
+         server refuses the same call from anyone else, because a till is one
+         shared login and anything decided in the browser is decided for
+         everybody who ever stands at it. -->
+    <t t-name="pos_retail.KhataPaymentButton" t-inherit="point_of_sale.ControlButtons"
+       t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <button t-if="posRetailCanTakeKhata"
+                    class="btn btn-secondary btn-lg py-5 pos-retail-khata-btn"
+                    t-on-click="() => this.onClickKhataPayment()">
+                <i class="fa fa-money me-1"/>Khata Payment
+            </button>
+        </xpath>
+    </t>
+
+</templates>

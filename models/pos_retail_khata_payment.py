@@ -103,6 +103,89 @@ class PosRetailKhataPayment(models.TransientModel):
                 or Journal.search(base + [('type', '=', 'bank')], limit=1)
             )
 
+    @api.model
+    def pos_retail_settle_from_pos(self, partner_id, amount, employee_id,
+                                   journal_id=False, memo=False):
+        """Take a khata payment at the till, in the middle of a queue.
+
+        The shop's objection to doing this in the back office was practical
+        and correct: a customer settling their udhaar is standing at the
+        counter with people behind them, and the cashier is not going to open
+        a second browser and sign in.
+
+        WHOSE PERMISSION IS CHECKED, and why it is not the obvious one. Every
+        call from a till arrives as the TILL ACCOUNT, because that is who the
+        browser is signed in as -- one shared login for the device. Checking
+        the caller would therefore give the same answer for every person who
+        ever stands at that counter. So the check is against the EMPLOYEE who
+        is logged in at the till, through the permission their own user
+        carries in the Roles & Permissions catalogue.
+
+        That also means hiding the button in the browser is not the control.
+        The button is a courtesy; this method is the control, and it refuses
+        an employee without the permission no matter how the call arrives.
+
+        The record itself is then created with sudo. The till account is a
+        till, not a bookkeeper: it has no business holding rights over
+        payments and journals, and granting them to it would hand every
+        cashier those rights whether or not they were meant to have them.
+        """
+        employee = self.env['hr.employee'].sudo().browse(int(employee_id)).exists()
+        if not employee:
+            raise UserError(_("No cashier is logged in at this till."))
+        user = employee.user_id
+        if not user or not user.has_group('pos_retail.perm_khata_adjust_res_groups'):
+            raise UserError(_(
+                "%(name)s is not allowed to take khata payments.\n\n"
+                "This is granted in Point of Sale > Configuration > Roles & "
+                "Permissions, with the \"Adjust Customer Khata\" permission, "
+                "and it applies to the cashier's own login rather than to this "
+                "till.",
+                name=employee.name,
+            ))
+
+        partner = self.env['res.partner'].sudo().browse(int(partner_id)).exists()
+        if not partner:
+            raise UserError(_("Choose the customer who is paying."))
+
+        wizard = self.sudo().new({'partner_id': partner.id})
+        wizard._compute_company_id()
+        wizard._compute_journal_id()
+        values = {
+            'partner_id': partner.id,
+            'company_id': wizard.company_id.id,
+            'currency_id': wizard.currency_id.id,
+            'amount': amount,
+            'journal_id': int(journal_id) if journal_id else wizard.journal_id.id,
+            'memo': memo or _("Khata payment at the till"),
+        }
+        if not values['journal_id']:
+            raise UserError(_(
+                "This branch has no cash or bank account set up, so there is "
+                "nowhere to record the money."))
+
+        record = self.sudo().create(values)
+        # action_confirm returns an action meant for a back-office screen. The
+        # till has no use for it, and the figure it does need -- what the
+        # customer owes now -- is the whole point of the exercise.
+        record.action_confirm()
+        # Both fields, and a flush first.
+        #
+        # pos_outstanding_balance is computed from partner.credit, which is
+        # itself computed from the ledger. Invalidating only the outer field
+        # recomputed it from a `credit` that was still cached from before the
+        # payment, so the till was told the customer owed exactly what they
+        # owed a moment ago -- the one number the whole action exists to
+        # change. The flush makes sure the payment and its reconciliation are
+        # in the database before either is read back.
+        self.env.flush_all()
+        partner.invalidate_recordset(['credit', 'pos_outstanding_balance'])
+        return {
+            'partner_id': partner.id,
+            'paid': record.amount,
+            'balance': partner.sudo().pos_outstanding_balance,
+        }
+
     def action_confirm(self):
         self.ensure_one()
         if self.amount <= 0:
