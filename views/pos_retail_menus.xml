@@ -347,22 +347,67 @@ else:
     <menuitem id="pos_retail_menu_discount_high_value" name="High Discount Transactions"
         parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_high_value" sequence="80"/>
 
-    <!-- Configuration > Roles & Permissions. Super-Admin-only (base.group_system,
-         not point_of_sale.group_pos_manager): this screen configures real
-         security, so managing it is kept out of reach of a plain manager. -->
-    <menuitem id="menu_pos_retail_access_role"
-        name="Roles &amp; Permissions"
-        parent="point_of_sale.menu_point_config_product"
-        action="pos_retail_access_role_action"
-        sequence="90"
+    <!-- ================= PEOPLE, UNDER ONE ROOF =================
+
+         Everything about a person was scattered across three places: their
+         employee record under Employees, their login buried in Settings >
+         Users & Companies, and the roles that decide what they may do under
+         Point of Sale > Configuration. Setting one cashier up meant three
+         apps, and the shop said so.
+
+         They are one subject, so they get one place. The Employees app is
+         renamed and everything about people moves under it, rather than a
+         fourth new app being invented for the same set of records.
+
+         The group gates are NOT relaxed by any of this. A menu keeps the
+         groups it was declared with, so Users and Branches stay super-admin
+         only; they are merely easier to find for whoever can already see
+         them. -->
+    <record id="hr.menu_hr_root" model="ir.ui.menu">
+        <field name="name">Staff &amp; Access</field>
+        <field name="sequence">55</field>
+    </record>
+
+    <menuitem id="menu_pos_retail_people_access"
+        name="Access &amp; Logins"
+        parent="hr.menu_hr_root"
+        sequence="80"
         groups="base.group_system"/>
 
-    <!-- Configuration > Permissions Catalog (same super-admin gate). -->
+    <!-- A login is what permissions attach to, so it belongs beside the
+         person it belongs to, not in a settings screen next to translations
+         and scheduled actions. -->
+    <record id="base.menu_action_res_users" model="ir.ui.menu">
+        <field name="parent_id" ref="menu_pos_retail_people_access"/>
+        <field name="name">Logins</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <!-- "Companies" is Odoo's word. This shop has one company and several
+         branches, and calls them branches. -->
+    <record id="base.menu_action_res_company_form" model="ir.ui.menu">
+        <field name="parent_id" ref="menu_pos_retail_people_access"/>
+        <field name="name">Branches</field>
+        <field name="sequence">30</field>
+    </record>
+
+    <!-- Roles configure real security, so they stay on base.group_system
+         rather than point_of_sale.group_pos_manager: a branch manager should
+         not be able to widen their own access. Moved here from the POS
+         configuration menu, since a role is a fact about people rather than
+         about a till. -->
+    <menuitem id="menu_pos_retail_access_role"
+        name="Roles &amp; Permissions"
+        parent="menu_pos_retail_people_access"
+        action="pos_retail_access_role_action"
+        sequence="15"
+        groups="base.group_system"/>
+
     <menuitem id="menu_pos_retail_access_permission"
         name="Permissions Catalog"
-        parent="point_of_sale.menu_point_config_product"
+        parent="menu_pos_retail_people_access"
         action="pos_retail_access_permission_action"
-        sequence="95"
+        sequence="20"
         groups="base.group_system"/>
 
     <!-- Core menu gates opened to catalog permissions. Direct catalog

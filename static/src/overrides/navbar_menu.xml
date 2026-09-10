@@ -28,23 +28,34 @@
          are set in the office, where there is a full form, a cost, a brand
          and a category, rather than mid-queue.
 
-         _role is core's own signal (pos_hr/hr_employee.py sets manager /
-         cashier / minimal, and res_users.py the same for a non-employee
-         login), which is what the neighbouring Install App and Cash In/Out
-         entries already test. -->
+         WHICH SIGNAL DECIDES. This used core's _role, which is "manager"
+         for anyone the register lists under Advanced Employees. That made
+         seniority at the till and the right to leave it the same thing, and
+         they are not: a cashier trusted to close a register is not thereby
+         trusted with the office.
+
+         It now reads the "Administer Point of Sale" permission from the
+         cashier's own login, so the Roles & Permissions screen decides this
+         like it decides everything else. One place to look, and a shop can
+         give the back office to exactly whom it means to.
+
+         Read from the EMPLOYEE, never from the browser's account: a till is
+         one shared login, so anything decided from it is decided identically
+         for every person who ever stands there. -->
+
     <t t-name="pos_retail.NavbarManagerOnly" t-inherit="point_of_sale.Navbar"
        t-inherit-mode="extension">
         <!-- Replaced whole rather than patched: the label is the element's
              own text, and appending to it would read "Backend Admin Panel /
              Control Center". -->
         <xpath expr="//DropdownItem[@onSelected='() => pos.closePos()']" position="replace">
-            <DropdownItem t-if="showBackend and this.pos.cashier._role == 'manager'"
+            <DropdownItem t-if="showBackend and this.pos.cashier._can_admin_panel"
                           onSelected="() => pos.closePos()">
                 Admin Panel / Control Center
             </DropdownItem>
         </xpath>
         <xpath expr="//DropdownItem[@t-if='showCreateProductButton']" position="attributes">
-            <attribute name="t-if">showCreateProductButton and this.pos.cashier._role == 'manager'</attribute>
+            <attribute name="t-if">showCreateProductButton and this.pos.cashier._can_admin_panel</attribute>
         </xpath>
     </t>
 

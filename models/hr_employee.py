@@ -61,6 +61,7 @@ class HrEmployee(models.Model):
     # Permissions catalogue carries.
     POS_RETAIL_TILL_PERMISSIONS = {
         '_can_khata': 'pos_retail.perm_khata_adjust_res_groups',
+        '_can_admin_panel': 'pos_retail.perm_pos_admin_res_groups',
     }
 
     @api.model
