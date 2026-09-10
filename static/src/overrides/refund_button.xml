@@ -11,10 +11,18 @@
 
          Added rather than replacing Register. Register is the only one-tap way
          back to the product grid, and without it a cashier who opens Orders
-         has no obvious route back to ringing up a sale. -->
+         has no obvious route back to ringing up a sale.
+
+         Shown on a permission, because a refund takes money back out of the
+         drawer and a shop may well want to name who can give one. The
+         capability ships attached to "Use Point of Sale (Till)", so nothing
+         changes for a shop that has not thought about it: every cashier keeps
+         the button, exactly as before. Moving it onto the narrower "Give
+         Refunds at the Till" permission is how a shop restricts it. -->
     <t t-inherit="point_of_sale.Navbar" t-inherit-mode="extension">
         <xpath expr="//button[hasclass('orders-button')]" position="after">
-            <button class="pos-retail-refund-btn btn btn-lg btn-light lh-lg"
+            <button t-if="pos.getCashier()?._can_refund"
+                    class="pos-retail-refund-btn btn btn-lg btn-light lh-lg"
                     t-on-click="() => this.posRetailStartRefund()">
                 <span t-if="!ui.isSmall"><i class="fa fa-undo me-1"/>Refund</span>
                 <i t-else="" class="fa fa-fw fa-undo fa-lg"/>

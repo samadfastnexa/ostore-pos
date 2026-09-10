@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Catalogue gaps.
+
+         The shop went through the list and found parts of their own system
+         with no permission covering them at all: the promotions screen, the
+         business dashboard, the two audit logs, and stock counts as distinct
+         from stock transfers. A permission catalogue that cannot describe
+         half the app is not a permission system, it is a suggestion.
+
+         Every entry here follows the same shape as the rest: a real group,
+         real ir.model.access rows, and a description written for whoever is
+         composing a role rather than for whoever wrote the code. -->
+
+    <!-- ============ Promotions ============ -->
+
+    <!-- Promotions decide what customers are charged, which puts them closer
+         to pricing than to configuration. Kept apart from the price
+         permissions all the same: running a weekend offer is a shop-floor
+         decision, changing a product's own price is not. -->
+    <record id="perm_promotions_view" model="pos.retail.access.permission">
+        <field name="name">View Promotions &amp; Discounts</field>
+        <field name="category">pos</field>
+        <field name="sequence">40</field>
+        <field name="description">See the promotions and discount offers that are running, and which products they apply to. Read-only: it does not allow creating an offer or changing one.</field>
+    </record>
+    <record id="access_perm_promotions_view_campaign" model="ir.model.access">
+        <field name="name">Permission View Promotions: pos.retail.brand.campaign</field>
+        <field name="model_id" ref="model_pos_retail_brand_campaign"/>
+        <field name="group_id" ref="perm_promotions_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_promotions_manage" model="pos.retail.access.permission">
+        <field name="name">Manage Promotions &amp; Discounts</field>
+        <field name="category">pos</field>
+        <field name="sequence">41</field>
+        <field name="description">Create and change promotions: percentage off, a fixed amount off, or a fixed selling price, aimed at everything or at chosen products, a category, a brand or a set of tags. An offer takes effect at every till the moment its start time passes, so this is a permission to change what customers pay.</field>
+    </record>
+    <record id="access_perm_promotions_manage_campaign" model="ir.model.access">
+        <field name="name">Permission Manage Promotions: pos.retail.brand.campaign</field>
+        <field name="model_id" ref="model_pos_retail_brand_campaign"/>
+        <field name="group_id" ref="perm_promotions_manage_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <!-- ============ Reporting ============ -->
+
+    <!-- The dashboard shows takings, margins and stock value for the whole
+         branch. Separate from the read-only POS reports, because a figure
+         that answers "how is the shop doing" is a different disclosure from
+         a list of the day's orders. -->
+    <record id="perm_dashboard" model="pos.retail.access.permission">
+        <field name="name">View Business Dashboard</field>
+        <field name="category">reporting</field>
+        <field name="sequence">10</field>
+        <field name="description">Open the business dashboard: sales, margins, stock value and the top products, over any date range. This is the whole branch's performance in one screen, so give it to whoever is accountable for the branch rather than to whoever is standing at the till.</field>
+    </record>
+    <record id="access_perm_dashboard" model="ir.model.access">
+        <field name="name">Permission View Business Dashboard: pos.retail.dashboard</field>
+        <field name="model_id" ref="model_pos_retail_dashboard"/>
+        <field name="group_id" ref="perm_dashboard_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Both audit logs are read-only by design, for everybody. They exist to
+         be evidence, and evidence that the people it describes can edit is
+         not evidence. Nobody gets write access to these, not even an
+         administrator, through any role. -->
+    <record id="perm_audit_logs" model="pos.retail.access.permission">
+        <field name="name">View Discount &amp; Stock Audit Logs</field>
+        <field name="category">reporting</field>
+        <field name="sequence">20</field>
+        <field name="description">Read the two audit trails: every discount given, by whom, for what reason and who approved it; and every stock movement caused by a sale. Both are permanently read-only for everyone, including administrators, because a log the people in it can edit proves nothing.</field>
+    </record>
+    <record id="access_perm_audit_discount_log" model="ir.model.access">
+        <field name="name">Permission View Audit Logs: pos.retail.discount.log</field>
+        <field name="model_id" ref="model_pos_retail_discount_log"/>
+        <field name="group_id" ref="perm_audit_logs_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_audit_inventory_movement" model="ir.model.access">
+        <field name="name">Permission View Audit Logs: pos.retail.inventory.movement</field>
+        <field name="model_id" ref="model_pos_retail_inventory_movement"/>
+        <field name="group_id" ref="perm_audit_logs_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ============ Inventory ============ -->
+
+    <!-- Counting what is on the shelf and moving goods between places are
+         different jobs. A cashier correcting a count of screws should not
+         thereby be able to transfer stock to another branch, and the
+         catalogue had only the second. -->
+    <record id="perm_stock_counts" model="pos.retail.access.permission">
+        <field name="name">Correct Stock Counts</field>
+        <field name="category">inventory</field>
+        <field name="sequence">40</field>
+        <field name="description">Count what is physically on the shelf and correct the figure, including from the till. Every correction is recorded as an inventory adjustment carrying the name of whoever made it. This does not allow transferring stock between locations or branches.</field>
+        <field name="till_capability">_can_stock_adjust</field>
+    </record>
+    <record id="access_perm_stock_counts_quant" model="ir.model.access">
+        <field name="name">Permission Correct Stock Counts: stock.quant</field>
+        <field name="model_id" ref="stock.model_stock_quant"/>
+        <field name="group_id" ref="perm_stock_counts_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ============ Point of Sale ============ -->
+
+    <!-- Refunds move money back out of the drawer, so a shop may well want to
+         name who can give one. It is seeded onto "Use Point of Sale" rather
+         than standing alone, so nothing changes for a shop that has not
+         thought about it: every cashier keeps the button. Moving the
+         capability onto this permission instead is how a shop restricts it.-->
+    <record id="perm_refund" model="pos.retail.access.permission">
+        <field name="name">Give Refunds at the Till</field>
+        <field name="category">pos</field>
+        <field name="sequence">30</field>
+        <field name="description">Refund a previous sale from the till. Money leaves the drawer, so a shop that wants refunds limited to senior staff should put this permission on their role and take the till capability off "Use Point of Sale (Till)". Until that is done every cashier can refund, which is how the shop worked before this permission existed.</field>
+    </record>
+
+</odoo>

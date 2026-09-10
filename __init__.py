@@ -111,6 +111,9 @@ def _pos_retail_seed_till_capabilities(env):
         'pos_retail.perm_products_create': '_can_create_product',
         'pos_retail.perm_inventory': '_can_stock_adjust',
         'pos_retail.perm_reporting': '_can_daily_sales',
+        # Seeded onto the everyday till permission so no shop loses the
+        # refund button by upgrading. Move it to perm_refund to restrict.
+        'pos_retail.perm_pos_use': '_can_refund',
     }
     for xmlid, capability in defaults.items():
         permission = env.ref(xmlid, raise_if_not_found=False)

@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.7.9.0',
+    'version': '19.0.7.10.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -53,6 +53,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         # menus file references the auto-created perm_*_res_groups xmlids.
         'data/pos_retail_access_permission_data.xml',
         'data/pos_retail_access_permission_crud_data.xml',
+        'data/pos_retail_access_permission_extra_data.xml',
         'data/pos_retail_access_role_data.xml',
         'data/pos_retail_package_data.xml',
         'data/pos_retail_partner_tag_data.xml',
