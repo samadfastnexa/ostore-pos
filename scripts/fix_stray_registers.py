@@ -32,9 +32,21 @@ So this reports exactly what Uthal is missing and leaves the decision alone.
 Commissioning a branch properly is what commission_branch.py is for.
 
 READ ONLY until APPLY is set to True.
+
+ARCHIVE OR DELETE. Archiving is the default because it is reversible and
+deleting is not. Set DELETE = True to remove the register outright instead.
+That is a reasonable thing to want for a register created by accident, and
+it is refused here unless the register has no orders AND no sessions of any
+kind, open or closed -- a closed session still holds the cash count and the
+journal entries for the day it covered.
+
+Either way the register's origin is printed first. A register nobody
+remembers creating may have been made by a script or by a module install, in
+which case it can come back, and deleting it teaches us nothing about that.
 """
 
 APPLY = False
+DELETE = False
 
 PosConfig = env['pos.config'].sudo()
 PosOrder = env['pos.order'].sudo()
@@ -57,6 +69,8 @@ print(line_break)
 parents = Company.search([('parent_id', '=', False)])
 candidates = PosConfig.search([('company_id', 'in', parents.ids), ('active', '=', True)])
 
+PosSession = env['pos.session'].sudo()
+
 safe, unsafe = [], []
 for config in candidates:
     orders = PosOrder.search_count([('config_id', '=', config.id)])
@@ -69,20 +83,53 @@ print()
 print("  Active registers on a parent company:")
 if not candidates:
     print("      none -- nothing to do")
+
 for config in safe:
-    print("      %-26r 0 orders, no open session  -> SAFE TO ARCHIVE" % config.name[:24])
+    # Sessions of ANY state, not just open ones. A closed session holds the
+    # cash count and the journal entries for the day it covered, so a
+    # register carrying one has history even with no orders on it.
+    sessions = PosSession.with_context(active_test=False).search_count(
+        [('config_id', '=', config.id)])
+    external = config.get_external_id().get(config.id) or "none (made by hand)"
+    print("      %-26r 0 orders, %s session(s)" % (config.name[:24], sessions))
+    print("          created %s by %r" % (
+        config.create_date and config.create_date.strftime("%Y-%m-%d %H:%M") or "?",
+        config.create_uid.name))
+    print("          origin  %s" % external)
+    if DELETE and sessions:
+        print("          -> CANNOT DELETE: it has sessions. Will archive instead.")
+    elif DELETE:
+        print("          -> WILL BE DELETED")
+    else:
+        print("          -> WILL BE ARCHIVED")
+
 for config, orders in unsafe:
     print("      %-26r %s order(s)%s  -> LEFT ALONE, it has traded" % (
         config.name[:24], orders,
         ", session OPEN" if config.current_session_id else ""))
 
 if APPLY and safe:
+    archived, deleted = [], []
     for config in safe:
-        config.active = False
+        sessions = PosSession.with_context(active_test=False).search_count(
+            [('config_id', '=', config.id)])
+        # The name is read BEFORE the unlink. Reading it afterwards gives a
+        # missing-record error on a delete that actually succeeded, which
+        # reads as a failure and is not one.
+        label = config.name
+        if DELETE and not sessions:
+            config.unlink()
+            deleted.append(label)
+        else:
+            config.active = False
+            archived.append(label)
     env.cr.commit()
     print()
-    print("  Archived %s register(s). The card disappears from the dashboard;" % len(safe))
-    print("  nothing is deleted and it can be un-archived if that was wrong.")
+    for label in deleted:
+        print("  DELETED %r. This cannot be undone." % label)
+    for label in archived:
+        print("  Archived %r. The card disappears from the dashboard; nothing is" % label)
+        print("  deleted and it can be un-archived if that was wrong.")
 
 print()
 print(line_break)
