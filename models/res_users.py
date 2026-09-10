@@ -10,6 +10,36 @@ from .res_company import TRADING_COMPANY_DOMAIN, pos_retail_trading_company
 class ResUsers(models.Model):
     _inherit = 'res.users'
 
+    # What the SIGNED-IN account may do, keyed by the flag the till sees.
+    #
+    # Distinct from the per-cashier capabilities on hr.employee, and the
+    # distinction is the whole point. A cashier's own permissions decide what
+    # that PERSON is allowed to ask for; these decide what the SESSION can
+    # actually carry out, because every call from the till runs as whoever the
+    # browser is signed in as. A button needs both to be true, and offering
+    # one without checking the other is what produced an "Access Error" naming
+    # twelve security groups in front of a customer.
+    POS_RETAIL_SESSION_CAPABILITIES = {
+        '_can_quotation': 'sales_team.group_sale_salesman',
+    }
+
+    @api.model
+    def _load_pos_data_read(self, records, config):
+        """Tell the till what this session is allowed to do.
+
+        Core loads all_group_ids here and deletes the key again before it
+        reaches the browser, so nothing client-side can see what the session
+        may do. Rather than send the whole group list back -- which is a map
+        of the security model handed to every till -- only named capabilities
+        go over, one boolean per feature that has a button.
+        """
+        rows = super()._load_pos_data_read(records, config)
+        for row in rows:
+            user = self.browse(row['id'])
+            for flag, group_xmlid in self.POS_RETAIL_SESSION_CAPABILITIES.items():
+                row[flag] = user.has_group(group_xmlid)
+        return rows
+
     def _pos_retail_default_company(self):
         """Land a new user in a shop rather than the holding company.
 
