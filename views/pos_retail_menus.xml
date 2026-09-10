@@ -22,16 +22,32 @@
          mixed list every time.
          All Contacts is left unfiltered and keeps its own name honest: it is
          still the way to reach a record that is neither. -->
+    <!-- Two entries in the sidebar rather than one, because the shop asked
+         for it and the reason holds: selling to somebody and buying from them
+         are different jobs done by different people, and a single "Customers
+         & Vendors" heading made staff open the wrong list first.
+
+         Each is gated on its own permissions. Someone granted only the
+         customer ones sees Customers and not Vendors. That gates the SCREEN,
+         not the rows — a contact is one record carrying a customer flag, a
+         vendor flag, or both, and plenty here carry both — so it decides
+         where somebody works rather than pretending they cannot see a record
+         that exists.
+
+         The old combined groups are kept in the list so nobody loses a menu
+         they have today. -->
     <menuitem id="pos_retail_menu_customers"
               name="Customers"
               action="pos_retail.action_pos_retail_customers"
               parent="contacts.menu_contacts"
-              sequence="1"/>
+              sequence="1"
+              groups="pos_retail.perm_customers_view_res_groups,pos_retail.perm_customers_create_res_groups,pos_retail.perm_customers_edit_res_groups,pos_retail.perm_customers_delete_res_groups,pos_retail.perm_partners_manage_res_groups,base.group_system"/>
     <menuitem id="pos_retail_menu_vendors"
               name="Vendors"
               action="pos_retail.action_pos_retail_vendors"
               parent="contacts.menu_contacts"
-              sequence="2"/>
+              sequence="2"
+              groups="pos_retail.perm_vendors_view_res_groups,pos_retail.perm_vendors_create_res_groups,pos_retail.perm_vendors_edit_res_groups,pos_retail.perm_vendors_delete_res_groups,pos_retail.perm_partners_manage_res_groups,base.group_system"/>
     <record id="contacts.res_partner_menu_contacts" model="ir.ui.menu">
         <field name="sequence">3</field>
     </record>

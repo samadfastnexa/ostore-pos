@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Customers and vendors, as separate permissions.
+
+         The catalogue treated them as one thing, which is not how the shop
+         works: the person who adds a walk-in customer at the counter is not
+         the person who sets up a supplier. Somebody granted the ability to
+         add a customer was also being handed the vendor book.
+
+         WHAT THIS DOES AND DOES NOT SEPARATE, stated plainly because it is
+         the one thing that could mislead. A customer and a vendor are the
+         same kind of record in Odoo — one contact carrying a customer flag,
+         a vendor flag, or both, and in this trade plenty carry both. So these
+         permissions separate the SCREENS, not the rows: they decide who gets
+         the Customers menu and who gets the Vendors menu, and someone with
+         only one of them could still reach the other kind of contact by
+         searching. Filtering the rows themselves was considered and rejected:
+         it would restrict the people who were granted a permission while
+         leaving anyone who was granted nothing seeing everything, which is
+         the wrong way round.
+
+         The older combined entries are left in place. Roles already use them,
+         and quietly withdrawing a permission somebody is relying on is how an
+         upgrade takes away access nobody agreed to lose. -->
+
+    <!-- ============ Customers ============ -->
+
+    <record id="perm_customers_view" model="pos.retail.access.permission">
+        <field name="name">View Customers</field>
+        <field name="category">partners</field>
+        <field name="sequence">50</field>
+        <field name="description">Open the Customers list and read customer records: contact details, khata balance and buying history. Read-only.</field>
+    </record>
+    <record id="access_perm_customers_view" model="ir.model.access">
+        <field name="name">Permission View Customers: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_customers_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_customers_create" model="pos.retail.access.permission">
+        <field name="name">Create Customers</field>
+        <field name="category">partners</field>
+        <field name="sequence">51</field>
+        <field name="description">Add a new customer, including from the till while serving. Does not allow editing an existing one, and does not touch the vendor book.</field>
+    </record>
+    <record id="access_perm_customers_create" model="ir.model.access">
+        <field name="name">Permission Create Customers: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_customers_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_customers_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Customers</field>
+        <field name="category">partners</field>
+        <field name="sequence">52</field>
+        <field name="description">Change a customer's details, including their credit limit. Raising a credit limit decides how much a customer may owe, so this is a permission about money as well as about addresses.</field>
+    </record>
+    <record id="access_perm_customers_edit" model="ir.model.access">
+        <field name="name">Permission Edit Customers: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_customers_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_customers_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Customers</field>
+        <field name="category">partners</field>
+        <field name="sequence">53</field>
+        <field name="description">Remove a customer record. Odoo refuses once anything has been sold to them, so in practice this only removes duplicates and mistakes.</field>
+    </record>
+    <record id="access_perm_customers_delete" model="ir.model.access">
+        <field name="name">Permission Delete Customers: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_customers_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <!-- ============ Vendors ============ -->
+
+    <record id="perm_vendors_view" model="pos.retail.access.permission">
+        <field name="name">View Vendors</field>
+        <field name="category">partners</field>
+        <field name="sequence">60</field>
+        <field name="description">Open the Vendors list and read supplier records, including what has been bought from them. Read-only.</field>
+    </record>
+    <record id="access_perm_vendors_view" model="ir.model.access">
+        <field name="name">Permission View Vendors: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_vendors_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_vendors_create" model="pos.retail.access.permission">
+        <field name="name">Create Vendors</field>
+        <field name="category">partners</field>
+        <field name="sequence">61</field>
+        <field name="description">Add a new supplier. Suppliers are set up when goods are being bought, which is an office job rather than a counter one.</field>
+    </record>
+    <record id="access_perm_vendors_create" model="ir.model.access">
+        <field name="name">Permission Create Vendors: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_vendors_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_vendors_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Vendors</field>
+        <field name="category">partners</field>
+        <field name="sequence">62</field>
+        <field name="description">Change a supplier's details, including their bank account. A supplier's bank details decide where payments go, so treat this as a permission about money.</field>
+    </record>
+    <record id="access_perm_vendors_edit" model="ir.model.access">
+        <field name="name">Permission Edit Vendors: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_vendors_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_vendors_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Vendors</field>
+        <field name="category">partners</field>
+        <field name="sequence">63</field>
+        <field name="description">Remove a supplier record. Odoo refuses once anything has been bought from them, so in practice this only removes duplicates and mistakes.</field>
+    </record>
+    <record id="access_perm_vendors_delete" model="ir.model.access">
+        <field name="name">Permission Delete Vendors: res_partner</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="group_id" ref="perm_vendors_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <!-- ============ Refunds, by direction ============ -->
+
+    <!-- Money going back to a customer and money coming back from a supplier
+         are opposite flows, usually handled by different people, and the
+         catalogue described only the first. Separated so a shop can let the
+         counter refund a customer without also letting it raise a claim
+         against a supplier. -->
+    <record id="perm_refund_vendor" model="pos.retail.access.permission">
+        <field name="name">Refund a Vendor (Credit Note)</field>
+        <field name="category">purchases</field>
+        <field name="sequence">60</field>
+        <field name="description">Raise a credit note against a supplier: goods sent back, an overcharge corrected, money owed to the shop rather than by it. This is the buying side and is separate from refunding a customer at the till.</field>
+    </record>
+    <record id="access_perm_refund_vendor_move" model="ir.model.access">
+        <field name="name">Permission Refund a Vendor: account_move</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="group_id" ref="perm_refund_vendor_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_refund_vendor_move_line" model="ir.model.access">
+        <field name="name">Permission Refund a Vendor: account_move_line</field>
+        <field name="model_id" ref="account.model_account_move_line"/>
+        <field name="group_id" ref="perm_refund_vendor_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+</odoo>
