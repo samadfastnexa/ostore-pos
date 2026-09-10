@@ -7,53 +7,16 @@
          access rows are standalone records for the same reasons as there
          (explicit names, own xmlids, clean uninstall). -->
 
-    <record id="perm_partners_create" model="pos.retail.access.permission">
-        <field name="name">Create Customers &amp; Vendors</field>
-        <field name="category">partners</field>
-        <field name="sequence">20</field>
-        <field name="description">Add new customers &amp; vendors. Does not allow editing or deleting existing ones.</field>
-    </record>
-    <record id="access_perm_partners_create_partner" model="ir.model.access">
-        <field name="name">Permission Create Customers &amp; Vendors: res_partner</field>
-        <field name="model_id" ref="base.model_res_partner"/>
-        <field name="group_id" ref="perm_partners_create_res_groups"/>
-        <field name="perm_read" eval="True"/>
-        <field name="perm_write" eval="False"/>
-        <field name="perm_create" eval="True"/>
-        <field name="perm_unlink" eval="False"/>
-    </record>
+    <!-- The combined Customers & Vendors create/edit/delete permissions were
+         here. They are superseded by the eight split entries in
+         pos_retail_access_permission_partners_data.xml, and two catalogue
+         entries meaning nearly the same thing is how a role ends up granting
+         something nobody intended.
 
-    <record id="perm_partners_edit" model="pos.retail.access.permission">
-        <field name="name">Edit Customers &amp; Vendors</field>
-        <field name="category">partners</field>
-        <field name="sequence">30</field>
-        <field name="description">Modify existing customers &amp; vendors. Does not allow adding new ones or deleting.</field>
-    </record>
-    <record id="access_perm_partners_edit_partner" model="ir.model.access">
-        <field name="name">Permission Edit Customers &amp; Vendors: res_partner</field>
-        <field name="model_id" ref="base.model_res_partner"/>
-        <field name="group_id" ref="perm_partners_edit_res_groups"/>
-        <field name="perm_read" eval="True"/>
-        <field name="perm_write" eval="True"/>
-        <field name="perm_create" eval="False"/>
-        <field name="perm_unlink" eval="False"/>
-    </record>
-
-    <record id="perm_partners_delete" model="pos.retail.access.permission">
-        <field name="name">Delete Customers &amp; Vendors</field>
-        <field name="category">partners</field>
-        <field name="sequence">40</field>
-        <field name="description">Delete customers &amp; vendors. Odoo's own rules still apply (e.g. posted or confirmed documents cannot be deleted).</field>
-    </record>
-    <record id="access_perm_partners_delete_partner" model="ir.model.access">
-        <field name="name">Permission Delete Customers &amp; Vendors: res_partner</field>
-        <field name="model_id" ref="base.model_res_partner"/>
-        <field name="group_id" ref="perm_partners_delete_res_groups"/>
-        <field name="perm_read" eval="True"/>
-        <field name="perm_write" eval="False"/>
-        <field name="perm_create" eval="False"/>
-        <field name="perm_unlink" eval="True"/>
-    </record>
+         Removed from the file so a fresh install never creates them, and
+         retired from existing databases by the 19.0.7.12.0 migration, which
+         moves every role onto the split equivalents before deleting them so
+         nobody loses access. -->
 
     <record id="perm_sales_view" model="pos.retail.access.permission">
         <field name="name">View Quotations &amp; Sales Orders</field>
