@@ -23,6 +23,46 @@ class ResUsers(models.Model):
         '_can_quotation': 'sales_team.group_sale_salesman',
     }
 
+    pos_retail_role_ids = fields.Many2many(
+        'pos.retail.access.role', string="Shop Roles",
+        compute='_compute_pos_retail_role_ids',
+        inverse='_inverse_pos_retail_role_ids',
+        help="The roles built under Point of Sale > Configuration > Roles & "
+             "Permissions. Each one carries a set of permissions, and adding "
+             "somebody to a role grants them all of it at once.",
+    )
+
+    @api.depends('group_ids')
+    def _compute_pos_retail_role_ids(self):
+        """Show a user's shop roles on their own form.
+
+        Roles were assignable only from the role's own screen, which is the
+        wrong way round for the common job. Setting one person up means
+        opening their user form and then leaving it again to go and find
+        every role they should be in -- and the field the user form does show
+        is Odoo's own User/Administrator switch, which is a different thing
+        with a confusingly similar name.
+
+        Computed rather than stored: the truth is which security groups the
+        user is in, and keeping a second copy of that would let the two drift
+        apart. Direct membership only -- a role reached by implication from
+        another role is not something to offer for removal here, because
+        un-ticking it would appear to do nothing.
+        """
+        Role = self.env['pos.retail.access.role']
+        for user in self:
+            user.pos_retail_role_ids = Role.sudo().search(
+                [('group_id', 'in', user.group_ids.ids)])
+
+    def _inverse_pos_retail_role_ids(self):
+        for user in self:
+            current = self.env['pos.retail.access.role'].sudo().search([])
+            wanted = user.pos_retail_role_ids
+            commands = [(3, role.group_id.id) for role in current - wanted]
+            commands += [(4, role.group_id.id) for role in wanted]
+            if commands:
+                user.sudo().group_ids = commands
+
     @api.model
     def _load_pos_data_read(self, records, config):
         """Tell the till what this session is allowed to do.

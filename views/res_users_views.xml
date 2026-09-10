@@ -130,7 +130,24 @@
                 </h5>
             </xpath>
 
+            <!-- Shop roles, on the user's own form.
+
+                 They were assignable only from the role's own screen, which
+                 is backwards for the common job: setting one person up meant
+                 opening their form and then leaving it again to hunt through
+                 every role they belong in.
+
+                 Worse, the field the form DOES show at this spot is Odoo's
+                 own User/Administrator switch, also labelled Role. Somebody
+                 looking for the three roles they had just built found two
+                 unrelated options with the same name and reasonably concluded
+                 the roles had not saved. Placed directly beneath it, and
+                 named for the shop rather than for the system, so the two are
+                 obviously different things. -->
             <xpath expr="//field[@name='company_ids']" position="before">
+                <field name="pos_retail_role_ids" widget="many2many_tags"
+                       options="{'no_create': True, 'no_open': True}"
+                       placeholder="e.g. Cashier"/>
                 <field name="pos_retail_assignable_company_ids" invisible="1"/>
             </xpath>
 
