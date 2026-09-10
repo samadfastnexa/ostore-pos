@@ -90,3 +90,26 @@ def _pos_retail_post_init(env):
             LoyaltyProgram.create({'name': 'Store Credit', 'program_type': 'ewallet', **template})
 
     _pos_retail_setup_wallet_methods(env)
+    _pos_retail_seed_till_capabilities(env)
+
+
+def _pos_retail_seed_till_capabilities(env):
+    """Point the shipped permissions at the till buttons they unlock.
+
+    Done here rather than in the data file because that file is noupdate: it
+    has to be, so a shop's own edits to the catalogue survive every upgrade.
+    The cost is that a field added later never reaches a database that already
+    has those records, which is exactly this field.
+
+    Only fills a capability that is still EMPTY. A shop that has moved a
+    button onto a permission of their own keeps that arrangement; this never
+    overrules a decision somebody made on purpose.
+    """
+    defaults = {
+        'pos_retail.perm_khata_adjust': '_can_khata',
+        'pos_retail.perm_pos_admin': '_can_admin_panel',
+    }
+    for xmlid, capability in defaults.items():
+        permission = env.ref(xmlid, raise_if_not_found=False)
+        if permission and not permission.till_capability:
+            permission.till_capability = capability

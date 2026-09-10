@@ -56,14 +56,6 @@ class HrEmployee(models.Model):
             result.append('pos_discount_role_id')
         return result
 
-    # Permissions that reach into the till, keyed by the flag the browser sees.
-    # Each value is the xmlid of the res.groups a permission in the Roles &
-    # Permissions catalogue carries.
-    POS_RETAIL_TILL_PERMISSIONS = {
-        '_can_khata': 'pos_retail.perm_khata_adjust_res_groups',
-        '_can_admin_panel': 'pos_retail.perm_pos_admin_res_groups',
-    }
-
     @api.model
     def _load_pos_data_read(self, records, config):
         """Tell the till what each cashier is allowed to do beyond selling.
@@ -76,18 +68,34 @@ class HrEmployee(models.Model):
         surfaced as an unrelated JavaScript error about currency_id. Core
         already sends _role, _barcode and _pin this way for the same reason.
 
-        The permission is read from the EMPLOYEE's own user, not from whoever
-        the browser is signed in as. On a kiosk till the browser is the till
-        account, so asking it what it may do would give every cashier the same
-        answer -- and the wrong one.
+        WHOSE permission is read: the EMPLOYEE's own user, never the browser's
+        account. A till is one shared login, so asking it what it may do would
+        give the same answer for every person who ever stands there.
+
+        WHICH permission grants what is read from the catalogue rather than
+        from a table in this file, so the shop decides it. An owner can invent
+        a permission of their own and point the Khata button at it, or move
+        the Admin Panel onto a role they built, without anybody editing code.
         """
         rows = super()._load_pos_data_read(records, config)
+        capabilities = self.env['pos.retail.access.permission'] \
+            ._pos_retail_till_capability_groups()
         by_id = {employee.id: employee for employee in records}
         for row in rows:
             employee = by_id.get(row['id'])
             user = employee.sudo().user_id if employee else None
-            for flag, group_xmlid in self.POS_RETAIL_TILL_PERMISSIONS.items():
-                row[flag] = bool(user) and user.has_group(group_xmlid)
+            held = set(user.all_group_ids.ids) if user else set()
+            for flag, group_ids in capabilities.items():
+                # Any one of the groups is enough, which is what lets a shop
+                # grant the same button through two different roles without
+                # duplicating the permission itself.
+                row[flag] = bool(held.intersection(group_ids))
+            # A capability nobody has pointed a permission at must still reach
+            # the browser as False. Left absent, the till reads undefined and
+            # hides the button anyway, but a missing key and a denied one are
+            # different things and only one of them is worth debugging.
+            for flag, _label in self.env['pos.retail.access.permission'].TILL_CAPABILITIES:
+                row.setdefault(flag, False)
         return rows
 
 

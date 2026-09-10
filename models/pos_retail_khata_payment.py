@@ -133,8 +133,14 @@ class PosRetailKhataPayment(models.TransientModel):
         employee = self.env['hr.employee'].sudo().browse(int(employee_id)).exists()
         if not employee:
             raise UserError(_("No cashier is logged in at this till."))
+        # Asked of the catalogue, not of a fixed group name. The shop decides
+        # which permission unlocks this button, and the server has to agree
+        # with whatever they chose, or the check drifts away from the screen
+        # and starts refusing people the shop believes it authorised.
+        allowed_groups = self.env['pos.retail.access.permission'] \
+            ._pos_retail_till_capability_groups().get('_can_khata') or []
         user = employee.user_id
-        if not user or not user.has_group('pos_retail.perm_khata_adjust_res_groups'):
+        if not user or not set(user.all_group_ids.ids).intersection(allowed_groups):
             raise UserError(_(
                 "%(name)s is not allowed to take khata payments.\n\n"
                 "This is granted in Point of Sale > Configuration > Roles & "

@@ -76,6 +76,49 @@ class PosRetailAccessPermission(models.Model):
     description = fields.Text(
         help="Admin-facing explanation of exactly what this permission unlocks.",
     )
+
+    # Which button at the TILL this permission controls, if any.
+    #
+    # Kept as data rather than as a mapping in code so the shop, not the
+    # developer, decides which permission unlocks which action at the counter.
+    # A shop can build a permission of its own and point the Khata button at
+    # it, or move the Admin Panel onto a role it invented, without anybody
+    # editing a file.
+    #
+    # A SELECTION and not free text, deliberately. Each value is a flag the
+    # till's own code reads by name; a typed one that matched nothing would
+    # silently hide a button with no error and nothing to search for. New
+    # entries appear here as new till actions are built.
+    #
+    # Several permissions may name the same capability. They are OR'd: holding
+    # any one of them is enough, which is what lets a shop grant the same
+    # button through two different roles without duplicating permissions.
+    TILL_CAPABILITIES = [
+        ('_can_khata', "Khata Payment button in the till's Actions"),
+        ('_can_admin_panel', "Admin Panel entry and Create Product in the till"),
+    ]
+    till_capability = fields.Selection(
+        TILL_CAPABILITIES, string="Unlocks at the Till",
+        help="Optional. If set, a cashier holding this permission gets the "
+             "named button inside the POS itself, not only in the back "
+             "office. Leave empty for a permission that is purely about the "
+             "back office.\n\n"
+             "The button is only ever a convenience: the server checks the "
+             "same permission again when the action runs, so removing it here "
+             "stops the action rather than merely hiding it.",
+    )
+
+    @api.model
+    def _pos_retail_till_capability_groups(self):
+        """Capability flag -> the groups that grant it, built from the data.
+
+        Read on every POS load, which is why it returns ids rather than
+        records: the caller only ever asks "is this cashier in one of these".
+        """
+        mapping = {}
+        for permission in self.sudo().search([('till_capability', '!=', False)]):
+            mapping.setdefault(permission.till_capability, []).append(permission.group_id.id)
+        return mapping
     grants_price_edit = fields.Boolean(
         string="Grants: Edit Sales Price on Existing Products", default=False,
         help="Pure flag, no access rows: a role holding this permission lifts "
