@@ -48,11 +48,30 @@ patch(LoginScreen.prototype, {
     // button; this states the fact, which is what someone arriving at a
     // counter wants to know before they touch anything.
     get posRetailSessionState() {
+        return this.posRetailSessionIsOpen ? _t("Open") : _t("Not open yet");
+    },
+
+    // Drives the colour of the status dot. Kept as a boolean rather than
+    // letting the template compare strings: the label is translated, and a
+    // template testing a translated string turns green into grey the moment
+    // somebody runs this shop in Urdu.
+    get posRetailSessionIsOpen() {
         const session = this.pos.session;
-        if (!session || !session.id) {
-            return _t("Not open yet");
-        }
-        return session.state === "opened" ? _t("Open") : _t("Waiting to be opened");
+        return Boolean(session && session.id && session.state === "opened");
+    },
+
+    // Whether the register's own name is worth printing next to the branch.
+    //
+    // Most shops name the till after the shop, and "Murshid Bahria Branch"
+    // under a heading that already reads "Murshad Bahria Branch" is noise
+    // that also looks like a mistake. Compared on letters and digits alone,
+    // so spacing, case and punctuation do not make two identical names look
+    // different.
+    get posRetailShowRegisterName() {
+        const flatten = (value) =>
+            (value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const register = flatten(this.posRetailRegisterName);
+        return Boolean(register) && register !== flatten(this.posRetailBranchName);
     },
 
     // The staff this till will accept, by name.

@@ -1,24 +1,43 @@
-// The branch and register block on the POS lock screen.
+// The branch and register card on the POS lock screen.
 //
-// The background behind it is a photographic gradient that varies wildly in
-// brightness, so nothing here relies on the backdrop for contrast: the text
-// carries its own shadow and the chips their own translucent panel. A plain
-// dark-on-light rule looked right on one install and was unreadable on the
-// next.
+// The first version painted white text with a drop shadow straight onto the
+// backdrop. That backdrop is a pale lavender gradient, so white-on-pale was
+// weak wherever the gradient lightened, and the shadow that rescued it made
+// the text look embossed. Every element also had to solve contrast for
+// itself, which is why there were four shadows and no shared alignment.
+//
+// One translucent panel instead: dark text on a light card reads against any
+// backdrop, light or photographic, and the card is the only thing that has to
+// negotiate with what is behind it.
 .pos-retail-login-details {
-    margin: -0.5rem auto 0;
-    max-width: 46rem;
+    display: flex;
+    justify-content: center;
     padding: 0 1rem;
+    margin-top: -0.25rem;
+}
+
+.pos-retail-login-card {
+    max-width: 40rem;
+    padding: 0.85rem 1.5rem 1rem;
+    border-radius: 1rem;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    // Frosts whatever is behind the card so busy backdrops cannot compete
+    // with the text. Ignored by browsers that do not support it, which then
+    // simply get the flat translucent panel above: no fallback needed.
+    backdrop-filter: blur(10px);
+    box-shadow: 0 6px 24px rgba(31, 31, 46, 0.14);
 }
 
 .pos-retail-login-branch {
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1.15;
-    color: #fff;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
-    // A branch name can be long, and wrapping it is better than clipping it:
-    // the whole point of the line is that it is readable at a glance.
+    font-size: 1.75rem;
+    font-weight: 650;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: #1f1f2e;
+    // A branch name can be long, and wrapping beats clipping: the line exists
+    // to be read at a glance from a step away.
     overflow-wrap: anywhere;
 }
 
@@ -26,67 +45,126 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+    align-items: center;
+    gap: 0.4rem 0.85rem;
+    margin-top: 0.45rem;
+    font-size: 0.875rem;
+    color: #4a4a5c;
 
     > span {
-        background: rgba(0, 0, 0, 0.42);
-        color: #fff;
-        border-radius: 999px;
-        padding: 0.2rem 0.75rem;
-        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
         white-space: nowrap;
+    }
+
+    .fa {
+        opacity: 0.55;
     }
 }
 
-.pos-retail-login-status .fa-circle {
-    font-size: 0.55em;
-    vertical-align: middle;
+// Small-caps label used for both "Till" and "Staff at this till". Naming the
+// value stops two similar names reading as the same name printed twice.
+.pos-retail-login-key {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8a8a9c;
+}
+
+.pos-retail-login-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.pos-retail-login-status {
+    font-weight: 600;
+
+    // The ring is written per state rather than derived from currentColor:
+    // Sass's rgba() takes a colour, and currentColor is a CSS keyword it
+    // cannot evaluate, so the shorthand fails at compile time and takes the
+    // whole POS bundle down with it.
+    &.is-open {
+        color: #1a7f4b;
+
+        .pos-retail-login-dot {
+            box-shadow: 0 0 0 3px rgba(26, 127, 75, 0.18);
+        }
+    }
+
+    // Amber, not red. The register simply has not been opened yet, which is
+    // the normal state of every till before trading starts. Red would say
+    // something is wrong when nothing is.
+    &.is-closed {
+        color: #9a6700;
+
+        .pos-retail-login-dot {
+            box-shadow: 0 0 0 3px rgba(154, 103, 0, 0.18);
+        }
+    }
 }
 
 .pos-retail-login-staff {
-    margin-top: 0.6rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
+    gap: 0.35rem 0.5rem;
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(31, 31, 46, 0.09);
+}
+
+.pos-retail-login-staff-names {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 0.35rem;
 }
 
-.pos-retail-login-staff-label {
-    color: rgba(255, 255, 255, 0.85);
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
-    font-size: 0.85rem;
-}
-
 .pos-retail-login-staff-name {
-    background: rgba(255, 255, 255, 0.9);
-    color: #1f1f1f;
+    background: rgba(31, 31, 46, 0.06);
+    border: 1px solid rgba(31, 31, 46, 0.08);
+    color: #2b2b3a;
     border-radius: 999px;
     padding: 0.1rem 0.6rem;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     white-space: nowrap;
 }
 
-// The case worth shouting about. A till with no staff assigned will refuse
-// every PIN typed at it, and the cashier has no way to know that from a
-// rejection message, so it is stated on the screen instead of being left to
-// be discovered.
-.pos-retail-login-staff-empty {
-    background: rgba(180, 30, 30, 0.85);
-    border-radius: 0.4rem;
-    padding: 0.3rem 0.7rem;
-    text-shadow: none;
+// The case worth shouting about. A till with nobody assigned refuses every
+// PIN typed at it, and the rejection message never explains why, so it is
+// stated here rather than left to be discovered at opening time.
+.pos-retail-login-warning {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 0.5rem;
+    background: rgba(176, 32, 32, 0.1);
+    border: 1px solid rgba(176, 32, 32, 0.25);
+    color: #8f1d1d;
+    font-size: 0.82rem;
 }
 
-// Tablets: the header drops its clock, so this block becomes the first thing
-// on the screen and can afford a little more room above it.
+// Tablets: the header drops its clock, so this card becomes the first thing
+// on screen and needs a little more room above it. The branch name comes down
+// a step so a long name still fits on two lines rather than four.
 @media (max-width: 767px) {
     .pos-retail-login-details {
         margin-top: 0.5rem;
     }
 
+    .pos-retail-login-card {
+        padding: 0.7rem 1rem 0.85rem;
+    }
+
     .pos-retail-login-branch {
-        font-size: 1.5rem;
+        font-size: 1.35rem;
     }
 }
