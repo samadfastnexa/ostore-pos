@@ -39,4 +39,22 @@
         </xpath>
     </t>
 
+    <!-- Odoo's own Quotation/Order button, gated the same way as ours.
+
+         pos_sale shows it to every cashier who is not "minimal", and it reads
+         sale.order on click. A cashier granted products and inventory but not
+         sales therefore got an Access Error naming twelve security groups, in
+         front of a customer, from a button nobody had told them not to press.
+
+         Ours were fixed and this one was missed, which is the more useful
+         lesson: gating our own buttons is not enough when a core module has
+         already put one on the same screen. -->
+    <t t-name="pos_retail.CoreQuotationButton" t-inherit="point_of_sale.ControlButtons"
+       t-inherit-mode="extension">
+        <xpath expr="//button[@t-on-click=&quot;() =&gt; this.onClickQuotation()&quot;]"
+               position="attributes">
+            <attribute name="t-if">this.pos.cashier._role != 'minimal' and pos.user._can_quotation</attribute>
+        </xpath>
+    </t>
+
 </templates>
