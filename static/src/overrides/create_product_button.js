@@ -22,7 +22,14 @@ import { ControlButtons } from "@point_of_sale/app/screens/product_screen/contro
 patch(PosStore.prototype, {
     async allowProductCreation() {
         if (this.config.module_pos_hr && this.getCashier()?._can_create_product) {
-            return await user.checkAccessRight("product.product", "create");
+            try {
+                return await user.checkAccessRight("product.product", "create");
+            } catch {
+                // Same rule as the caller: a failed probe answers "no".
+                // Core's navbar also calls this during setup, so letting it
+                // throw would break the menu as well as the Actions bar.
+                return false;
+            }
         }
         return await super.allowProductCreation(...arguments);
     },
@@ -43,7 +50,24 @@ patch(ControlButtons.prototype, {
         // repeatedly would put a request behind every keystroke in the cart.
         this.posRetailProduct = useState({ canCreate: false });
         onWillStart(async () => {
-            this.posRetailProduct.canCreate = await this.pos.allowProductCreation();
+            // Never allowed to take the till down. This bar is on the product
+            // screen permanently, so a failure here is a failure to render the
+            // screen the cashier sells from -- which is what happened: a
+            // server error from this probe surfaced as an OwlError in
+            // initiateRender and the till would not open at all.
+            //
+            // Core only ever made this call for manager cashiers, because
+            // pos_hr short-circuits on employeeIsAdmin before asking. Opening
+            // it to anyone holding Create Products meant the call now runs for
+            // ordinary cashiers too, on every render, and on accounts core had
+            // never exercised it with. A probe that fails means "no button",
+            // not "no till".
+            try {
+                this.posRetailProduct.canCreate = Boolean(await this.pos.allowProductCreation());
+            } catch (error) {
+                console.warn("pos_retail: product creation check failed; hiding New Product", error);
+                this.posRetailProduct.canCreate = false;
+            }
         });
     },
 

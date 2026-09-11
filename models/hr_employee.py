@@ -78,24 +78,21 @@ class HrEmployee(models.Model):
         the Admin Panel onto a role they built, without anybody editing code.
         """
         rows = super()._load_pos_data_read(records, config)
-        capabilities = self.env['pos.retail.access.permission'] \
-            ._pos_retail_till_capability_groups()
+        Permission = self.env['pos.retail.access.permission']
+        # Built once for the whole payload rather than per cashier: it is the
+        # same answer for everybody, and the till loads every employee at once.
+        mapping = Permission._pos_retail_till_capability_groups()
         by_id = {employee.id: employee for employee in records}
         for row in rows:
             employee = by_id.get(row['id'])
             user = employee.sudo().user_id if employee else None
-            held = set(user.all_group_ids.ids) if user else set()
-            for flag, group_ids in capabilities.items():
-                # Any one of the groups is enough, which is what lets a shop
-                # grant the same button through two different roles without
-                # duplicating the permission itself.
-                row[flag] = bool(held.intersection(group_ids))
-            # A capability nobody has pointed a permission at must still reach
-            # the browser as False. Left absent, the till reads undefined and
-            # hides the button anyway, but a missing key and a denied one are
-            # different things and only one of them is worth debugging.
-            for flag, _label in self.env['pos.retail.access.permission'].TILL_CAPABILITIES:
-                row.setdefault(flag, False)
+            # Every capability is written, granted or not. Left absent, the
+            # till reads undefined and hides the button anyway, but a missing
+            # key and a denied one are different things and only one of them
+            # is worth debugging.
+            for flag, _label in Permission.TILL_CAPABILITIES:
+                row[flag] = Permission._pos_retail_user_has_till_capability(
+                    user, flag, mapping)
         return rows
 
 

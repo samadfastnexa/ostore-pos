@@ -137,10 +137,9 @@ class PosRetailKhataPayment(models.TransientModel):
         # which permission unlocks this button, and the server has to agree
         # with whatever they chose, or the check drifts away from the screen
         # and starts refusing people the shop believes it authorised.
-        allowed_groups = self.env['pos.retail.access.permission'] \
-            ._pos_retail_till_capability_groups().get('_can_khata') or []
-        user = employee.user_id
-        if not user or not set(user.all_group_ids.ids).intersection(allowed_groups):
+        allowed = self.env['pos.retail.access.permission'] \
+            ._pos_retail_user_has_till_capability(employee.user_id, '_can_khata')
+        if not allowed:
             raise UserError(_(
                 "%(name)s is not allowed to take khata payments.\n\n"
                 "This is granted in Point of Sale > Configuration > Roles & "

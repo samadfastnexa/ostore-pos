@@ -113,6 +113,38 @@ class PosRetailAccessPermission(models.Model):
              "stops the action rather than merely hiding it.",
     )
 
+    # Accounts that hold every till capability regardless of the catalogue.
+    #
+    # Without this, wiring the till buttons to permissions quietly took them
+    # away from administrators. Before, the Admin Panel and New Product were
+    # gated on core's manager role; once they read the catalogue instead, an
+    # administrator who had never been put in one of the shop's roles got
+    # every flag False -- measured, not assumed -- and lost the Admin Panel
+    # on their own till.
+    #
+    # The same two groups core itself trusts with everything at a register.
+    # A POS manager could already do all of this under core's rules, so this
+    # restores their access rather than widening anybody's.
+    TILL_SUPERUSER_GROUPS = ('base.group_system', 'point_of_sale.group_pos_manager')
+
+    @api.model
+    def _pos_retail_user_has_till_capability(self, user, capability, mapping=None):
+        """The one answer to "may this person do X at the till".
+
+        Used by the payload the browser receives AND by every server method
+        that performs the action, so the button and the check can never
+        disagree. Two copies of this rule is how a till ends up showing a
+        button the server then refuses.
+        """
+        if not user:
+            return False
+        user = user.sudo()
+        if any(user.has_group(xmlid) for xmlid in self.TILL_SUPERUSER_GROUPS):
+            return True
+        if mapping is None:
+            mapping = self._pos_retail_till_capability_groups()
+        return bool(set(user.all_group_ids.ids).intersection(mapping.get(capability) or []))
+
     @api.model
     def _pos_retail_till_capability_groups(self):
         """Capability flag -> the groups that grant it, built from the data.

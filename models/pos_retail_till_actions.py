@@ -28,10 +28,12 @@ class PosSessionTillActions(models.Model):
         employee = self.env['hr.employee'].sudo().browse(int(employee_id)).exists()
         if not employee:
             raise UserError(_("No cashier is logged in at this till."))
-        groups = self.env['pos.retail.access.permission'] \
-            ._pos_retail_till_capability_groups().get(capability) or []
-        user = employee.user_id
-        if not user or not set(user.all_group_ids.ids).intersection(groups):
+        # The same rule the till's payload is built from, so a button the
+        # cashier can see is never refused here, and one they cannot see is
+        # never accepted.
+        allowed = self.env['pos.retail.access.permission'] \
+            ._pos_retail_user_has_till_capability(employee.user_id, capability)
+        if not allowed:
             raise UserError(_(
                 "%(name)s is not allowed to %(action)s.\n\n"
                 "This is granted under Staff & Access > Roles & Permissions, "
