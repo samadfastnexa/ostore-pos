@@ -27,3 +27,11 @@ access_pos_retail_khata_payment_invoice,pos.retail.khata.payment.invoice,model_p
 access_pos_retail_khata_payment_admin,pos.retail.khata.payment.admin,model_pos_retail_khata_payment,base.group_system,1,1,1,1
 access_pos_retail_brand_campaign_user,pos.retail.brand.campaign.user,model_pos_retail_brand_campaign,base.group_user,1,0,0,0
 access_pos_retail_brand_campaign_manager,pos.retail.brand.campaign.manager,model_pos_retail_brand_campaign,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_vendor_return_reason_user,pos.retail.vendor.return.reason.user,model_pos_retail_vendor_return_reason,base.group_user,1,0,0,0
+access_pos_retail_vendor_return_reason_manager,pos.retail.vendor.return.reason.manager,model_pos_retail_vendor_return_reason,purchase.group_purchase_manager,1,1,1,1
+access_pos_retail_vendor_return_reason_system,pos.retail.vendor.return.reason.system,model_pos_retail_vendor_return_reason,base.group_system,1,1,1,1
+access_pos_retail_customer_refund_line_pos_manager,pos.retail.customer.refund.line.pos.manager,model_pos_retail_customer_refund_line,point_of_sale.group_pos_manager,1,0,0,0
+access_pos_retail_customer_refund_line_sale_manager,pos.retail.customer.refund.line.sale.manager,model_pos_retail_customer_refund_line,sales_team.group_sale_manager,1,0,0,0
+access_pos_retail_customer_refund_line_system,pos.retail.customer.refund.line.system,model_pos_retail_customer_refund_line,base.group_system,1,0,0,0
+access_pos_retail_vendor_refund_line_manager,pos.retail.vendor.refund.line.manager,model_pos_retail_vendor_refund_line,purchase.group_purchase_manager,1,0,0,0
+access_pos_retail_vendor_refund_line_system,pos.retail.vendor.refund.line.system,model_pos_retail_vendor_refund_line,base.group_system,1,0,0,0

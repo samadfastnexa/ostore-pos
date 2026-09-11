@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Customer refunds and vendor refunds, as two permissions that never
+         imply each other.
+
+         They are opposite flows. A customer refund sends money OUT of the
+         shop to somebody who bought from it; a vendor refund brings money IN
+         from somebody the shop bought from. Different people handle them,
+         and the figures answer different questions: one is about what
+         customers bring back, the other about what suppliers get wrong.
+         Seeing one is no reason to see the other. -->
+
+    <record id="perm_customer_refunds_view" model="pos.retail.access.permission">
+        <field name="name">View Customer Refunds</field>
+        <field name="category">sales</field>
+        <field name="sequence">70</field>
+        <field name="description">Open Sales > Customer Refunds and its reports: every product a customer brought back, with the original sale, the refund amount, the reason, the cashier and how the money went back. Read-only. It shows no vendor or supplier returns, which are a separate permission.</field>
+    </record>
+    <record id="access_perm_customer_refunds_view" model="ir.model.access">
+        <field name="name">Permission View Customer Refunds: pos.retail.customer.refund.line</field>
+        <field name="model_id" ref="model_pos_retail_customer_refund_line"/>
+        <field name="group_id" ref="perm_customer_refunds_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_vendor_refunds_view" model="pos.retail.access.permission">
+        <field name="name">View Vendor Refunds</field>
+        <field name="category">purchases</field>
+        <field name="sequence">70</field>
+        <field name="description">Open Purchases > Vendor Refunds and its reports: every product sent back to a supplier, with the original purchase, the cost, the credit received, the reason and whether the credit has come in yet. Read-only. It shows no customer refunds, which are a separate permission.</field>
+    </record>
+    <record id="access_perm_vendor_refunds_view" model="ir.model.access">
+        <field name="name">Permission View Vendor Refunds: pos.retail.vendor.refund.line</field>
+        <field name="model_id" ref="model_pos_retail_vendor_refund_line"/>
+        <field name="group_id" ref="perm_vendor_refunds_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- A starting list for sending goods back to a supplier. Editable under
+         Purchases > Configuration > Vendor Return Reasons; these are only the
+         ones a hardware shop meets most often. -->
+    <record id="vendor_return_reason_damaged" model="pos.retail.vendor.return.reason">
+        <field name="name">Damaged in transit</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="vendor_return_reason_defective" model="pos.retail.vendor.return.reason">
+        <field name="name">Defective or faulty</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="vendor_return_reason_wrong_item" model="pos.retail.vendor.return.reason">
+        <field name="name">Wrong item supplied</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="vendor_return_reason_excess" model="pos.retail.vendor.return.reason">
+        <field name="name">Excess or unsold stock</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="vendor_return_reason_expired" model="pos.retail.vendor.return.reason">
+        <field name="name">Expired or near expiry</field>
+        <field name="sequence">50</field>
+    </record>
+
+</odoo>

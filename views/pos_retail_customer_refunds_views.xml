@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================= SALES > CUSTOMER REFUNDS =================
+
+         Only customer refunds: products a customer bought from the shop and
+         brought back. Vendor returns have their own menu under Purchases and
+         never appear here, because the two answer opposite questions and a
+         combined total would mean nothing.
+
+         Every screen below is the same read-only view grouped a different
+         way, so each named report is one click and none of them can drift
+         from the others. -->
+
+    <record id="pos_retail_customer_refund_line_search" model="ir.ui.view">
+        <field name="name">pos.retail.customer.refund.line.search</field>
+        <field name="model">pos.retail.customer.refund.line</field>
+        <field name="arch" type="xml">
+            <search string="Customer Refunds">
+                <field name="partner_id"/>
+                <field name="product_id"/>
+                <field name="original_reference"/>
+                <field name="return_reason_id"/>
+                <field name="employee_id"/>
+                <separator/>
+                <filter string="Refunded" name="refunded" domain="[('status', '=', 'refunded')]"/>
+                <filter string="Awaiting Payment" name="pending" domain="[('status', '=', 'pending')]"/>
+                <filter string="Excluding Cancelled" name="not_cancelled" domain="[('status', '!=', 'cancelled')]"/>
+                <separator/>
+                <filter string="Till Refunds" name="from_pos" domain="[('source', '=', 'pos')]"/>
+                <filter string="Credit Notes" name="from_invoice" domain="[('source', '=', 'invoice')]"/>
+                <separator/>
+                <filter string="Refund Date" name="filter_date" date="date"/>
+                <group>
+                    <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Product" name="group_product" context="{'group_by': 'product_id'}"/>
+                    <filter string="Product Category" name="group_categ" context="{'group_by': 'categ_id'}"/>
+                    <filter string="Refund Reason" name="group_reason" context="{'group_by': 'return_reason_id'}"/>
+                    <filter string="Cashier" name="group_cashier" context="{'group_by': 'employee_id'}"/>
+                    <filter string="Refund Method" name="group_method" context="{'group_by': 'payment_method_id'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                    <filter string="Branch" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Day" name="group_day" context="{'group_by': 'date:day'}"/>
+                    <filter string="Month" name="group_month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_customer_refund_line_list" model="ir.ui.view">
+        <field name="name">pos.retail.customer.refund.line.list</field>
+        <field name="model">pos.retail.customer.refund.line</field>
+        <field name="arch" type="xml">
+            <list string="Customer Refunds" create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="partner_id"/>
+                <field name="original_reference"/>
+                <field name="product_id"/>
+                <field name="quantity" sum="Total quantity"/>
+                <field name="amount" sum="Total refunded"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="return_reason_id"/>
+                <field name="reason_note" optional="hide"/>
+                <field name="employee_id"/>
+                <field name="user_id" optional="hide"/>
+                <field name="payment_method_id"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'refunded'"
+                       decoration-warning="status == 'pending'"
+                       decoration-muted="status in ('draft', 'cancelled')"/>
+                <field name="source" optional="show"/>
+                <field name="company_id" optional="hide" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_customer_refund_line_pivot" model="ir.ui.view">
+        <field name="name">pos.retail.customer.refund.line.pivot</field>
+        <field name="model">pos.retail.customer.refund.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Customer Refunds" sample="1">
+                <field name="date" interval="month" type="row"/>
+                <field name="amount" type="measure"/>
+                <field name="quantity" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="pos_retail_customer_refund_line_graph" model="ir.ui.view">
+        <field name="name">pos.retail.customer.refund.line.graph</field>
+        <field name="model">pos.retail.customer.refund.line</field>
+        <field name="arch" type="xml">
+            <graph string="Customer Refunds" type="bar" sample="1">
+                <field name="date" interval="month"/>
+                <field name="amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- The main screen: every refunded item, newest first. -->
+    <record id="action_pos_retail_customer_refunds" model="ir.actions.act_window">
+        <field name="name">Customer Refunds</field>
+        <field name="res_model">pos.retail.customer.refund.line</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No customer refunds yet</p>
+            <p>Every product a customer brings back appears here, whether it was
+               refunded at the till or with a credit note.</p>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_customer_refund_summary" model="ir.actions.act_window">
+        <field name="name">Customer Refund Summary</field>
+        <field name="res_model">pos.retail.customer.refund.line</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1,
+                               'pivot_row_groupby': ['date:month'],
+                               'pivot_column_groupby': ['source'],
+                               'pivot_measures': ['amount', 'quantity', '__count']}</field>
+    </record>
+
+    <record id="action_pos_retail_customer_refunds_by_customer" model="ir.actions.act_window">
+        <field name="name">Refunds by Customer</field>
+        <field name="res_model">pos.retail.customer.refund.line</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1, 'search_default_group_partner': 1}</field>
+    </record>
+
+    <record id="action_pos_retail_customer_refunds_by_product" model="ir.actions.act_window">
+        <field name="name">Refunds by Product</field>
+        <field name="res_model">pos.retail.customer.refund.line</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1, 'search_default_group_product': 1}</field>
+    </record>
+
+    <record id="action_pos_retail_customer_refund_reasons" model="ir.actions.act_window">
+        <field name="name">Refund Reasons</field>
+        <field name="res_model">pos.retail.customer.refund.line</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1,
+                               'graph_groupbys': ['return_reason_id'],
+                               'graph_mode': 'pie', 'graph_measure': 'amount',
+                               'pivot_row_groupby': ['return_reason_id'],
+                               'pivot_measures': ['amount', 'quantity', '__count']}</field>
+    </record>
+
+    <record id="action_pos_retail_customer_refunds_daily" model="ir.actions.act_window">
+        <field name="name">Daily Customer Refunds</field>
+        <field name="res_model">pos.retail.customer.refund.line</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1,
+                               'graph_groupbys': ['date:day'], 'graph_measure': 'amount',
+                               'pivot_row_groupby': ['date:day'],
+                               'pivot_measures': ['amount', 'quantity', '__count']}</field>
+    </record>
+
+    <record id="action_pos_retail_customer_refunds_monthly" model="ir.actions.act_window">
+        <field name="name">Monthly Customer Refunds</field>
+        <field name="res_model">pos.retail.customer.refund.line</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1,
+                               'graph_groupbys': ['date:month'], 'graph_measure': 'amount',
+                               'pivot_row_groupby': ['date:month'],
+                               'pivot_measures': ['amount', 'quantity', '__count']}</field>
+    </record>
+
+    <!-- Menus. Gated on the permission AND on the groups that already have
+         read access to the view, so an owner, a POS manager and a sales
+         manager all find it without being put in a role first. -->
+    <menuitem id="menu_pos_retail_customer_refunds_root"
+              name="Customer Refunds"
+              parent="sale.sale_menu_root"
+              sequence="25"
+              groups="base.group_system,point_of_sale.group_pos_manager,sales_team.group_sale_manager,pos_retail.perm_customer_refunds_view_res_groups"/>
+    <menuitem id="menu_pos_retail_customer_refunds"
+              name="Customer Refunds"
+              parent="menu_pos_retail_customer_refunds_root"
+              action="action_pos_retail_customer_refunds"
+              sequence="1"/>
+    <menuitem id="menu_pos_retail_customer_refund_summary"
+              name="Customer Refund Summary"
+              parent="menu_pos_retail_customer_refunds_root"
+              action="action_pos_retail_customer_refund_summary"
+              sequence="10"/>
+    <menuitem id="menu_pos_retail_customer_refunds_by_customer"
+              name="Refunds by Customer"
+              parent="menu_pos_retail_customer_refunds_root"
+              action="action_pos_retail_customer_refunds_by_customer"
+              sequence="20"/>
+    <menuitem id="menu_pos_retail_customer_refunds_by_product"
+              name="Refunds by Product"
+              parent="menu_pos_retail_customer_refunds_root"
+              action="action_pos_retail_customer_refunds_by_product"
+              sequence="30"/>
+    <menuitem id="menu_pos_retail_customer_refund_reasons"
+              name="Refund Reasons"
+              parent="menu_pos_retail_customer_refunds_root"
+              action="action_pos_retail_customer_refund_reasons"
+              sequence="40"/>
+    <menuitem id="menu_pos_retail_customer_refunds_daily"
+              name="Daily Customer Refunds"
+              parent="menu_pos_retail_customer_refunds_root"
+              action="action_pos_retail_customer_refunds_daily"
+              sequence="50"/>
+    <menuitem id="menu_pos_retail_customer_refunds_monthly"
+              name="Monthly Customer Refunds"
+              parent="menu_pos_retail_customer_refunds_root"
+              action="action_pos_retail_customer_refunds_monthly"
+              sequence="60"/>
+
+</odoo>

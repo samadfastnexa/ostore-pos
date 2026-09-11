@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================= PURCHASES > VENDOR REFUNDS =================
+
+         Only vendor refunds: goods the shop bought from a supplier and sent
+         back, and the credit the supplier gives for them. Customer refunds
+         live under Sales and never appear here.
+
+         Two kinds of row, because a supplier return is genuinely two events
+         that do not always arrive together: the goods leaving the shop, and
+         the credit coming back. A supplier often credits weeks after the
+         goods go, or credits with no goods at all — a price correction, a
+         short delivery — so forcing them into one row would either hide the
+         credits or invent goods for them. "Recorded As" says which a row is,
+         and the Credit Pending filter finds goods sent back that have not
+         been paid for yet, which is the figure a shop chases suppliers on. -->
+
+    <record id="pos_retail_vendor_refund_line_search" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.refund.line.search</field>
+        <field name="model">pos.retail.vendor.refund.line</field>
+        <field name="arch" type="xml">
+            <search string="Vendor Refunds">
+                <field name="partner_id"/>
+                <field name="product_id"/>
+                <field name="original_reference"/>
+                <field name="purchase_order_id"/>
+                <field name="return_reason_id"/>
+                <separator/>
+                <filter string="Goods Returned" name="returned" domain="[('status', '=', 'returned')]"/>
+                <filter string="Credit Not Yet Received" name="credit_pending" domain="[('status', '=', 'credit_pending')]"/>
+                <filter string="Credited" name="credited" domain="[('status', '=', 'credited')]"/>
+                <filter string="Excluding Cancelled" name="not_cancelled" domain="[('status', '!=', 'cancelled')]"/>
+                <separator/>
+                <filter string="Returned Goods" name="from_return" domain="[('source', '=', 'return')]"/>
+                <filter string="Credit Notes" name="from_credit" domain="[('source', '=', 'credit_note')]"/>
+                <separator/>
+                <filter string="Return Date" name="filter_date" date="date"/>
+                <group>
+                    <filter string="Vendor" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Product" name="group_product" context="{'group_by': 'product_id'}"/>
+                    <filter string="Product Category" name="group_categ" context="{'group_by': 'categ_id'}"/>
+                    <filter string="Return Reason" name="group_reason" context="{'group_by': 'return_reason_id'}"/>
+                    <filter string="Purchase Order" name="group_po" context="{'group_by': 'purchase_order_id'}"/>
+                    <filter string="Staff Member" name="group_user" context="{'group_by': 'user_id'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                    <filter string="Branch" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Day" name="group_day" context="{'group_by': 'date:day'}"/>
+                    <filter string="Month" name="group_month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_vendor_refund_line_list" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.refund.line.list</field>
+        <field name="model">pos.retail.vendor.refund.line</field>
+        <field name="arch" type="xml">
+            <list string="Vendor Refunds" create="false" edit="false" delete="false">
+                <field name="date"/>
+                <field name="partner_id"/>
+                <field name="original_reference"/>
+                <field name="product_id"/>
+                <field name="quantity" sum="Total returned"/>
+                <field name="unit_cost" optional="hide"/>
+                <field name="purchase_cost" sum="Total cost"/>
+                <field name="credit_amount" sum="Total credited"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="return_reason_id"/>
+                <field name="reason_note" optional="hide"/>
+                <field name="user_id"/>
+                <field name="status" widget="badge"
+                       decoration-success="status in ('credited', 'returned')"
+                       decoration-warning="status in ('pending', 'credit_pending')"
+                       decoration-muted="status in ('draft', 'cancelled')"/>
+                <field name="source" optional="show"/>
+                <field name="company_id" optional="hide" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_vendor_refund_line_pivot" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.refund.line.pivot</field>
+        <field name="model">pos.retail.vendor.refund.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Vendor Refunds" sample="1">
+                <field name="date" interval="month" type="row"/>
+                <field name="quantity" type="measure"/>
+                <field name="purchase_cost" type="measure"/>
+                <field name="credit_amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="pos_retail_vendor_refund_line_graph" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.refund.line.graph</field>
+        <field name="model">pos.retail.vendor.refund.line</field>
+        <field name="arch" type="xml">
+            <graph string="Vendor Refunds" type="bar" sample="1">
+                <field name="date" interval="month"/>
+                <field name="purchase_cost" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_vendor_refunds" model="ir.actions.act_window">
+        <field name="name">Vendor Refunds</field>
+        <field name="res_model">pos.retail.vendor.refund.line</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="pos_retail_vendor_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No vendor refunds yet</p>
+            <p>Goods sent back to a supplier appear here when a receipt is returned,
+               and each vendor credit note appears here when it is raised.</p>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_vendor_refund_summary" model="ir.actions.act_window">
+        <field name="name">Vendor Refund Summary</field>
+        <field name="res_model">pos.retail.vendor.refund.line</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="pos_retail_vendor_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1,
+                               'pivot_row_groupby': ['date:month'],
+                               'pivot_column_groupby': ['source'],
+                               'pivot_measures': ['quantity', 'purchase_cost', 'credit_amount']}</field>
+    </record>
+
+    <record id="action_pos_retail_vendor_refunds_by_vendor" model="ir.actions.act_window">
+        <field name="name">Refunds by Vendor</field>
+        <field name="res_model">pos.retail.vendor.refund.line</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="pos_retail_vendor_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1, 'search_default_group_partner': 1}</field>
+    </record>
+
+    <record id="action_pos_retail_vendor_refunds_by_product" model="ir.actions.act_window">
+        <field name="name">Refunds by Product</field>
+        <field name="res_model">pos.retail.vendor.refund.line</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="pos_retail_vendor_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1, 'search_default_group_product': 1}</field>
+    </record>
+
+    <record id="action_pos_retail_vendor_returned_quantity" model="ir.actions.act_window">
+        <field name="name">Returned Quantity</field>
+        <field name="res_model">pos.retail.vendor.refund.line</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="pos_retail_vendor_refund_line_search"/>
+        <field name="domain">[('source', '=', 'return')]</field>
+        <field name="context">{'search_default_not_cancelled': 1,
+                               'pivot_row_groupby': ['product_id'],
+                               'pivot_column_groupby': ['partner_id'],
+                               'pivot_measures': ['quantity'],
+                               'graph_groupbys': ['product_id'], 'graph_measure': 'quantity'}</field>
+    </record>
+
+    <record id="action_pos_retail_vendor_credit_amount" model="ir.actions.act_window">
+        <field name="name">Vendor Credit Amount</field>
+        <field name="res_model">pos.retail.vendor.refund.line</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="search_view_id" ref="pos_retail_vendor_refund_line_search"/>
+        <field name="domain">[('source', '=', 'credit_note')]</field>
+        <field name="context">{'search_default_not_cancelled': 1,
+                               'pivot_row_groupby': ['partner_id'],
+                               'pivot_column_groupby': ['status'],
+                               'pivot_measures': ['credit_amount'],
+                               'graph_groupbys': ['partner_id'], 'graph_measure': 'credit_amount'}</field>
+    </record>
+
+    <record id="action_pos_retail_vendor_refunds_daily" model="ir.actions.act_window">
+        <field name="name">Daily Vendor Refunds</field>
+        <field name="res_model">pos.retail.vendor.refund.line</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="pos_retail_vendor_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1,
+                               'graph_groupbys': ['date:day'], 'graph_measure': 'purchase_cost',
+                               'pivot_row_groupby': ['date:day'],
+                               'pivot_measures': ['quantity', 'purchase_cost', 'credit_amount']}</field>
+    </record>
+
+    <record id="action_pos_retail_vendor_refunds_monthly" model="ir.actions.act_window">
+        <field name="name">Monthly Vendor Refunds</field>
+        <field name="res_model">pos.retail.vendor.refund.line</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="pos_retail_vendor_refund_line_search"/>
+        <field name="context">{'search_default_not_cancelled': 1,
+                               'graph_groupbys': ['date:month'], 'graph_measure': 'purchase_cost',
+                               'pivot_row_groupby': ['date:month'],
+                               'pivot_measures': ['quantity', 'purchase_cost', 'credit_amount']}</field>
+    </record>
+
+    <!-- ============ Vendor return reasons ============ -->
+
+    <record id="pos_retail_vendor_return_reason_list" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.return.reason.list</field>
+        <field name="model">pos.retail.vendor.return.reason</field>
+        <field name="arch" type="xml">
+            <list string="Vendor Return Reasons" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_vendor_return_reasons" model="ir.actions.act_window">
+        <field name="name">Vendor Return Reasons</field>
+        <field name="res_model">pos.retail.vendor.return.reason</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <!-- The reason on the return transfer itself. Shown only on a transfer
+         that sends goods back to a supplier: on an ordinary delivery to a
+         customer it would be a field about nothing. -->
+    <record id="view_picking_form_vendor_return_reason" model="ir.ui.view">
+        <field name="name">stock.picking.form.pos.retail.vendor.return.reason</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='origin']" position="after">
+                <field name="pos_retail_is_vendor_return" invisible="1"/>
+                <field name="pos_retail_vendor_return_reason_id"
+                       invisible="not pos_retail_is_vendor_return"
+                       options="{'no_create': True}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Menus -->
+
+    <!-- Let the permission reach its own menu. The Purchase app's root is
+         closed to anyone who is not a purchasing user, and a gated root hides
+         everything beneath it — so someone granted only "View Vendor
+         Refunds" saw no Purchase app at all and could never reach the report
+         they had been given. Measured, not assumed.
+
+         Added to, never replaced: the root keeps every group it already had.
+         And opening the root opens only the root; each purchase menu under it
+         keeps its own gate, so this person sees Vendor Refunds and nothing
+         else in Purchases. -->
+    <record id="purchase.menu_purchase_root" model="ir.ui.menu">
+        <field name="group_ids" eval="[(4, ref('pos_retail.perm_vendor_refunds_view_res_groups'))]"/>
+    </record>
+    <record id="sale.sale_menu_root" model="ir.ui.menu">
+        <field name="group_ids" eval="[(4, ref('pos_retail.perm_customer_refunds_view_res_groups'))]"/>
+    </record>
+
+    <!-- The two Purchase sections that relied on the app being closed.
+
+         Orders and Products carry no group of their own: core leaves them
+         open and trusts the root to keep strangers out. Opening the root to
+         "View Vendor Refunds" therefore put Orders and Products in front of a
+         person who holds no purchase access at all, and who would have met an
+         access error the moment they clicked. Measured, which is how this was
+         found.
+
+         So they get exactly the groups the root had BEFORE vendor refunds
+         were added to it: everyone who could use them still can, and the
+         vendor-refunds permission reaches Vendor Refunds and nothing else. -->
+    <record id="purchase.menu_procurement_management" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [
+            ref('purchase.group_purchase_user'),
+            ref('purchase.group_purchase_manager'),
+            ref('pos_retail.perm_purchases_view_res_groups'),
+            ref('pos_retail.perm_purchases_create_res_groups'),
+            ref('pos_retail.perm_purchases_edit_res_groups'),
+            ref('pos_retail.perm_purchases_delete_res_groups'),
+        ])]"/>
+    </record>
+    <record id="purchase.menu_purchase_products" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [
+            ref('purchase.group_purchase_user'),
+            ref('purchase.group_purchase_manager'),
+            ref('pos_retail.perm_purchases_view_res_groups'),
+            ref('pos_retail.perm_purchases_create_res_groups'),
+            ref('pos_retail.perm_purchases_edit_res_groups'),
+            ref('pos_retail.perm_purchases_delete_res_groups'),
+        ])]"/>
+    </record>
+
+    <menuitem id="menu_pos_retail_vendor_refunds_root"
+              name="Vendor Refunds"
+              parent="purchase.menu_purchase_root"
+              sequence="25"
+              groups="base.group_system,purchase.group_purchase_manager,pos_retail.perm_vendor_refunds_view_res_groups"/>
+    <menuitem id="menu_pos_retail_vendor_refunds"
+              name="Vendor Refunds"
+              parent="menu_pos_retail_vendor_refunds_root"
+              action="action_pos_retail_vendor_refunds"
+              sequence="1"/>
+    <menuitem id="menu_pos_retail_vendor_refund_summary"
+              name="Vendor Refund Summary"
+              parent="menu_pos_retail_vendor_refunds_root"
+              action="action_pos_retail_vendor_refund_summary"
+              sequence="10"/>
+    <menuitem id="menu_pos_retail_vendor_refunds_by_vendor"
+              name="Refunds by Vendor"
+              parent="menu_pos_retail_vendor_refunds_root"
+              action="action_pos_retail_vendor_refunds_by_vendor"
+              sequence="20"/>
+    <menuitem id="menu_pos_retail_vendor_refunds_by_product"
+              name="Refunds by Product"
+              parent="menu_pos_retail_vendor_refunds_root"
+              action="action_pos_retail_vendor_refunds_by_product"
+              sequence="30"/>
+    <menuitem id="menu_pos_retail_vendor_returned_quantity"
+              name="Returned Quantity"
+              parent="menu_pos_retail_vendor_refunds_root"
+              action="action_pos_retail_vendor_returned_quantity"
+              sequence="40"/>
+    <menuitem id="menu_pos_retail_vendor_credit_amount"
+              name="Vendor Credit Amount"
+              parent="menu_pos_retail_vendor_refunds_root"
+              action="action_pos_retail_vendor_credit_amount"
+              sequence="50"/>
+    <menuitem id="menu_pos_retail_vendor_refunds_daily"
+              name="Daily Vendor Refunds"
+              parent="menu_pos_retail_vendor_refunds_root"
+              action="action_pos_retail_vendor_refunds_daily"
+              sequence="60"/>
+    <menuitem id="menu_pos_retail_vendor_refunds_monthly"
+              name="Monthly Vendor Refunds"
+              parent="menu_pos_retail_vendor_refunds_root"
+              action="action_pos_retail_vendor_refunds_monthly"
+              sequence="70"/>
+    <menuitem id="menu_pos_retail_vendor_return_reasons"
+              name="Vendor Return Reasons"
+              parent="purchase.menu_purchase_config"
+              action="action_pos_retail_vendor_return_reasons"
+              sequence="40"/>
+
+</odoo>

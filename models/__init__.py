@@ -38,3 +38,6 @@ from . import branch_company_pickers
 from . import auditlog_patch
 from . import pos_retail_brand_campaign
 from . import ir_http
+from . import pos_retail_vendor_return_reason
+from . import pos_retail_customer_refund_line
+from . import pos_retail_vendor_refund_line
