@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- PDF Receipt beside Print Receipt, for an order already paid.
+
+         Print Receipt only reaches a printer. A customer who comes back for a
+         copy usually wants it on their phone, so this produces the PDF and
+         shares it, or downloads it where the device cannot share a file. -->
+    <t t-inherit="point_of_sale.TicketScreen" t-inherit-mode="extension">
+        <xpath expr="//button[@t-on-click='() =&gt; doPrint.call(_selectedSyncedOrder)']" position="after">
+            <button class="control-button btn btn-secondary btn-lg lh-lg flex-grow-1 flex-shrink-1 pos-retail-pdf-receipt"
+                    t-att-disabled="posRetailPdf.busy"
+                    t-on-click="() => this.posRetailPdfReceipt(_selectedSyncedOrder)">
+                <i t-attf-class="fa {{ posRetailPdf.busy ? 'fa-fw fa-spin fa-circle-o-notch' : 'fa-file-pdf-o' }} me-1"/>PDF Receipt
+            </button>
+        </xpath>
+    </t>
+
+</templates>
