@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.7.18.0',
+    'version': '19.0.7.20.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -56,6 +56,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'data/pos_retail_access_permission_extra_data.xml',
         'data/pos_retail_access_permission_partners_data.xml',
         'data/pos_retail_refunds_data.xml',
+        'data/pos_retail_ledgers_data.xml',
         'data/pos_retail_access_role_data.xml',
         'data/pos_retail_package_data.xml',
         'data/pos_retail_partner_tag_data.xml',
@@ -110,6 +111,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/pos_retail_access_role_views.xml',
         'views/pos_retail_access_permission_views.xml',
         'views/pos_retail_logging_views.xml',
+        'views/pos_retail_ledgers_views.xml',
         'views/pos_retail_menus.xml',
         'views/res_users_views.xml',
         'views/login_templates.xml',
@@ -150,6 +152,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/backend/checkboxes_select_all.xml',
             'pos_retail/static/src/backend/back_to_till.js',
             'pos_retail/static/src/backend/back_to_till.xml',
+            'pos_retail/static/src/backend/ledger_summary.js',
+            'pos_retail/static/src/backend/ledger_summary.xml',
         ],
         # The sign-in page renders through web.frontend_layout, so its styling
         # belongs to the frontend bundle rather than the backend one.

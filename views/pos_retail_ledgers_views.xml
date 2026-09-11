@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================= CUSTOMER LEDGER / VENDOR LEDGER =================
+
+         Two ledgers, never one. The customer ledger is money customers owe
+         the shop and payments received from them; the vendor ledger is money
+         the shop owes suppliers and payments made to them. They read
+         different accounts, so no row can appear in both, and each has its
+         own columns, filters and summary cards.
+
+         Both are read-only views over posted accounting entries: the same
+         records behind Odoo's own Partner Ledger, not a second set of books.
+         The cards above each table come from the ledger_summary list view,
+         recomputed for whatever is filtered. -->
+
+    <!-- ================ Customer Ledger ================ -->
+
+    <record id="pos_retail_customer_ledger_line_search" model="ir.ui.view">
+        <field name="name">pos.retail.customer.ledger.line.search</field>
+        <field name="model">pos.retail.customer.ledger.line</field>
+        <field name="arch" type="xml">
+            <search string="Customer Ledger">
+                <field name="partner_id"/>
+                <field name="move_name"/>
+                <field name="reference"/>
+                <field name="transaction_type"/>
+                <field name="payment_journal_id"/>
+                <field name="salesperson_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <separator/>
+                <filter string="Sales" name="type_sale" domain="[('transaction_type', 'in', ('sale', 'pos_sale'))]"/>
+                <filter string="Payments Received" name="type_payment" domain="[('transaction_type', '=', 'payment')]"/>
+                <filter string="Refunds" name="type_refund" domain="[('transaction_type', '=', 'refund')]"/>
+                <filter string="Khata Adjustments" name="type_adjustment" domain="[('transaction_type', '=', 'adjustment')]"/>
+                <separator/>
+                <filter string="Still Owes Something" name="owing" domain="[('balance_after', '&gt;', 0)]"/>
+                <separator/>
+                <filter string="Paid" name="status_paid" domain="[('payment_status', '=', 'paid')]"/>
+                <filter string="Balance / Partial Payment" name="status_partial" domain="[('payment_status', '=', 'partial')]"/>
+                <filter string="Unpaid / Outstanding" name="status_unpaid" domain="[('payment_status', '=', 'unpaid')]"/>
+                <separator/>
+                <filter string="Date" name="filter_date" date="date"/>
+                <group>
+                    <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Transaction Type" name="group_type" context="{'group_by': 'transaction_type'}"/>
+                    <filter string="Payment Status" name="group_status" context="{'group_by': 'payment_status'}"/>
+                    <filter string="Payment Method" name="group_method" context="{'group_by': 'payment_journal_id'}"/>
+                    <filter string="Salesperson" name="group_salesperson" context="{'group_by': 'salesperson_id'}"/>
+                    <filter string="Branch" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Day" name="group_day" context="{'group_by': 'date:day'}"/>
+                    <filter string="Month" name="group_month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_customer_ledger_line_list" model="ir.ui.view">
+        <field name="name">pos.retail.customer.ledger.line.list</field>
+        <field name="model">pos.retail.customer.ledger.line</field>
+        <field name="arch" type="xml">
+            <!-- Every column optional, so the gear at the end of the header lets
+                 somebody hide what they do not need. The ones hidden by default
+                 are the accountant's columns; the ones shown are what a shop
+                 owner reads. -->
+            <list string="Customer Ledger" js_class="pos_retail_ledger_list"
+                  create="false" edit="false" delete="false">
+                <field name="currency_id" column_invisible="True"/>
+                <field name="datetime" optional="show"/>
+                <field name="partner_id" optional="show"/>
+                <field name="move_name" optional="show"/>
+                <field name="transaction_type" optional="show" widget="badge"
+                       decoration-info="transaction_type in ('sale', 'pos_sale')"
+                       decoration-success="transaction_type == 'payment'"
+                       decoration-warning="transaction_type == 'refund'"
+                       decoration-muted="transaction_type == 'adjustment'"/>
+                <field name="sale_amount" sum="Total sales" optional="show"/>
+                <field name="payment_received" sum="Total received" optional="show"/>
+                <field name="refund_amount" sum="Total refunded" optional="show"/>
+                <field name="discount_amount" sum="Total discount" optional="show"/>
+                <field name="debit" sum="Total debit" optional="hide"/>
+                <field name="credit" sum="Total credit" optional="hide"/>
+                <field name="balance_before" optional="show"/>
+                <field name="amount" optional="show"/>
+                <field name="balance_after" optional="show"
+                       decoration-danger="balance_after &gt; 0"
+                       decoration-success="balance_after &lt;= 0"/>
+                <!-- Whether THIS transaction (not the running balance above)
+                     has been settled. Blank on a payment or an adjustment row,
+                     which are not themselves a debt. -->
+                <field name="total_amount" optional="show"/>
+                <field name="paid_amount" optional="show"/>
+                <field name="balance_amount" optional="show"/>
+                <field name="payment_status" optional="show" widget="badge"
+                       decoration-success="payment_status == 'paid'"
+                       decoration-warning="payment_status == 'partial'"
+                       decoration-danger="payment_status == 'unpaid'"/>
+                <field name="due_date" optional="hide"/>
+                <field name="payment_history" optional="hide"/>
+                <field name="payment_journal_id" optional="show"/>
+                <field name="user_id" optional="show"/>
+                <field name="salesperson_id" optional="hide"/>
+                <field name="company_id" optional="hide" groups="base.group_multi_company"/>
+                <field name="origin" optional="hide"/>
+                <field name="reference" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_customer_ledger_v2" model="ir.actions.act_window">
+        <field name="name">Customer Ledger</field>
+        <field name="res_model">pos.retail.customer.ledger.line</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="pos_retail_customer_ledger_line_list"/>
+        <field name="search_view_id" ref="pos_retail_customer_ledger_line_search"/>
+        <field name="domain">[('company_id', 'in', allowed_company_ids)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No customer transactions yet</p>
+            <p>Every sale on credit, invoice, refund, payment received and khata
+               adjustment appears here, with the customer's balance before and
+               after each one.</p>
+        </field>
+    </record>
+
+    <!-- ================ Vendor Ledger ================ -->
+
+    <record id="pos_retail_vendor_ledger_line_search" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.ledger.line.search</field>
+        <field name="model">pos.retail.vendor.ledger.line</field>
+        <field name="arch" type="xml">
+            <search string="Vendor Ledger">
+                <field name="partner_id"/>
+                <field name="move_name"/>
+                <field name="origin"/>
+                <field name="reference"/>
+                <field name="transaction_type"/>
+                <field name="payment_journal_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <separator/>
+                <filter string="Purchases" name="type_bill" domain="[('transaction_type', '=', 'bill')]"/>
+                <filter string="Payments Made" name="type_payment" domain="[('transaction_type', '=', 'payment')]"/>
+                <filter string="Vendor Refunds" name="type_refund" domain="[('transaction_type', '=', 'refund')]"/>
+                <filter string="Adjustments" name="type_adjustment" domain="[('transaction_type', '=', 'adjustment')]"/>
+                <separator/>
+                <filter string="Still Owed to Them" name="owed" domain="[('balance_after', '&gt;', 0)]"/>
+                <separator/>
+                <filter string="Paid" name="status_paid" domain="[('payment_status', '=', 'paid')]"/>
+                <filter string="Balance / Partial Payment" name="status_partial" domain="[('payment_status', '=', 'partial')]"/>
+                <filter string="Unpaid / Outstanding" name="status_unpaid" domain="[('payment_status', '=', 'unpaid')]"/>
+                <separator/>
+                <filter string="Date" name="filter_date" date="date"/>
+                <group>
+                    <filter string="Vendor" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Transaction Type" name="group_type" context="{'group_by': 'transaction_type'}"/>
+                    <filter string="Payment Status" name="group_status" context="{'group_by': 'payment_status'}"/>
+                    <filter string="Payment Method" name="group_method" context="{'group_by': 'payment_journal_id'}"/>
+                    <filter string="Branch" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Day" name="group_day" context="{'group_by': 'date:day'}"/>
+                    <filter string="Month" name="group_month" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_vendor_ledger_line_list" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.ledger.line.list</field>
+        <field name="model">pos.retail.vendor.ledger.line</field>
+        <field name="arch" type="xml">
+            <list string="Vendor Ledger" js_class="pos_retail_ledger_list"
+                  create="false" edit="false" delete="false">
+                <field name="currency_id" column_invisible="True"/>
+                <field name="datetime" optional="show"/>
+                <field name="partner_id" optional="show"/>
+                <field name="move_name" optional="show"/>
+                <field name="origin" optional="show"/>
+                <field name="transaction_type" optional="show" widget="badge"
+                       decoration-info="transaction_type == 'bill'"
+                       decoration-success="transaction_type == 'payment'"
+                       decoration-warning="transaction_type == 'refund'"
+                       decoration-muted="transaction_type == 'adjustment'"/>
+                <field name="purchase_amount" sum="Total purchases" optional="show"/>
+                <field name="payment_made" sum="Total paid" optional="show"/>
+                <field name="refund_amount" sum="Total refunded" optional="show"/>
+                <field name="debit" sum="Total debit" optional="hide"/>
+                <field name="credit" sum="Total credit" optional="hide"/>
+                <field name="balance_before" optional="show"/>
+                <field name="amount" optional="show"/>
+                <field name="balance_after" optional="show"
+                       decoration-danger="balance_after &gt; 0"
+                       decoration-success="balance_after &lt;= 0"/>
+                <field name="total_amount" optional="show"/>
+                <field name="paid_amount" optional="show"/>
+                <field name="balance_amount" optional="show"/>
+                <field name="payment_status" optional="show" widget="badge"
+                       decoration-success="payment_status == 'paid'"
+                       decoration-warning="payment_status == 'partial'"
+                       decoration-danger="payment_status == 'unpaid'"/>
+                <field name="due_date" optional="hide"/>
+                <field name="payment_history" optional="hide"/>
+                <field name="payment_journal_id" optional="show"/>
+                <field name="user_id" optional="show"/>
+                <field name="company_id" optional="hide" groups="base.group_multi_company"/>
+                <field name="reference" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_vendor_ledger" model="ir.actions.act_window">
+        <field name="name">Vendor Ledger</field>
+        <field name="res_model">pos.retail.vendor.ledger.line</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="pos_retail_vendor_ledger_line_list"/>
+        <field name="search_view_id" ref="pos_retail_vendor_ledger_line_search"/>
+        <field name="domain">[('company_id', 'in', allowed_company_ids)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No supplier transactions yet</p>
+            <p>Every vendor bill, payment made, vendor refund and adjustment appears
+               here, with what the shop owed that supplier before and after each one.</p>
+        </field>
+    </record>
+
+    <!-- ================ Menus ================ -->
+
+    <!-- Reporting > Customer Ledger is repointed at the new ledger where that
+         menu is defined, in pos_retail_menus.xml, rather than overridden from
+         here. Menu items are re-applied on every upgrade, so an override in a
+         file that loads before the definition would be silently undone by it. -->
+
+    <!-- Let each ledger permission reach its own menu. Point of Sale and its
+         Reporting section are closed to anyone without POS access, and a
+         gated parent hides everything beneath it, so someone granted only a
+         ledger saw neither. Measured before this was added. Added to, never
+         replaced: both keep every group they already had. -->
+    <record id="point_of_sale.menu_point_root" model="ir.ui.menu">
+        <field name="group_ids" eval="[(4, ref('pos_retail.perm_customer_ledger_view_res_groups')),
+                                       (4, ref('pos_retail.perm_vendor_ledger_view_res_groups'))]"/>
+    </record>
+    <!-- Reporting is back to core's definition: no group at all.
+
+         An earlier version ADDED the two ledger groups here, which looked
+         additive and was not. Core leaves this menu without a group, meaning
+         "visible to anyone who can see Point of Sale". Giving it any group
+         turns it into "visible ONLY to these groups" — so that change closed
+         Reporting to POS managers and everyone else who relied on it.
+         Measured, then undone.
+
+         The (5) clears every link rather than just dropping the line from
+         this file, because group links written by a previous upgrade stay in
+         the database until something removes them. Leaving it ungated is
+         safe: every report under it carries its own group. -->
+    <record id="point_of_sale.menu_point_rep" model="ir.ui.menu">
+        <field name="group_ids" eval="[(5, 0, 0)]"/>
+    </record>
+
+    <!-- Products, closed back to exactly who could see it before the app was
+         opened to the ledgers. It carries no group of its own and relied on
+         the app being closed, so opening the app to "View Customer Ledger"
+         put the whole product catalogue in front of somebody who only reads
+         a ledger. This is the app's previous list, minus the two ledgers. -->
+    <record id="point_of_sale.pos_config_menu_catalog" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [
+            ref('point_of_sale.group_pos_user'),
+            ref('point_of_sale.group_pos_manager'),
+            ref('pos_retail.perm_config_lists_res_groups'),
+            ref('pos_retail.perm_config_lists_create_res_groups'),
+            ref('pos_retail.perm_config_lists_edit_res_groups'),
+            ref('pos_retail.perm_config_lists_delete_res_groups'),
+            ref('pos_retail.perm_products_create_res_groups'),
+            ref('pos_retail.perm_products_edit_res_groups'),
+            ref('pos_retail.perm_products_delete_res_groups'),
+            ref('pos_retail.perm_sales_view_res_groups'),
+            ref('pos_retail.perm_sales_create_res_groups'),
+            ref('pos_retail.perm_sales_edit_res_groups'),
+            ref('pos_retail.perm_sales_delete_res_groups'),
+            ref('pos_retail.perm_expenses_res_groups'),
+            ref('pos_retail.perm_expenses_create_res_groups'),
+            ref('pos_retail.perm_expenses_edit_res_groups'),
+            ref('pos_retail.perm_expenses_delete_res_groups'),
+            ref('pos_retail.perm_reporting_res_groups'),
+        ])]"/>
+    </record>
+
+    <menuitem id="pos_retail_menu_vendor_ledger" name="Vendor Ledger"
+        parent="point_of_sale.menu_point_rep" action="action_pos_retail_vendor_ledger"
+        sequence="9"
+        groups="base.group_system,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
+
+</odoo>
