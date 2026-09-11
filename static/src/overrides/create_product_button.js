@@ -4,6 +4,7 @@ import { patch } from "@web/core/utils/patch";
 import { user } from "@web/core/user";
 import { useState, onWillStart } from "@odoo/owl";
 import { PosStore } from "@point_of_sale/app/services/pos_store";
+import { ProductInfoPopup } from "@point_of_sale/app/components/popups/product_info_popup/product_info_popup";
 import { ControlButtons } from "@point_of_sale/app/screens/product_screen/control_buttons/control_buttons";
 
 // Let the shop's own permission decide who may add a product at the till.
@@ -52,5 +53,26 @@ patch(ControlButtons.prototype, {
         // brand as one added in the office. A cut-down popup here would create
         // half-finished records for somebody to find and repair later.
         this.pos.editProduct();
+    },
+});
+
+// The Edit button on a product's info popup.
+//
+// pos_hr gates it on employeeIsAdmin, the same manager-only rule that blocked
+// creating a product: a cashier the REGISTER lists under Advanced Employees.
+// So a shop could grant "Edit Products" in the catalogue, watch the server
+// confirm the cashier may write to a product, and still find no way to edit
+// one from the till. Measured exactly that before changing it.
+//
+// Now honours the permission as well, so the Roles & Permissions screen
+// decides this like it decides everything else. Core's rule is kept as the
+// fallback rather than replaced: a shop that has never touched the catalogue
+// keeps the behaviour it has today.
+patch(ProductInfoPopup.prototype, {
+    get allowProductEdition() {
+        if (this.pos.getCashier()?._can_edit_product) {
+            return true;
+        }
+        return super.allowProductEdition;
     },
 });

@@ -96,6 +96,7 @@ class PosRetailAccessPermission(models.Model):
     TILL_CAPABILITIES = [
         ('_can_khata', "Khata Payment button in the till's Actions"),
         ('_can_create_product', "New Product button in the till's Actions"),
+        ('_can_edit_product', "Edit button on a product's info popup in the till"),
         ('_can_refund', "Refund button in the till's top bar"),
         ('_can_stock_adjust', "Correct Stock button in the till's Actions"),
         ('_can_daily_sales', "Today's Sales button in the till's Actions"),
