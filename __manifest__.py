@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.7.14.0',
+    'version': '19.0.7.15.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -143,6 +143,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/backend/form_intro.js',
             'pos_retail/static/src/backend/form_intro.xml',
             'pos_retail/static/src/backend/form_intro.scss',
+            'pos_retail/static/src/backend/checkboxes_select_all.js',
+            'pos_retail/static/src/backend/checkboxes_select_all.xml',
         ],
         # The sign-in page renders through web.frontend_layout, so its styling
         # belongs to the frontend bundle rather than the backend one.

@@ -151,3 +151,26 @@ class PosRetailAccessRole(models.Model):
         groups.unlink()
         self.env.registry.clear_cache()
         return res
+
+    def action_pos_retail_grant_all_permissions(self):
+        """Tick every permission in the catalogue on this role.
+
+        The per-section "Select all" links cover the common case. This is for
+        the one role that genuinely should hold everything -- an owner's own
+        Admin role -- where ticking ten sections one after another is exactly
+        how a single box gets missed and the role quietly cannot do one thing.
+
+        Sits behind a confirmation on the form, because it includes every
+        Delete permission and both price permissions: it is the one click on
+        this screen that hands somebody the whole shop.
+        """
+        everything = self.env['pos.retail.access.permission'].search([])
+        self.write({'permission_ids': [(6, 0, everything.ids)]})
+
+    def action_pos_retail_clear_all_permissions(self):
+        """Untick every permission on this role, leaving its users in place.
+
+        Useful when rebuilding a role from nothing. The role and the people in
+        it stay; they simply hold nothing until permissions are ticked again.
+        """
+        self.write({'permission_ids': [(5, 0, 0)]})

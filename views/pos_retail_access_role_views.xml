@@ -20,6 +20,17 @@
         <field name="arch" type="xml">
             <form string="Role">
                 <header>
+                    <!-- Whole-role shortcuts. The per-section links cover the
+                         usual case; these are for building an owner's own
+                         Admin role, or rebuilding one from nothing. Granting
+                         everything carries every Delete and both price
+                         permissions, so it asks first. -->
+                    <button name="action_pos_retail_grant_all_permissions" type="object"
+                            string="Select All Permissions" class="btn-secondary"
+                            confirm="This gives the role every permission in the catalogue, including every Delete permission and the right to change prices and costs. Everyone assigned to this role receives all of it immediately. Continue?"/>
+                    <button name="action_pos_retail_clear_all_permissions" type="object"
+                            string="Clear All Permissions" class="btn-secondary"
+                            confirm="This removes every permission from the role. The people assigned to it stay assigned but will hold nothing from this role until permissions are ticked again. Continue?"/>
                     <button name="action_archive" type="object" string="Archive"
                             invisible="not active"
                             confirm="Archiving this role immediately removes it from every assigned user. Continue?"/>
@@ -54,52 +65,52 @@
                             <group>
                                 <group string="Products">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'products')]"/>
                                 </group>
                                 <group string="Customers &amp; Vendors">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'partners')]"/>
                                 </group>
                                 <group string="Point of Sale">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'pos')]"/>
                                 </group>
                                 <group string="Sales">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'sales')]"/>
                                 </group>
                                 <group string="Purchases">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'purchases')]"/>
                                 </group>
                                 <group string="Inventory">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'inventory')]"/>
                                 </group>
                                 <group string="Invoicing">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'accounting')]"/>
                                 </group>
                                 <group string="Store Expenses">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'expenses')]"/>
                                 </group>
                                 <group string="Reporting">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'reporting')]"/>
                                 </group>
                                 <group string="Configuration">
                                     <field name="permission_ids" nolabel="1" colspan="2"
-                                           widget="many2many_checkboxes"
+                                           widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'configuration')]"/>
                                 </group>
                             </group>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- The core checkbox list, with "Select all" and "Clear" above it.
+
+         Links rather than buttons, and small: they are a shortcut beside the
+         list, not the thing the section is about. The one that would do
+         nothing is hidden rather than greyed out, so the row only ever offers
+         an action that changes something. -->
+    <t t-name="pos_retail.CheckboxesSelectAll">
+        <div aria-atomic="true">
+            <div t-if="!props.readonly and items and items.length > 1"
+                 class="pos-retail-select-all d-flex gap-3 mb-1 small">
+                <a t-if="!posRetailAllSelected" href="#" role="button"
+                   t-on-click.prevent="() => this.posRetailSelectAll()">
+                    <i class="fa fa-check-square-o me-1" aria-hidden="true"/>Select all
+                </a>
+                <a t-if="!posRetailNoneSelected" href="#" role="button" class="text-muted"
+                   t-on-click.prevent="() => this.posRetailClearAll()">
+                    <i class="fa fa-square-o me-1" aria-hidden="true"/>Clear
+                </a>
+            </div>
+            <t t-foreach="items" t-as="item" t-key="item[0]">
+                <div>
+                    <CheckBox
+                        value="isSelected(item)"
+                        disabled="props.readonly"
+                        onChange="(ev) => this.onChange(item[0], ev)"
+                    >
+                        <t t-esc="item[1]"/>
+                    </CheckBox>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>
