@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- The core list view, with the summary cards placed directly above the
+         table. Inherited as a primary copy so the change reaches only the two
+         ledgers that ask for it through js_class, never every list in the
+         system. -->
+    <t t-name="pos_retail.LedgerListView" t-inherit="web.ListView" t-inherit-mode="primary">
+        <xpath expr="//t[@t-component='props.Renderer']" position="before">
+            <PosRetailLedgerSummary t-if="model.isReady"
+                                    resModel="props.resModel"
+                                    domain="props.domain"
+                                    cards="posRetailCards"/>
+        </xpath>
+    </t>
+
+    <t t-name="pos_retail.LedgerSummary">
+        <div class="pos-retail-ledger-summary d-flex flex-wrap gap-2 px-3 pt-3 pb-2">
+            <t t-foreach="props.cards" t-as="card" t-key="card.key">
+                <div class="pos-retail-ledger-card bg-white border rounded-3 shadow-sm px-3 py-2 flex-grow-1"
+                     t-att-title="card.hint or ''">
+                    <div class="text-muted small text-uppercase fw-semibold" t-esc="card.label"/>
+                    <div t-attf-class="fs-4 fw-bold text-nowrap text-{{ card.tone }}">
+                        <t t-if="state.loading"><i class="fa fa-circle-o-notch fa-spin text-muted"/></t>
+                        <t t-else="" t-esc="display(card)"/>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>

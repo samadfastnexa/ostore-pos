@@ -35,3 +35,11 @@ access_pos_retail_customer_refund_line_sale_manager,pos.retail.customer.refund.l
 access_pos_retail_customer_refund_line_system,pos.retail.customer.refund.line.system,model_pos_retail_customer_refund_line,base.group_system,1,0,0,0
 access_pos_retail_vendor_refund_line_manager,pos.retail.vendor.refund.line.manager,model_pos_retail_vendor_refund_line,purchase.group_purchase_manager,1,0,0,0
 access_pos_retail_vendor_refund_line_system,pos.retail.vendor.refund.line.system,model_pos_retail_vendor_refund_line,base.group_system,1,0,0,0
+access_pos_retail_customer_ledger_line_system,pos.retail.customer.ledger.line.system,model_pos_retail_customer_ledger_line,base.group_system,1,0,0,0
+access_pos_retail_customer_ledger_line_pos_manager,pos.retail.customer.ledger.line.pos.manager,model_pos_retail_customer_ledger_line,point_of_sale.group_pos_manager,1,0,0,0
+access_pos_retail_customer_ledger_line_invoice,pos.retail.customer.ledger.line.invoice,model_pos_retail_customer_ledger_line,account.group_account_invoice,1,0,0,0
+access_pos_retail_customer_ledger_line_readonly,pos.retail.customer.ledger.line.readonly,model_pos_retail_customer_ledger_line,account.group_account_readonly,1,0,0,0
+access_pos_retail_vendor_ledger_line_system,pos.retail.vendor.ledger.line.system,model_pos_retail_vendor_ledger_line,base.group_system,1,0,0,0
+access_pos_retail_vendor_ledger_line_purchase,pos.retail.vendor.ledger.line.purchase,model_pos_retail_vendor_ledger_line,purchase.group_purchase_manager,1,0,0,0
+access_pos_retail_vendor_ledger_line_invoice,pos.retail.vendor.ledger.line.invoice,model_pos_retail_vendor_ledger_line,account.group_account_invoice,1,0,0,0
+access_pos_retail_vendor_ledger_line_readonly,pos.retail.vendor.ledger.line.readonly,model_pos_retail_vendor_ledger_line,account.group_account_readonly,1,0,0,0

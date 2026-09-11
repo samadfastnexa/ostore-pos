@@ -157,9 +157,14 @@
          (Inventory Movements 5, Discount Log 6, Returns 7, Customer Ledger 8,
          Expenses by Category 9) ahead of the report sub-groups (10/12/14) so
          none of them gets lost between two groups' children. -->
+    <!-- Points at the full Customer Ledger (running balances, summary cards,
+         transaction types). The Vendor Ledger sits beside it, defined in
+         pos_retail_ledgers_views.xml, and the two never share rows. The older
+         receivable-lines list is kept for the smart button on a customer's
+         form, where it is scoped to one customer and reads correctly. -->
     <menuitem id="pos_retail_menu_customer_ledger" name="Customer Ledger"
-        parent="point_of_sale.menu_point_rep" action="action_pos_retail_customer_ledger"
-        sequence="8" groups="point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,perm_reporting_res_groups"/>
+        parent="point_of_sale.menu_point_rep" action="action_pos_retail_customer_ledger_v2"
+        sequence="8" groups="base.group_system,point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,perm_reporting_res_groups,perm_customer_ledger_view_res_groups"/>
 
     <!-- Reporting > Credit Approvals -->
     <menuitem id="pos_retail_menu_credit_overrides" name="Credit Approvals"

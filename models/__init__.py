@@ -41,3 +41,4 @@ from . import ir_http
 from . import pos_retail_vendor_return_reason
 from . import pos_retail_customer_refund_line
 from . import pos_retail_vendor_refund_line
+from . import pos_retail_ledger_lines

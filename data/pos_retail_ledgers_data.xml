@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Customer Ledger and Vendor Ledger as two permissions that never imply
+         each other. Who customers owe and who the shop owes are different
+         facts, often for different people: the person chasing khata at the
+         counter has no need to see what the shop owes its wholesaler. -->
+
+    <record id="perm_customer_ledger_view" model="pos.retail.access.permission">
+        <field name="name">View Customer Ledger</field>
+        <field name="category">reporting</field>
+        <field name="sequence">30</field>
+        <field name="description">Open Reporting > Customer Ledger: every sale on credit, invoice, refund, payment received and khata adjustment, with each customer's balance before and after, and totals for sales, payments, refunds and what is still outstanding. Read-only. It shows nothing the shop owes its suppliers, which is the Vendor Ledger.</field>
+    </record>
+    <record id="access_perm_customer_ledger_view" model="ir.model.access">
+        <field name="name">Permission View Customer Ledger: pos.retail.customer.ledger.line</field>
+        <field name="model_id" ref="model_pos_retail_customer_ledger_line"/>
+        <field name="group_id" ref="perm_customer_ledger_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Kept for the people who already had it. "View POS Reports" opened the
+         old Customer Ledger, and taking it away on upgrade would withdraw
+         access nobody agreed to lose. It is declared here rather than in the
+         security CSV because that file loads before the permission catalogue,
+         so on a fresh install the group it names would not exist yet. It
+         reaches the customer ledger only, never the vendor one. -->
+    <record id="access_customer_ledger_for_pos_reports" model="ir.model.access">
+        <field name="name">View POS Reports: pos.retail.customer.ledger.line</field>
+        <field name="model_id" ref="model_pos_retail_customer_ledger_line"/>
+        <field name="group_id" ref="perm_reporting_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_vendor_ledger_view" model="pos.retail.access.permission">
+        <field name="name">View Vendor Ledger</field>
+        <field name="category">reporting</field>
+        <field name="sequence">31</field>
+        <field name="description">Open Reporting > Vendor Ledger: every vendor bill, payment made, vendor refund and adjustment, with what the shop owed each supplier before and after, and totals for purchases, payments and what is still payable. Read-only. It shows nothing customers owe the shop, which is the Customer Ledger.</field>
+    </record>
+    <record id="access_perm_vendor_ledger_view" model="ir.model.access">
+        <field name="name">Permission View Vendor Ledger: pos.retail.vendor.ledger.line</field>
+        <field name="model_id" ref="model_pos_retail_vendor_ledger_line"/>
+        <field name="group_id" ref="perm_vendor_ledger_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+</odoo>
