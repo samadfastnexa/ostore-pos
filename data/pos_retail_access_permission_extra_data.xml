@@ -125,6 +125,21 @@
         <field name="perm_unlink" eval="False"/>
     </record>
 
+    <!-- ============ Back office from the till ============ -->
+
+    <!-- Not seeded onto any everyday permission, deliberately. Leaving the
+         till for the back office is a real step up from selling, so it has
+         to be granted on purpose rather than arriving with "Use Point of
+         Sale". What the cashier then sees there is bounded by the rest of
+         their role, not by this. -->
+    <record id="perm_back_office" model="pos.retail.access.permission">
+        <field name="name">Open Back Office from the Till</field>
+        <field name="category">pos</field>
+        <field name="sequence">32</field>
+        <field name="description">Adds a Back Office entry to the till's menu. The cashier confirms with their own PIN and the back office opens as them, showing only what the rest of their role allows, with no dashboard and no settings. A "Back to Till" entry returns the device to the till afterwards. The cashier needs a login of their own for this to work.</field>
+        <field name="till_capability">_can_back_office</field>
+    </record>
+
     <!-- ============ Point of Sale ============ -->
 
     <!-- Refunds move money back out of the drawer, so a shop may well want to

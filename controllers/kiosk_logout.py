@@ -61,6 +61,17 @@ class PosRetailSession(Session):
             is_till_account = bool(request.env['pos.config'].sudo().search_count(
                 [('pos_retail_kiosk_user_id', '=', uid)]))
 
+        # A cashier who reached the back office from the till with their PIN
+        # and now signs out is going back to the counter, not leaving the
+        # building. Treated as a till closing its back-office visit: no lock,
+        # and the device is sent straight back to its till. Without this,
+        # the ordinary Log out menu would have locked the kiosk link on the
+        # very device the cashier has to sell from next.
+        pin_till = request.session.get('pos_retail_pin_till')
+        if pin_till:
+            super().logout(redirect=redirect)
+            return request.redirect('/pos_retail/kiosk/%s' % pin_till['token'])
+
         response = super().logout(redirect=redirect)
         if not is_till_account:
             response.set_cookie(

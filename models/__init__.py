@@ -37,3 +37,4 @@ from . import res_users
 from . import branch_company_pickers
 from . import auditlog_patch
 from . import pos_retail_brand_campaign
+from . import ir_http

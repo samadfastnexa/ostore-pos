@@ -53,6 +53,16 @@
                           onSelected="() => pos.closePos()">
                 Admin Panel / Control Center
             </DropdownItem>
+            <!-- The route in for a cashier at a kiosk till, where the entry
+                 above never shows: showBackend needs the cashier to BE the
+                 browser's signed-in user, and on a kiosk the browser is the
+                 till account. This one asks for the cashier's PIN and opens
+                 the back office as them. Shown only where the one above is
+                 not, so nobody is offered two doors to the same room. -->
+            <DropdownItem t-if="posRetailShowBackOffice and !(showBackend and this.pos.cashier._can_admin_panel)"
+                          onSelected="() => this.posRetailOpenBackOffice()">
+                Back Office
+            </DropdownItem>
         </xpath>
         <xpath expr="//DropdownItem[@t-if='showCreateProductButton']" position="attributes">
             <attribute name="t-if">showCreateProductButton and this.pos.cashier._can_create_product</attribute>

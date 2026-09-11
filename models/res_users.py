@@ -438,6 +438,8 @@ class ResUsers(models.Model):
         with sudo() because the person attempting to sign in has, by
         definition, no session yet to hold any rights of their own.
         """
+        if credential.get('type') == 'pos_retail_pin':
+            return self._pos_retail_check_pin_credential(credential)
         if credential.get('type') != 'pos_retail_kiosk':
             return super()._check_credentials(credential, env)
 
@@ -455,3 +457,55 @@ class ResUsers(models.Model):
             # hand back a clean "login failed" rather than a raw error.
             raise AccessDenied(_("Wrong or expired kiosk link."))
         return {'uid': self.id, 'auth_method': 'pos_retail_kiosk', 'mfa': 'skip'}
+
+    def _pos_retail_check_pin_credential(self, credential):
+        """Sign a cashier into the back office as THEMSELVES, with their PIN.
+
+        The shop wanted cashiers to reach the back office from the till
+        without a password, and to see only what their own role allows. That
+        rules out simply leaving the till: a kiosk till is signed in as the
+        shared till account, so anything opened from it runs with that
+        account's rights, identical for every person who ever stands there.
+        The only way to get the cashier's own permissions is to sign in as
+        the cashier's own user, and this is that sign-in.
+
+        A PIN is four or five digits, so it is guessable, and this is built on
+        that assumption rather than around it. It is accepted only when ALL of
+        these hold, any one of which a stranger on the internet does not have:
+
+          * the till's kiosk token -- the secret that the device was set up
+            with, proving the request comes through a real till;
+          * an employee that register actually offers at its PIN screen;
+          * that employee linked to THIS user;
+          * the PIN matching, compared in constant time.
+
+        The controller adds two more before this ever runs: the browser must
+        already be signed in as that till's own account, and failed attempts
+        are counted and locked out. Nothing reaches this from the public login
+        route either -- it hard-codes the credential type to password.
+        """
+        import hmac
+
+        self.ensure_one()
+        config = self.env['pos.config'].sudo().browse(
+            int(credential.get('config_id') or 0)).exists()
+        token = (credential.get('kiosk_token') or '').strip()
+        if not config or not token or not hmac.compare_digest(
+                token, config.pos_retail_kiosk_token or ''):
+            raise AccessDenied(_("This PIN sign-in did not come from a till."))
+
+        employee = self.env['hr.employee'].sudo().browse(
+            int(credential.get('employee_id') or 0)).exists()
+        if not employee or employee.user_id != self:
+            raise AccessDenied(_("That PIN does not belong to this person."))
+
+        offered = self.env['hr.employee'].sudo().search(
+            config._employee_domain(config.current_user_id.id))
+        if employee not in offered:
+            raise AccessDenied(_("That person does not work at this till."))
+
+        pin = str(credential.get('pin') or '')
+        if not employee.pin or not hmac.compare_digest(pin, employee.pin):
+            raise AccessDenied(_("Wrong PIN."))
+
+        return {'uid': self.id, 'auth_method': 'pos_retail_pin', 'mfa': 'skip'}

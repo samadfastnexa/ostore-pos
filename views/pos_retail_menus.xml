@@ -384,6 +384,32 @@ else:
         <field name="sequence">55</field>
     </record>
 
+    <!-- Menus that ship open to every internal user, closed to those who
+         actually run the place.
+
+         Measured with a cashier holding only till, product and inventory
+         permissions: their back office still listed Apps — the module
+         installer — and a Staff & Access app of HR screens they could open
+         but had no use for. Core leaves these without a group and relies on
+         the records behind them being unreadable, which keeps the data safe
+         but leaves the menu in front of somebody at a counter who asked for
+         a back office without dashboards and settings.
+
+         Replaced with explicit groups rather than added to, because the whole
+         point is that "internal user" should no longer be enough. -->
+    <record id="base.menu_management" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system')])]"/>
+    </record>
+    <record id="hr.menu_hr_main" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system'), ref('hr.group_hr_user'), ref('pos_retail.perm_manage_staff_res_groups')])]"/>
+    </record>
+    <record id="hr.menu_hr_employee" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system'), ref('hr.group_hr_user'), ref('pos_retail.perm_manage_staff_res_groups')])]"/>
+    </record>
+    <record id="hr.menu_hr_department_kanban" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system'), ref('hr.group_hr_user'), ref('pos_retail.perm_manage_staff_res_groups')])]"/>
+    </record>
+
     <menuitem id="menu_pos_retail_people_access"
         name="Access &amp; Logins"
         parent="hr.menu_hr_root"

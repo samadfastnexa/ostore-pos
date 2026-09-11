@@ -101,6 +101,7 @@ class PosRetailAccessPermission(models.Model):
         ('_can_stock_adjust', "Correct Stock button in the till's Actions"),
         ('_can_daily_sales', "Today's Sales button in the till's Actions"),
         ('_can_admin_panel', "Admin Panel entry in the till's menu"),
+        ('_can_back_office', "Back Office entry in the till, opened with the cashier's PIN"),
     ]
     till_capability = fields.Selection(
         TILL_CAPABILITIES, string="Unlocks at the Till",
