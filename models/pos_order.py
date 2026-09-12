@@ -117,6 +117,14 @@ class PosOrder(models.Model):
              "so this stays true on the record rather than the gap being "
              "silently invisible in reports.",
     )
+    pos_retail_return_manager_id = fields.Many2one(
+        'hr.employee', string="Return Approved By",
+        help="The manager whose PIN cleared this return, when the register is "
+             "set to require one. A named field of its own rather than reusing "
+             "discount_manager_id: that one says who approved a price cut, and "
+             "labelling a return with it would say the wrong thing on the "
+             "receipt.",
+    )
 
     # --- Fast physical returns -----------------------------------------------
 
@@ -130,6 +138,14 @@ class PosOrder(models.Model):
         order -- never to browse someone's purchase history from a bare
         reference number. A cashier typing a wrong or partial reference gets a
         plain "not found", never someone else's order.
+
+        `returnable_qty` is the ORIGINAL quantity minus whatever has already
+        come back against this exact line, via refund_orderline_ids -- the
+        same reverse link core's own with-receipt refund screen already uses
+        to cap a return, read here rather than reinvented. A sale of 25 with
+        5 already returned reports 20 returnable, not 25, so a second fast
+        return months later cannot double up on the first one just because it
+        went through a different screen.
         """
         reference = (reference or '').strip()
         if not reference:
@@ -150,15 +166,21 @@ class PosOrder(models.Model):
                 'order_name': order.pos_reference or order.name,
             }
 
+        already_returned = sum(line.refund_orderline_ids.mapped(lambda l: abs(l.qty)))
+        returnable = max(line.qty - already_returned, 0.0)
+
         return {
             'found': True,
             'order_id': order.id,
             'order_line_id': line.id,
             'order_name': order.pos_reference or order.name,
+            'order_date': fields.Date.to_string(order.date_order) if order.date_order else False,
             'partner_id': order.partner_id.id,
             'partner_name': order.partner_id.name,
             'price_unit': line.price_unit,
-            'available_qty': line.qty,
+            'original_qty': line.qty,
+            'already_returned_qty': already_returned,
+            'returnable_qty': returnable,
         }
 
     # --- Receipt management -------------------------------------------------
@@ -219,7 +241,58 @@ class PosOrder(models.Model):
             'grand_total': self.amount_total,
             'paid': self.amount_paid,
             'change': self.amount_return,
+            'credit_return_info': self._pos_retail_credit_return_info() if self.is_refund else False,
         }
+
+    def _pos_retail_credit_return_info(self):
+        """The extra section a return receipt carries that an ordinary sale
+        does not: what this undoes, how the money actually went back, who
+        cleared it, and -- only when it genuinely touched the customer's
+        account -- what that account stood at before and after.
+
+        The balance figures are an ESTIMATE, said as one on the receipt
+        itself rather than dressed up as posted fact. A POS credit only
+        reaches the customer's real receivable when the till session closes
+        (see pos.session._create_pay_later_receivable_lines); this receipt
+        prints the moment the sale is rung up, which is always earlier than
+        that. So "before" is the customer's current, already-posted balance,
+        and "after" is that figure minus this return -- correct once the day
+        closes, and told as a running total rather than a closed book before
+        then.
+        """
+        self.ensure_one()
+        original_orders = self.lines.refunded_orderline_id.order_id
+        credit_payment = self.payment_ids.filtered(
+            lambda p: p.payment_method_id.type == 'pay_later')[:1]
+
+        info = {
+            'original_orders': [
+                {'reference': o.pos_reference or o.name,
+                 'date': o.date_order}
+                for o in original_orders
+            ],
+            'unlinked': self.pos_retail_return_unlinked,
+            'authorized_by': self.pos_retail_return_manager_id.name or False,
+            'refund_amount': abs(self.amount_total),
+        }
+
+        if credit_payment:
+            partner = self.partner_id
+            info['disposition'] = _(
+                "Credited to %s", credit_payment.payment_method_id.name)
+            if partner:
+                # sudo: a cashier printing a receipt has no reason to hold
+                # accounting rights, and the figure itself is already shown
+                # to them on the payment screen before they get here.
+                balance_before = partner.sudo().pos_outstanding_balance
+                info['balance_before'] = balance_before
+                info['balance_after'] = balance_before - info['refund_amount']
+                info['balance_is_estimate'] = True
+        else:
+            methods = self.payment_ids.mapped('payment_method_id.name')
+            info['disposition'] = ", ".join(methods) if methods else _("Not yet paid")
+
+        return info
 
     def action_print_receipt_thermal(self):
         return self.env.ref(
@@ -260,7 +333,8 @@ class PosOrder(models.Model):
         if not result:
             return result
         for field in ('discount_manager_id', 'discount_reason_id', 'discount_reason_notes', 'discount_input_type',
-                      'return_reason_id', 'return_reason_notes', 'pos_retail_return_unlinked',
+                      'return_reason_id', 'return_reason_notes',
+                      'pos_retail_return_unlinked', 'pos_retail_return_manager_id',
                       'pos_retail_credit_manager_id', 'pos_retail_credit_over_amount',
                       'pos_retail_credit_before', 'pos_retail_credit_after',
                       'pos_retail_credit_limit'):

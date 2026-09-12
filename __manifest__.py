@@ -76,6 +76,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'report/pos_retail_receipt_report.xml',
         'report/pos_retail_khata_statement_report.xml',
         'report/pos_retail_goods_receipt_report.xml',
+        'report/pos_retail_vendor_return_report.xml',
         'report/pos_retail_quotation_report.xml',
         # After the report: the template attaches the A4 report by xmlid.
         'data/pos_retail_mail_template_data.xml',

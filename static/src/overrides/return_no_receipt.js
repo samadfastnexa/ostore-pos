@@ -34,9 +34,15 @@ patch(ControlButtons.prototype, {
         const isNewReturn = !order.is_refund;
 
         if (isNewReturn && this.pos.config.pos_retail_return_requires_manager) {
-            if (!(await this.posRetailCheckReturnManagerPin())) {
+            // The employee record itself, not a plain yes/no -- discarding it
+            // here is exactly what left every no-receipt return with no
+            // record of who approved it, so a receipt asking "Authorized By"
+            // had nothing to show.
+            const manager = await this.posRetailCheckReturnManagerPin();
+            if (!manager) {
                 return;
             }
+            order.pos_retail_return_manager_id = manager;
         }
         if (isNewReturn && this.pos.config.pos_retail_require_return_reason) {
             const reasons = this.pos.models["pos.retail.return.reason"].getAll();

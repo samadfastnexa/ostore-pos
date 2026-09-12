@@ -55,16 +55,54 @@
                 </div>
             </t>
 
-            <!-- A fast physical return whose original sale was never looked up.
-                 Printed rather than left silent: the refund price on this
-                 receipt is the product's CURRENT price, not necessarily what
-                 was actually charged when it was bought, and that gap needs
-                 to be visible on the paper trail, not just in a database
-                 column nobody reads. -->
-            <div t-if="order.is_refund and order.pos_retail_return_unlinked"
-                 class="pos-retail-return-unlinked text-start pt-1">
-                <i class="fa fa-exclamation-triangle me-1"/>Not linked to original sale
-            </div>
+            <!-- Credit Return section. Only the shape of a refund: the sale
+                 it undoes, how the money actually went back, and, only when
+                 it truly touched an account rather than the till drawer,
+                 what that account stood at before and after. Mirrors the PDF
+                 receipt's own Credit Return section (pos_retail_receipt_report.xml)
+                 so a customer sees the same story whether they get a screen
+                 print or a paper one. -->
+            <t t-set="posRetailCRI" t-value="posRetailCreditReturnInfo"/>
+            <t t-if="posRetailCRI">
+                <div class="pos-retail-credit-return text-start pt-2"
+                     style="border-top:1px dashed currentColor; padding-top:6px;">
+                    <div class="fw-bolder">Credit Return</div>
+
+                    <div t-if="posRetailCRI.originalOrders.length" class="pos-retail-credit-return-original">
+                        <t t-foreach="posRetailCRI.originalOrders" t-as="orig" t-key="orig.reference">
+                            Original Sale: <t t-esc="orig.reference"/>
+                            <t t-if="orig.date"> (<t t-esc="orig.date"/>)</t>
+                        </t>
+                    </div>
+                    <div t-else="" class="pos-retail-return-unlinked">
+                        <i class="fa fa-exclamation-triangle me-1"/>Not linked to original sale
+                    </div>
+
+                    <div>
+                        <span class="label-credit-return-method">Refund Method</span>
+                        <span class="pos-receipt-right-align" t-esc="posRetailCRI.disposition"/>
+                    </div>
+                    <div t-if="posRetailCRI.authorizedBy">
+                        <span class="label-credit-return-authorized">Authorized By</span>
+                        <span class="pos-receipt-right-align" t-esc="posRetailCRI.authorizedBy"/>
+                    </div>
+
+                    <t t-if="posRetailCRI.hasBalance">
+                        <div>
+                            <span class="label-credit-return-before">Previous Outstanding</span>
+                            <span class="pos-receipt-right-align" t-esc="posRetailCRI.balanceBefore"/>
+                        </div>
+                        <div>
+                            <span class="label-credit-return-credit">Return Credit</span>
+                            <span class="pos-receipt-right-align" t-esc="posRetailCRI.refundAmount"/>
+                        </div>
+                        <div class="fw-bolder">
+                            <span class="label-credit-return-after">New Outstanding (est.)</span>
+                            <span class="pos-receipt-right-align" t-esc="posRetailCRI.balanceAfter"/>
+                        </div>
+                    </t>
+                </div>
+            </t>
 
             <!-- Approved price changes. The line prices themselves are already
                  printed by the core receipt; this records who authorised any

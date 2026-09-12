@@ -54,4 +54,29 @@
         <field name="perm_unlink" eval="False"/>
     </record>
 
+    <!-- Outstanding Customers / Outstanding Vendors: one-row-per-partner
+         summaries built on top of the two ledgers above (see
+         pos_retail_outstanding_ledger.py). Same question the ledgers answer,
+         just the last line of it, so they reuse the exact same two
+         permissions rather than inventing new ones somebody would have to
+         separately remember to grant. -->
+    <record id="access_perm_customer_ledger_view_outstanding" model="ir.model.access">
+        <field name="name">Permission View Customer Ledger: pos.retail.outstanding.customer</field>
+        <field name="model_id" ref="model_pos_retail_outstanding_customer"/>
+        <field name="group_id" ref="perm_customer_ledger_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_vendor_ledger_view_outstanding" model="ir.model.access">
+        <field name="name">Permission View Vendor Ledger: pos.retail.outstanding.vendor</field>
+        <field name="model_id" ref="model_pos_retail_outstanding_vendor"/>
+        <field name="group_id" ref="perm_vendor_ledger_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
 </odoo>

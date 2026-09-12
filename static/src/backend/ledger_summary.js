@@ -78,6 +78,18 @@ const CARDS = {
           hint: "What the shop owed suppliers at their last transaction shown." },
         { key: "count", label: "Number of Transactions", tone: "secondary", kind: "count" },
     ],
+    // One row per partner already, so there is no "as of last transaction"
+    // subtlety here -- just a plain sum and count over whatever is filtered.
+    "pos.retail.outstanding.customer": [
+        { key: "total_outstanding", label: "Total Outstanding", tone: "danger",
+          hint: "What every customer shown owes the shop right now." },
+        { key: "count", label: "Number of Customers", tone: "secondary", kind: "count" },
+    ],
+    "pos.retail.outstanding.vendor": [
+        { key: "total_outstanding", label: "Total Payable", tone: "danger",
+          hint: "What the shop owes every supplier shown right now." },
+        { key: "count", label: "Number of Vendors", tone: "secondary", kind: "count" },
+    ],
 };
 
 export class PosRetailLedgerListController extends ListController {

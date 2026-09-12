@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import { patch } from "@web/core/utils/patch";
+import { _t } from "@web/core/l10n/translation";
 import { OrderReceipt } from "@point_of_sale/app/screens/receipt_screen/receipt/order_receipt";
 import { generateQRCodeDataUrl } from "@point_of_sale/utils";
 
@@ -62,6 +63,70 @@ patch(OrderReceipt.prototype, {
     get posRetailAmountWithBalance() {
         const total = this.order.priceIncl || 0;
         return this.formatCurrency(total + this.posRetailPreviousBalanceAmount);
+    },
+
+    /**
+     * The Credit Return section of a refund receipt: what this undoes, how
+     * the money actually went back, who authorised it, and -- only when it
+     * genuinely touched the customer's account -- what that account stood at
+     * before and after. Mirrors _pos_retail_credit_return_info() on the
+     * server (pos_order.py), computed here instead of over RPC because a
+     * receipt has to be printable with no connectivity at all.
+     *
+     * The balance figures carry the same caveat as posRetailPreviousBalance
+     * above: partner.pos_outstanding_balance is a snapshot loaded at session
+     * start, not a live read, and the credit itself only becomes posted
+     * truth once the till session closes -- an estimate on paper, not a
+     * closed book.
+     */
+    get posRetailCreditReturnInfo() {
+        const order = this.order;
+        if (!order.is_refund) {
+            return false;
+        }
+
+        // One entry per distinct original order this return's lines point
+        // back to -- usually one, but a single no-receipt return popup only
+        // ever links one line at a time, so a customer bringing back items
+        // from two different visits in one go would show both.
+        const originals = new Map();
+        for (const line of order.getOrderlines() || []) {
+            const origOrder = line.refunded_orderline_id?.order_id;
+            if (origOrder && !originals.has(origOrder.id)) {
+                originals.set(origOrder.id, {
+                    reference: origOrder.pos_reference || origOrder.name,
+                    date: origOrder.formatDateOrTime
+                        ? origOrder.formatDateOrTime("date_order")
+                        : "",
+                });
+            }
+        }
+
+        const creditPayment = this.paymentLines.find(
+            (p) => p.payment_method_id?.type === "pay_later"
+        );
+        const refundAmount = Math.abs(order.priceIncl || 0);
+
+        const info = {
+            originalOrders: [...originals.values()],
+            authorizedBy: order.pos_retail_return_manager_id?.name || false,
+            refundAmount: this.formatCurrency(refundAmount),
+        };
+
+        if (creditPayment) {
+            info.disposition = _t("Credited to %s", creditPayment.payment_method_id.name);
+            const before = this.posRetailPreviousBalanceAmount;
+            info.hasBalance = true;
+            info.balanceBefore = this.formatCurrency(before);
+            info.balanceAfter = this.formatCurrency(before - refundAmount);
+        } else {
+            const methodNames = this.paymentLines
+                .map((p) => p.payment_method_id?.name)
+                .filter(Boolean);
+            info.hasBalance = false;
+            info.disposition = methodNames.length ? methodNames.join(", ") : _t("Not yet paid");
+        }
+        return info;
     },
 
     /**

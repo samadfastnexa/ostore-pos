@@ -10,6 +10,18 @@
                 <button name="action_print_goods_receipt" type="object"
                         string="Print Goods Receipt Note" icon="fa-print"
                         invisible="picking_type_code != 'incoming'"/>
+                <button name="action_print_vendor_return" type="object"
+                        string="Print Vendor Return Note" icon="fa-print"
+                        invisible="not pos_retail_is_vendor_return"/>
+            </xpath>
+            <!-- Why these goods are going back, right next to the field that
+                 already names what is being returned (Source Document /
+                 Related Return). Only meaningful, and only shown, on a
+                 transfer that actually is a vendor return. -->
+            <xpath expr="//field[@name='origin']" position="after">
+                <field name="pos_retail_is_vendor_return" invisible="1"/>
+                <field name="pos_retail_vendor_return_reason_id"
+                       invisible="not pos_retail_is_vendor_return"/>
             </xpath>
         </field>
     </record>
@@ -65,6 +77,67 @@
             <p class="o_view_nocontent_smiling_face">No goods receipts yet</p>
             <p>Every delivery received from a vendor. Open one and use Print Goods Receipt Note
                for a printable note with costs, batch numbers and signature boxes.</p>
+        </field>
+    </record>
+
+    <!-- ================ Vendor Returns ================
+         Goods physically going back to a supplier: the transfers where
+         pos_retail_is_vendor_return is true (see stock_picking.py). Kept as
+         its own list rather than mixed into Goods Receipts, which only ever
+         shows incoming stock; a return is the opposite leg. -->
+
+    <record id="view_picking_list_vendor_return" model="ir.ui.view">
+        <field name="name">stock.picking.list.vendor.return</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <list string="Vendor Returns" create="false" default_order="scheduled_date desc">
+                <field name="name" string="Return No."/>
+                <field name="partner_id" string="Vendor"/>
+                <field name="return_id" string="Original Goods Receipt" optional="show"/>
+                <field name="pos_retail_vendor_return_reason_id" string="Reason" optional="show"/>
+                <field name="scheduled_date" string="Scheduled"/>
+                <field name="date_done" string="Returned On" optional="show"/>
+                <field name="user_id" string="Returned By" optional="show"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_picking_search_vendor_return" model="ir.ui.view">
+        <field name="name">stock.picking.search.vendor.return</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <search string="Vendor Returns">
+                <field name="name" string="Return No."/>
+                <field name="partner_id" string="Vendor"/>
+                <field name="return_id" string="Original Goods Receipt"/>
+                <field name="pos_retail_vendor_return_reason_id" string="Reason"/>
+                <field name="user_id" string="Returned By"/>
+                <filter name="done" string="Returned" domain="[('state', '=', 'done')]"/>
+                <filter name="pending" string="Pending" domain="[('state', 'not in', ('done', 'cancel'))]"/>
+                <separator/>
+                <filter name="filter_scheduled" date="scheduled_date" string="Scheduled Date"/>
+                <group>
+                    <filter name="group_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_reason" string="Reason" context="{'group_by': 'pos_retail_vendor_return_reason_id'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_month" string="Month" context="{'group_by': 'scheduled_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_vendor_returns" model="ir.actions.act_window">
+        <field name="name">Vendor Returns</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_picking_list_vendor_return"/>
+        <field name="search_view_id" ref="view_picking_search_vendor_return"/>
+        <field name="domain">[('pos_retail_is_vendor_return', '=', True)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No vendor returns yet</p>
+            <p>Every transfer sending goods back to a supplier. Open one and use Print Vendor
+               Return Note for a printable note with the return reason, value and signature boxes.</p>
         </field>
     </record>
 

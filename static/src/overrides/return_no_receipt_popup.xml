@@ -24,12 +24,30 @@
                     <div class="row g-2">
                         <div class="col">
                             <label class="form-label mb-0">Quantity</label>
-                            <input type="number" min="1" class="form-control" t-model="state.qty"/>
+                            <input type="number" min="1" t-att-max="maxQty === Infinity ? undefined : maxQty"
+                                   class="form-control" t-model="state.qty"/>
                         </div>
                         <div class="col">
                             <label class="form-label mb-0">Refund price (each)</label>
                             <input type="number" min="0" step="0.01" class="form-control" t-model="state.price"/>
                         </div>
+                    </div>
+
+                    <!-- Shown only once a link is found: what was originally
+                         sold, what has already come back against it (possibly
+                         from a different visit, weeks apart), and what is
+                         actually left to return. Stops a second return months
+                         later from silently exceeding what remains, which is
+                         exactly the case a receipt-free return makes easy. -->
+                    <div t-if="state.linkResult and state.linkResult.found"
+                         class="pos-retail-return-qty-info d-flex justify-content-between small text-muted border rounded p-2">
+                        <span>Original: <strong t-esc="state.linkResult.original_qty"/></span>
+                        <span>Already returned: <strong t-esc="state.linkResult.already_returned_qty"/></span>
+                        <span>Returnable now: <strong t-esc="state.linkResult.returnable_qty"/></span>
+                    </div>
+                    <div t-if="parseFloat(state.qty || 0) > maxQty" class="text-danger small">
+                        <i class="fa fa-exclamation-triangle me-1"/>
+                        Only <t t-esc="maxQty"/> can still be returned against this sale.
                     </div>
 
                     <!-- Who this is for. Optional — a plain cash refund to a

@@ -207,6 +207,14 @@
         sequence="15"
         groups="purchase.group_purchase_user,perm_purchases_view_res_groups,perm_inventory_view_res_groups"/>
 
+    <!-- Purchase > Orders > Vendor Returns. Same gate as Goods Receipts: the
+         two are opposite legs of the same relationship with a supplier, and
+         anyone who can see stock coming in can see it going back. -->
+    <menuitem id="pos_retail_menu_vendor_returns" name="Vendor Returns"
+        parent="purchase.menu_procurement_management" action="action_pos_retail_vendor_returns"
+        sequence="16"
+        groups="purchase.group_purchase_user,perm_purchases_view_res_groups,perm_inventory_view_res_groups"/>
+
     <!-- Purchase > Reporting > Vendor Reports. Also opened up to plain
          purchase users so the "Manage Purchases" catalog permission (implying
          purchase.group_purchase_user) covers them; all child action models

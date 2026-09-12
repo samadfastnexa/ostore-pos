@@ -219,6 +219,134 @@
         </field>
     </record>
 
+    <!-- ================ Outstanding Customers ================
+         One row per customer: their current balance, nothing else. Built on
+         top of the Customer Ledger above (see pos_retail_outstanding_ledger.py),
+         answering "who owes what right now" where the ledger answers "what
+         happened". Same permission as the ledger; see pos_retail_ledgers_data.xml. -->
+
+    <record id="pos_retail_outstanding_customer_search" model="ir.ui.view">
+        <field name="name">pos.retail.outstanding.customer.search</field>
+        <field name="model">pos.retail.outstanding.customer</field>
+        <field name="arch" type="xml">
+            <search string="Outstanding Customers">
+                <field name="partner_id"/>
+                <field name="last_move_name"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <separator/>
+                <filter string="Currently Owing" name="owing" domain="[('outstanding', '&gt;', 0)]"/>
+                <filter string="Credit Balance (shop owes them)" name="in_credit" domain="[('outstanding', '&lt;', 0)]"/>
+                <separator/>
+                <filter string="Last Transaction" name="filter_date" date="last_transaction_date"/>
+                <group>
+                    <filter string="Branch" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Last Transaction Type" name="group_type" context="{'group_by': 'last_transaction_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_outstanding_customer_list" model="ir.ui.view">
+        <field name="name">pos.retail.outstanding.customer.list</field>
+        <field name="model">pos.retail.outstanding.customer</field>
+        <field name="arch" type="xml">
+            <list string="Outstanding Customers" js_class="pos_retail_ledger_list"
+                  create="false" edit="false" delete="false" default_order="outstanding desc">
+                <field name="currency_id" column_invisible="True"/>
+                <field name="partner_id"/>
+                <field name="outstanding" sum="Total Outstanding"
+                       decoration-danger="outstanding &gt; 0"
+                       decoration-success="outstanding &lt;= 0"/>
+                <field name="age_days" string="Days Since"/>
+                <field name="last_transaction_date"/>
+                <field name="last_move_name" optional="show"/>
+                <field name="last_transaction_type" optional="show" widget="badge"
+                       decoration-info="last_transaction_type in ('sale', 'pos_sale')"
+                       decoration-success="last_transaction_type == 'payment'"
+                       decoration-warning="last_transaction_type == 'refund'"
+                       decoration-muted="last_transaction_type == 'adjustment'"/>
+                <field name="company_id" optional="hide" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_outstanding_customer" model="ir.actions.act_window">
+        <field name="name">Outstanding Customers</field>
+        <field name="res_model">pos.retail.outstanding.customer</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="pos_retail_outstanding_customer_list"/>
+        <field name="search_view_id" ref="pos_retail_outstanding_customer_search"/>
+        <field name="context">{'search_default_owing': 1}</field>
+        <field name="domain">[('company_id', 'in', allowed_company_ids)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No customer balances yet</p>
+            <p>One row per customer, their balance as of their last transaction.
+               The full history behind any of these is the Customer Ledger.</p>
+        </field>
+    </record>
+
+    <!-- ================ Outstanding Vendors ================ -->
+
+    <record id="pos_retail_outstanding_vendor_search" model="ir.ui.view">
+        <field name="name">pos.retail.outstanding.vendor.search</field>
+        <field name="model">pos.retail.outstanding.vendor</field>
+        <field name="arch" type="xml">
+            <search string="Outstanding Vendors">
+                <field name="partner_id"/>
+                <field name="last_move_name"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <separator/>
+                <filter string="Currently Owed" name="owed" domain="[('outstanding', '&gt;', 0)]"/>
+                <filter string="Credit Balance (they owe the shop)" name="in_credit" domain="[('outstanding', '&lt;', 0)]"/>
+                <separator/>
+                <filter string="Last Transaction" name="filter_date" date="last_transaction_date"/>
+                <group>
+                    <filter string="Branch" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Last Transaction Type" name="group_type" context="{'group_by': 'last_transaction_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_outstanding_vendor_list" model="ir.ui.view">
+        <field name="name">pos.retail.outstanding.vendor.list</field>
+        <field name="model">pos.retail.outstanding.vendor</field>
+        <field name="arch" type="xml">
+            <list string="Outstanding Vendors" js_class="pos_retail_ledger_list"
+                  create="false" edit="false" delete="false" default_order="outstanding desc">
+                <field name="currency_id" column_invisible="True"/>
+                <field name="partner_id"/>
+                <field name="outstanding" sum="Total Payable"
+                       decoration-danger="outstanding &gt; 0"
+                       decoration-success="outstanding &lt;= 0"/>
+                <field name="age_days" string="Days Since"/>
+                <field name="last_transaction_date"/>
+                <field name="last_move_name" optional="show"/>
+                <field name="last_transaction_type" optional="show" widget="badge"
+                       decoration-info="last_transaction_type == 'bill'"
+                       decoration-success="last_transaction_type == 'payment'"
+                       decoration-warning="last_transaction_type == 'refund'"
+                       decoration-muted="last_transaction_type == 'adjustment'"/>
+                <field name="company_id" optional="hide" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_outstanding_vendor" model="ir.actions.act_window">
+        <field name="name">Outstanding Vendors</field>
+        <field name="res_model">pos.retail.outstanding.vendor</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="pos_retail_outstanding_vendor_list"/>
+        <field name="search_view_id" ref="pos_retail_outstanding_vendor_search"/>
+        <field name="context">{'search_default_owed': 1}</field>
+        <field name="domain">[('company_id', 'in', allowed_company_ids)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No supplier balances yet</p>
+            <p>One row per supplier, what the shop owes as of the last transaction.
+               The full history behind any of these is the Vendor Ledger.</p>
+        </field>
+    </record>
+
     <!-- ================ Menus ================ -->
 
     <!-- Reporting > Customer Ledger is repointed at the new ledger where that
@@ -282,6 +410,19 @@
 
     <menuitem id="pos_retail_menu_vendor_ledger" name="Vendor Ledger"
         parent="point_of_sale.menu_point_rep" action="action_pos_retail_vendor_ledger"
+        sequence="9"
+        groups="base.group_system,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
+
+    <!-- Sit right beside their own full ledger: same permission, same
+         reader, just the last line of the story instead of the whole
+         history. -->
+    <menuitem id="pos_retail_menu_outstanding_customer" name="Outstanding Customers"
+        parent="point_of_sale.menu_point_rep" action="action_pos_retail_outstanding_customer"
+        sequence="8"
+        groups="base.group_system,point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_customer_ledger_view_res_groups"/>
+
+    <menuitem id="pos_retail_menu_outstanding_vendor" name="Outstanding Vendors"
+        parent="point_of_sale.menu_point_rep" action="action_pos_retail_outstanding_vendor"
         sequence="9"
         groups="base.group_system,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
 

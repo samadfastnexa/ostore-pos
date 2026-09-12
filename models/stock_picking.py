@@ -45,3 +45,21 @@ class StockPicking(models.Model):
             ))
         return self.env.ref(
             'pos_retail.action_report_goods_receipt').report_action(self, config=False)
+
+    def action_print_vendor_return(self):
+        """Vendor Return Note: what is going back to the supplier, why, and
+        what it is worth -- the paper a driver signs on the way out and the
+        document behind the credit the Vendor Refunds report expects to see
+        arrive. Native ships nothing purpose-built for this leg; the
+        Delivery Slip it would otherwise fall back to has no reason, no
+        cost column and no reference to the delivery it undoes.
+        """
+        not_returns = self.filtered(lambda p: not p.pos_retail_is_vendor_return)
+        if not_returns:
+            raise UserError(_(
+                "A Vendor Return Note only applies to stock going back to a "
+                "supplier. %(names)s is not a vendor return.",
+                names=", ".join(not_returns.mapped('name')),
+            ))
+        return self.env.ref(
+            'pos_retail.action_report_vendor_return').report_action(self, config=False)

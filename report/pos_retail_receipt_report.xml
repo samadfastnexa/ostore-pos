@@ -145,6 +145,36 @@
             <div t-if="o.discount_manager_id">Approved By: <t t-esc="o.discount_manager_id.name"/></div>
             <div t-if="o.return_reason_id">Return Reason: <t t-esc="o.return_reason_id.name"/></div>
 
+            <!-- Credit Return section. Only the shape of a refund: the sale
+                 it undoes, how the money actually went back, and, only when
+                 it truly touched an account rather than the till drawer,
+                 what that account stood at before and after. Balance figures
+                 are marked as an estimate on the paper itself, because they
+                 become the posted truth only once the day's session closes,
+                 not the moment this receipt prints. -->
+            <t t-if="d.get('credit_return_info')" t-set="cri" t-value="d['credit_return_info']"/>
+            <t t-if="d.get('credit_return_info')">
+                <div class="pos-retail-pdf-rule"/>
+                <div class="fw-bold text-center">CREDIT RETURN</div>
+                <div t-if="cri['original_orders']">
+                    <t t-foreach="cri['original_orders']" t-as="orig">
+                        Original Sale: <span t-esc="orig['reference']"/>
+                        (<span t-esc="orig['date']" t-options='{"widget": "date"}'/>)
+                    </t>
+                </div>
+                <div t-else="">
+                    <i class="fa fa-exclamation-triangle me-1"/>Not linked to original sale
+                </div>
+                <div>Refund Method: <t t-esc="cri['disposition']"/></div>
+                <div t-if="cri.get('authorized_by')">Authorized By: <t t-esc="cri['authorized_by']"/></div>
+                <t t-if="cri.get('balance_before') is not None">
+                    <div class="pos-retail-pdf-rule"/>
+                    <div>Previous Outstanding: <span t-esc="cri['balance_before']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></div>
+                    <div>Return Credit: <span t-esc="cri['refund_amount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></div>
+                    <div class="fw-bold">New Outstanding (est.): <span t-esc="cri['balance_after']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></div>
+                </t>
+            </t>
+
             <div class="pos-retail-pdf-rule"/>
             <div t-if="cfg.pos_retail_receipt_thankyou" class="text-center fw-bold"
                  t-esc="cfg.pos_retail_receipt_thankyou"/>
@@ -188,7 +218,11 @@
         <t t-set="cfg" t-value="o.config_id"/>
         <t t-call="web.external_layout">
             <div class="page">
-                <h2>Sales Receipt <span t-esc="o.pos_reference or o.name"/></h2>
+                <h2>
+                    <t t-if="o.is_refund">Credit Return Receipt</t>
+                    <t t-else="">Sales Receipt</t>
+                    <span t-esc="o.pos_reference or o.name"/>
+                </h2>
 
                 <div class="row mt-3">
                     <div class="col-6">
@@ -278,6 +312,47 @@
                                 <td class="text-end"><span t-esc="pay['amount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                             </tr>
                         </tbody>
+                    </table>
+                </div>
+
+                <!-- Credit Return section, A4 layout. Same content as the
+                     thermal receipt, laid out for the wider page: see that
+                     template's comment for why the balance is marked an
+                     estimate rather than shown as settled fact. -->
+                <t t-if="d.get('credit_return_info')" t-set="cri" t-value="d['credit_return_info']"/>
+                <div t-if="d.get('credit_return_info')" class="mt-3 p-3" style="border:1px solid #ccc; border-radius:4px;">
+                    <strong>Credit Return</strong>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr t-if="cri['original_orders']">
+                            <td class="fw-bold" style="width:220px;">Original Sale</td>
+                            <td>
+                                <t t-foreach="cri['original_orders']" t-as="orig">
+                                    <span t-esc="orig['reference']"/>
+                                    (<span t-esc="orig['date']" t-options='{"widget": "date"}'/>)<br/>
+                                </t>
+                            </td>
+                        </tr>
+                        <tr t-else="">
+                            <td colspan="2" class="text-danger">
+                                <i class="fa fa-exclamation-triangle me-1"/>Not linked to original sale
+                            </td>
+                        </tr>
+                        <tr><td class="fw-bold">Refund Method</td><td t-esc="cri['disposition']"/></tr>
+                        <tr t-if="cri.get('authorized_by')">
+                            <td class="fw-bold">Authorized By</td><td t-esc="cri['authorized_by']"/>
+                        </tr>
+                        <tr t-if="cri.get('balance_before') is not None">
+                            <td class="fw-bold">Previous Outstanding</td>
+                            <td><span t-esc="cri['balance_before']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                        </tr>
+                        <tr t-if="cri.get('balance_before') is not None">
+                            <td class="fw-bold">Return Credit</td>
+                            <td><span t-esc="cri['refund_amount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                        </tr>
+                        <tr t-if="cri.get('balance_before') is not None" class="fw-bold border-top">
+                            <td>New Outstanding (est.)</td>
+                            <td><span t-esc="cri['balance_after']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
+                        </tr>
                     </table>
                 </div>
 

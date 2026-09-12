@@ -93,10 +93,25 @@ export class ReturnNoReceiptPopup extends Component {
                 // The point of linking at all: the ORIGINAL price, not
                 // whatever the product happens to cost today.
                 this.state.price = String(result.price_unit);
+                // Never above what is actually left to return. Sold 25,
+                // already returned 5 through some earlier visit -- typing 25
+                // again here would return 5 of them a second time, silently,
+                // months apart, which is exactly the mistake a receipt-free
+                // return makes easy if nothing stops it.
+                if (parseFloat(this.state.qty) > result.returnable_qty) {
+                    this.state.qty = String(result.returnable_qty);
+                }
             }
         } finally {
             this.state.linking = false;
         }
+    }
+
+    // The cap this popup enforces once a link is found. Read by the
+    // template for the max= on the quantity field and by canConfirm, so the
+    // two can never disagree about what is allowed.
+    get maxQty() {
+        return this.state.linkResult?.found ? this.state.linkResult.returnable_qty : Infinity;
     }
 
     clearLink() {
@@ -108,6 +123,7 @@ export class ReturnNoReceiptPopup extends Component {
         return Boolean(
             this.selectedProduct &&
                 parseFloat(this.state.qty) > 0 &&
+                parseFloat(this.state.qty) <= this.maxQty &&
                 parseFloat(this.state.price) >= 0
         );
     }
