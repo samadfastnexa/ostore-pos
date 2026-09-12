@@ -24,7 +24,8 @@ genuinely belong to the legal entity, and branches already reach them through
 core's parent_of rules without holding the parent themselves.
 """
 
-from odoo import fields, models
+from odoo import api, fields, models, _
+from odoo.exceptions import ValidationError
 
 from .res_company import TRADING_COMPANY_DOMAIN, pos_retail_trading_company
 
@@ -38,6 +39,15 @@ class SaleOrder(models.Model):
         domain=TRADING_COMPANY_DOMAIN,
         default=lambda self: pos_retail_trading_company(self.env))
 
+    @api.constrains('company_id')
+    def _check_trading_company(self):
+        for record in self:
+            if record.company_id and record.company_id.child_ids:
+                raise ValidationError(
+                    _("Cannot assign to '%(company)s' because it is a holding company, not a branch. "
+                      "Choose one of its branches instead.",
+                      company=record.company_id.name))
+
 
 class PurchaseOrder(models.Model):
     _inherit = 'purchase.order'
@@ -50,6 +60,15 @@ class PurchaseOrder(models.Model):
         domain=TRADING_COMPANY_DOMAIN,
         default=lambda self: pos_retail_trading_company(self.env))
 
+    @api.constrains('company_id')
+    def _check_trading_company(self):
+        for record in self:
+            if record.company_id and record.company_id.child_ids:
+                raise ValidationError(
+                    _("Cannot assign to '%(company)s' because it is a holding company, not a branch. "
+                      "Choose one of its branches instead.",
+                      company=record.company_id.name))
+
 
 class StockScrap(models.Model):
     _inherit = 'stock.scrap'
@@ -60,6 +79,15 @@ class StockScrap(models.Model):
     company_id = fields.Many2one(
         domain=TRADING_COMPANY_DOMAIN,
         default=lambda self: pos_retail_trading_company(self.env))
+
+    @api.constrains('company_id')
+    def _check_trading_company(self):
+        for record in self:
+            if record.company_id and record.company_id.child_ids:
+                raise ValidationError(
+                    _("Cannot assign to '%(company)s' because it is a holding company, not a branch. "
+                      "Choose one of its branches instead.",
+                      company=record.company_id.name))
 
 
 class ProductPricelist(models.Model):

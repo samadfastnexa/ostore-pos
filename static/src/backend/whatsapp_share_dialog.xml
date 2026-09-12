@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.WhatsAppShareDialog">
+        <Dialog title="'Share on WhatsApp'" size="'md'">
+            <div class="pos-retail-wa-dialog">
+                <div class="mb-3" t-if="props.partnerName">
+                    <label class="form-label fw-bold">Partner</label>
+                    <div t-esc="props.partnerName"/>
+                </div>
+                <div class="mb-3" t-if="props.documentName">
+                    <label class="form-label fw-bold">Document</label>
+                    <div t-esc="props.documentName"/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold" for="wa_phone">Phone Number</label>
+                    <input type="tel" class="form-control" id="wa_phone"
+                           t-att-value="state.phone"
+                           t-on-input="(ev) => this.state.phone = ev.target.value"
+                           placeholder="e.g. +92 300 1234567"/>
+                </div>
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary" t-on-click="props.close">Cancel</button>
+                <button class="btn btn-success" t-on-click="onShare">
+                    <i class="fa fa-whatsapp me-1"/>Share
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

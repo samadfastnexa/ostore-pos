@@ -43,3 +43,5 @@ from . import pos_retail_customer_refund_line
 from . import pos_retail_vendor_refund_line
 from . import pos_retail_ledger_lines
 from . import pos_retail_outstanding_ledger
+from . import pos_retail_report_service
+from . import pos_retail_vendor_statement

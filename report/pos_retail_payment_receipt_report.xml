@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Payment Receipt PDF: a branded payment confirmation for customer
+         and vendor payments.  Core already has a receipt; this adds the
+         store's visual identity and a signature line for the counter. -->
+
+    <template id="report_payment_receipt_document">
+        <t t-call="web.external_layout">
+            <t t-call="pos_retail.pos_retail_report_styles"/>
+            <div class="page pos-retail-report">
+                <h2>Payment Receipt</h2>
+                <div class="report-subtitle"
+                     t-esc="'%s — %s' % (doc.payment_type == 'inbound' and 'Payment Received' or 'Payment Made', doc.name or '')"/>
+
+                <div class="row mt-4 mb-4">
+                    <div class="col-6">
+                        <table class="table table-borderless table-sm">
+                            <tr>
+                                <td class="fw-bold">Partner</td>
+                                <td t-field="doc.partner_id"/>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Date</td>
+                                <td t-field="doc.date"/>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Payment Method</td>
+                                <td t-field="doc.journal_id"/>
+                            </tr>
+                            <tr t-if="doc.ref">
+                                <td class="fw-bold">Reference</td>
+                                <td t-field="doc.ref"/>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-6">
+                        <div class="report-summary text-center">
+                            <div class="text-muted">Amount</div>
+                            <div class="fs-2 fw-bold">
+                                <span t-field="doc.amount"
+                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-5">
+                    <div class="col-6">
+                        <div style="border-top: 1px solid #333; width: 200px; margin-top: 40px; padding-top: 4px;">
+                            Received by
+                        </div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div style="border-top: 1px solid #333; width: 200px; margin-top: 40px; padding-top: 4px; display: inline-block;">
+                            Customer signature
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-footer">
+                    Generated <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_pos_retail_payment_receipt">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="pos_retail.report_payment_receipt_document"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_payment_receipt" model="ir.actions.report">
+        <field name="name">Payment Receipt (Retail)</field>
+        <field name="model">account.payment</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_pos_retail_payment_receipt</field>
+        <field name="report_file">pos_retail.report_pos_retail_payment_receipt</field>
+        <field name="print_report_name">'Receipt - %s' % (object.name or '').replace('/', '-')</field>
+        <field name="binding_model_id" ref="account.model_account_payment"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

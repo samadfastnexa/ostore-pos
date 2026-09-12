@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Customer Ledger PDF: one page per selected customer showing every
+         posted receivable entry with a running balance.  Works with single
+         and bulk selection (Print menu on the customer list or customer
+         form).  The data comes from the same pos_retail_khata_lines() method
+         that the Khata Statement uses, so the two always agree. -->
+
+    <template id="report_customer_ledger_document">
+        <t t-call="web.external_layout">
+            <t t-call="pos_retail.pos_retail_report_styles"/>
+            <div class="page pos-retail-report">
+                <h2>Customer Ledger</h2>
+                <div class="row mt-3 mb-4">
+                    <div class="col-6">
+                        <strong t-field="doc.name"/>
+                        <div t-if="doc.phone" t-field="doc.phone"/>
+                        <div t-if="doc.mobile and doc.mobile != doc.phone" t-field="doc.mobile"/>
+                        <div t-if="doc.street" t-field="doc.street"/>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div>Date: <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y')"/></div>
+                        <div t-if="doc.company_id">Branch: <span t-field="doc.company_id.name"/></div>
+                    </div>
+                </div>
+
+                <t t-set="rows" t-value="doc.pos_retail_khata_lines()"/>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Reference</th>
+                            <th class="text-end">Purchases</th>
+                            <th class="text-end">Payments</th>
+                            <th class="text-end">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="rows" t-as="row">
+                            <td><span t-esc="row['date'].strftime('%d/%m/%Y')"/></td>
+                            <td><span t-esc="row['name']"/></td>
+                            <td class="text-end">
+                                <span t-if="row['debit']" t-esc="row['debit']"
+                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-if="row['credit']" t-esc="row['credit']"
+                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-esc="row['balance']"
+                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                            </td>
+                        </tr>
+                        <tr t-if="not rows">
+                            <td colspan="5" class="text-center text-muted">No ledger entries.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="row mt-3">
+                    <div class="col-6 offset-6">
+                        <table class="table table-sm report-summary">
+                            <tr class="fw-bold fs-5">
+                                <td>Outstanding Balance</td>
+                                <td class="text-end">
+                                    <span t-esc="rows and rows[-1]['balance'] or 0.0"
+                                          t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="report-footer">
+                    Generated <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_customer_ledger">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="pos_retail.report_customer_ledger_document"/>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_customer_ledger" model="ir.actions.report">
+        <field name="name">Customer Ledger</field>
+        <field name="model">res.partner</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_customer_ledger</field>
+        <field name="report_file">pos_retail.report_customer_ledger</field>
+        <field name="print_report_name">'Customer Ledger - %s' % (object.name or '').replace('/', '-')</field>
+        <field name="binding_model_id" ref="base.model_res_partner"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

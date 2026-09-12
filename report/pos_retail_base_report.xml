@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Shared SCSS for all pos_retail PDF reports.
+         Loaded once in both report bundles so wkhtmltopdf and the on-screen
+         HTML preview render identically. -->
+    <template id="pos_retail_report_styles">
+        <style>
+            .pos-retail-report h2 { margin-bottom: 0.25rem; }
+            .pos-retail-report .report-subtitle { color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
+            .pos-retail-report table.table-sm th { background-color: #f8f9fa; font-size: 0.85rem; }
+            .pos-retail-report table.table-sm td { font-size: 0.85rem; }
+            .pos-retail-report .report-summary { background-color: #f8f9fa; border-radius: 4px; padding: 12px; }
+            .pos-retail-report .report-footer { font-size: 0.75rem; color: #999; margin-top: 2rem; border-top: 1px solid #eee; padding-top: 0.5rem; }
+        </style>
+    </template>
+
+</odoo>

@@ -93,6 +93,133 @@
             <field name="global" eval="True"/>
         </record>
 
+        <!-- ── Transactional models: replace core's parent_of rules ─────────
+
+             Core's multi-company rules on these models use parent_of, which
+             lets a child company see the parent's records.  That is wrong for
+             shops that must be isolated from each other and from the holding
+             company.  Global rules on the same model are ANDed, so adding a
+             strict 'in company_ids' rule intersects with core's and tightens
+             it, without removing whatever else core protects.
+
+             Records with company_id = False remain shared (global).  Journals
+             and accounts are deliberately excluded: branches share their
+             parent's chart of accounts and journals. -->
+
+        <record id="sale_order_branch_rule" model="ir.rule">
+            <field name="name">Sale Order: visible to its own branch</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="sale_order_line_branch_rule" model="ir.rule">
+            <field name="name">Sale Order Line: visible to its own branch</field>
+            <field name="model_id" ref="sale.model_sale_order_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="purchase_order_branch_rule" model="ir.rule">
+            <field name="name">Purchase Order: visible to its own branch</field>
+            <field name="model_id" ref="purchase.model_purchase_order"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="purchase_order_line_branch_rule" model="ir.rule">
+            <field name="name">Purchase Order Line: visible to its own branch</field>
+            <field name="model_id" ref="purchase.model_purchase_order_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="stock_picking_branch_rule" model="ir.rule">
+            <field name="name">Stock Transfer: visible to its own branch</field>
+            <field name="model_id" ref="stock.model_stock_picking"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="stock_move_branch_rule" model="ir.rule">
+            <field name="name">Stock Move: visible to its own branch</field>
+            <field name="model_id" ref="stock.model_stock_move"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="stock_scrap_branch_rule" model="ir.rule">
+            <field name="name">Stock Scrap: visible to its own branch</field>
+            <field name="model_id" ref="stock.model_stock_scrap"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="stock_quant_branch_rule" model="ir.rule">
+            <field name="name">Stock Quant: visible to its own branch</field>
+            <field name="model_id" ref="stock.model_stock_quant"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="account_move_branch_rule" model="ir.rule">
+            <field name="name">Journal Entry: visible to its own branch</field>
+            <field name="model_id" ref="account.model_account_move"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="account_move_line_branch_rule" model="ir.rule">
+            <field name="name">Journal Item: visible to its own branch</field>
+            <field name="model_id" ref="account.model_account_move_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="account_payment_branch_rule" model="ir.rule">
+            <field name="name">Payment: visible to its own branch</field>
+            <field name="model_id" ref="account.model_account_payment"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="hr_employee_branch_rule" model="ir.rule">
+            <field name="name">Employee: visible to its own branch</field>
+            <field name="model_id" ref="hr.model_hr_employee"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="hr_employee_public_branch_rule" model="ir.rule">
+            <field name="name">Employee (public): visible to its own branch</field>
+            <field name="model_id" ref="hr.model_hr_employee_public"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <!-- Custom pos_retail models that carry company_id but had no rule. -->
+
+        <record id="discount_log_branch_rule" model="ir.rule">
+            <field name="name">Discount Log: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_discount_log"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="brand_campaign_branch_rule" model="ir.rule">
+            <field name="name">Brand Campaign: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_brand_campaign"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="loyalty_program_branch_rule" model="ir.rule">
+            <field name="name">Loyalty Program: visible to its own branch</field>
+            <field name="model_id" ref="loyalty.model_loyalty_program"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
         <!-- Deliberately NOT covered here: account.journal and account.account.
              branch 1 owns no journals at all and posts through the parent's, so
              a strict rule on those would stop it invoicing rather than merely

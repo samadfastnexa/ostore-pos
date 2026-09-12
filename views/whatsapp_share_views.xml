@@ -81,5 +81,33 @@
             </xpath>
         </field>
     </record>
+    <!-- Vendor Statement on the vendor form.  The khata widget above only
+         renders on the customer ledger view inheritance; this one goes on
+         the vendor's own form view inheritance. -->
+    <record id="view_partner_vendor_form_whatsapp" model="ir.ui.view">
+        <field name="name">res.partner.vendor.form.whatsapp</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <widget name="pos_retail_whatsapp" report="pos_retail.report_vendor_statement" title="Vendor Statement"
+                        invisible="supplier_rank == 0"/>
+                <widget name="pos_retail_whatsapp" report="pos_retail.report_customer_ledger" title="Customer Ledger"
+                        invisible="customer_rank == 0"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- POS Order receipt from the order form. -->
+    <record id="view_pos_order_form_whatsapp" model="ir.ui.view">
+        <field name="name">pos.order.form.whatsapp</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <widget name="pos_retail_whatsapp" report="pos_retail.report_pos_receipt_a4" title="POS Receipt"/>
+            </xpath>
+        </field>
+    </record>
 
 </odoo>
