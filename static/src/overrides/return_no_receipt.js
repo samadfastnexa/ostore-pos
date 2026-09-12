@@ -9,10 +9,15 @@ import { ReturnNoReceiptPopup } from "./return_no_receipt_popup";
 import { posRetailRequestManagerPin } from "../utils/manager_pin";
 
 // "Return (No Receipt)" flow: manager PIN -> return reason -> product/qty/price
-// popup -> add a negative-qty line to a fresh is_refund order. Checkout then
-// refunds it and restocks inventory natively. Reuses the same manager-PIN
-// challenge as the order-discount approval (employees whose discount role
-// can_approve), via the shared helper in utils/manager_pin.js.
+// (+ optional customer, + optional link to the original sale) -> a negative
+// line on a fresh is_refund order -> straight to Payment, where Cash, Card or
+// Customer Credit stands in for "how should we handle the refund" -- the shop
+// asked for that choice and core's own payment buttons already are it, so
+// nothing new was built to duplicate them.
+//
+// Reuses the same manager-PIN challenge as the order-discount approval
+// (employees whose discount role can_approve), via the shared helper in
+// utils/manager_pin.js.
 patch(ControlButtons.prototype, {
     async posRetailCheckReturnManagerPin() {
         return posRetailRequestManagerPin(this.pos, this.dialog, this.notification, {
@@ -52,13 +57,22 @@ patch(ControlButtons.prototype, {
             }
         }
 
-        const payload = await makeAwaitable(this.dialog, ReturnNoReceiptPopup, {});
+        const payload = await makeAwaitable(this.dialog, ReturnNoReceiptPopup, { order });
         if (!payload) {
             return;
         }
 
         order.is_refund = true;
-        await this.pos.addLineToOrder(
+        // Marked the moment it is known, not guessed at later from whether a
+        // link happens to be present: a return can fail to link for reasons
+        // that have nothing to do with the cashier's choice (a typo, an order
+        // that predates this database), and only the popup that actually
+        // tried knows whether skipping the lookup was deliberate.
+        if (payload.unlinked) {
+            order.pos_retail_return_unlinked = true;
+        }
+
+        const line = await this.pos.addLineToOrder(
             {
                 product_id: payload.product,
                 product_tmpl_id: payload.product.product_tmpl_id,
@@ -70,10 +84,28 @@ patch(ControlButtons.prototype, {
             { force: true },
             false
         );
-        this.notification.add(
-            _t("Return line added. Add more items or go to Payment to refund."),
-            { type: "success" }
-        );
+
+        if (payload.originalOrderId && line) {
+            // The link the report reads: which sale this undoes. Set on the
+            // line itself, the same field a same-receipt refund uses, so a
+            // linked fast return and an ordinary refund look identical to
+            // every report built on refunded_orderline_id -- there is only
+            // one notion of "linked" in this codebase, not two competing ones.
+            const originalOrder = this.pos.models["pos.order"].get(payload.originalOrderId);
+            const originalLine = originalOrder?.lines.find(
+                (l) => l.product_id.id === payload.product.id && l.getQuantity() > 0
+            );
+            if (originalLine) {
+                line.refunded_orderline_id = originalLine;
+            }
+        }
+
         this.props.close?.();
+        // Straight to the till's own choice of how to give the money back,
+        // rather than leaving the cashier to find Payment themselves. That
+        // screen's Cash / Card / Customer Credit buttons ARE the refund
+        // options: Customer Credit both credits the ledger and nets against
+        // whatever the customer already owed, since it is the same account.
+        this.pos.navigate("PaymentScreen", { orderUuid: order.uuid });
     },
 });

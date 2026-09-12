@@ -97,7 +97,13 @@ class PosRetailCustomerRefundLine(models.Model):
                     NULL::integer                     AS move_id,
                     ro.id                             AS original_pos_order_id,
                     NULL::integer                     AS original_move_id,
-                    COALESCE(ro.pos_reference, ro.name) AS original_reference,
+                    -- A fast return the cashier chose not to look up leaves ro
+                    -- null, and a blank cell here would read as a mistake in
+                    -- the report rather than the cashier's own deliberate
+                    -- choice at the till. Said plainly instead.
+                    COALESCE(ro.pos_reference, ro.name,
+                             CASE WHEN o.pos_retail_return_unlinked
+                                  THEN 'Not linked to original sale' END) AS original_reference,
                     l.product_id                      AS product_id,
                     pt.categ_id                       AS categ_id,
                     -l.qty                            AS quantity,

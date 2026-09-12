@@ -55,6 +55,17 @@
                 </div>
             </t>
 
+            <!-- A fast physical return whose original sale was never looked up.
+                 Printed rather than left silent: the refund price on this
+                 receipt is the product's CURRENT price, not necessarily what
+                 was actually charged when it was bought, and that gap needs
+                 to be visible on the paper trail, not just in a database
+                 column nobody reads. -->
+            <div t-if="order.is_refund and order.pos_retail_return_unlinked"
+                 class="pos-retail-return-unlinked text-start pt-1">
+                <i class="fa fa-exclamation-triangle me-1"/>Not linked to original sale
+            </div>
+
             <!-- Approved price changes. The line prices themselves are already
                  printed by the core receipt; this records who authorised any
                  sale made outside the product's normal range, so the receipt

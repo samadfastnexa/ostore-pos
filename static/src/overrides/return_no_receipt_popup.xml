@@ -31,6 +31,49 @@
                             <input type="number" min="0" step="0.01" class="form-control" t-model="state.price"/>
                         </div>
                     </div>
+
+                    <!-- Who this is for. Optional — a plain cash refund to a
+                         walk-in needs nobody named — but front and centre,
+                         because crediting a customer's account instead of
+                         handing back cash needs to know whose account. -->
+                    <div class="pos-retail-return-customer d-flex align-items-center justify-content-between border rounded p-2">
+                        <span>
+                            <i class="fa fa-user me-1" aria-hidden="true"/>
+                            <t t-if="partner"><t t-esc="partner.name"/></t>
+                            <t t-else="">Walk-in Customer</t>
+                        </span>
+                        <button class="btn btn-sm btn-secondary" t-on-click="() => this.pickCustomer()">
+                            <t t-if="partner">Change</t><t t-else="">Select Customer</t>
+                        </button>
+                    </div>
+
+                    <!-- The optional link. Collapsed to one line by default;
+                         typing here is something a cashier reaches for, never
+                         something the screen is waiting on. -->
+                    <div class="pos-retail-return-link border rounded p-2">
+                        <label class="form-label mb-1 small text-muted">
+                            Original order / invoice no. (optional)
+                        </label>
+                        <div class="d-flex gap-2">
+                            <input type="text" class="form-control"
+                                   placeholder="e.g. 261-2-000006"
+                                   t-model="state.reference"
+                                   t-on-keydown="(ev) => { if (ev.key === 'Enter') this.lookupOriginal(); }"/>
+                            <button class="btn btn-secondary" t-att-disabled="!state.reference.trim() or state.linking"
+                                    t-on-click="() => this.lookupOriginal()">
+                                <i t-attf-class="fa {{ state.linking ? 'fa-spin fa-circle-o-notch' : 'fa-search' }}"/>
+                            </button>
+                        </div>
+                        <div t-if="state.linkResult and state.linkResult.found"
+                             class="text-success small mt-1">
+                            <i class="fa fa-check-circle me-1"/>
+                            Linked to <t t-esc="state.linkResult.order_name"/> — original price filled in.
+                            <a href="#" t-on-click.prevent="() => this.clearLink()">undo</a>
+                        </div>
+                        <div t-elif="state.linkResult" class="text-muted small mt-1">
+                            <i class="fa fa-info-circle me-1"/><t t-esc="linkStatusMessage"/>
+                        </div>
+                    </div>
                 </div>
             </div>
             <t t-set-slot="footer">

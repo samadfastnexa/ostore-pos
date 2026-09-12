@@ -109,6 +109,57 @@ class PosOrder(models.Model):
         help="Anything the cashier typed about the return beyond the reason "
              "chosen, e.g. what was wrong with the item.",
     )
+    pos_retail_return_unlinked = fields.Boolean(
+        string="Return Not Linked to Original Order", default=False,
+        help="Set on a fast physical return where the cashier did not look up "
+             "the original sale. The refund price is then the product's own "
+             "current price rather than what was actually charged at the time, "
+             "so this stays true on the record rather than the gap being "
+             "silently invisible in reports.",
+    )
+
+    # --- Fast physical returns -----------------------------------------------
+
+    @api.model
+    def pos_retail_find_return_source(self, reference, product_id):
+        """Look up an order by its receipt number, for the OPTIONAL "link to
+        original order" step on a fast return.
+
+        Deliberately narrow: only ever called with a product already chosen,
+        and only ever used to prefill that product's ORIGINAL price on THIS
+        order -- never to browse someone's purchase history from a bare
+        reference number. A cashier typing a wrong or partial reference gets a
+        plain "not found", never someone else's order.
+        """
+        reference = (reference or '').strip()
+        if not reference:
+            return {'found': False}
+
+        order = self.sudo().search([
+            ('company_id', 'in', self.env.companies.ids),
+            '|', ('pos_reference', 'like', reference), ('name', '=', reference),
+        ], limit=1, order='date_order desc')
+        if not order:
+            return {'found': False, 'reason': 'no_order'}
+
+        line = order.lines.filtered(
+            lambda l: l.product_id.id == int(product_id) and l.qty > 0)[:1]
+        if not line:
+            return {
+                'found': False, 'reason': 'no_matching_product',
+                'order_name': order.pos_reference or order.name,
+            }
+
+        return {
+            'found': True,
+            'order_id': order.id,
+            'order_line_id': line.id,
+            'order_name': order.pos_reference or order.name,
+            'partner_id': order.partner_id.id,
+            'partner_name': order.partner_id.name,
+            'price_unit': line.price_unit,
+            'available_qty': line.qty,
+        }
 
     # --- Receipt management -------------------------------------------------
 
@@ -209,7 +260,7 @@ class PosOrder(models.Model):
         if not result:
             return result
         for field in ('discount_manager_id', 'discount_reason_id', 'discount_reason_notes', 'discount_input_type',
-                      'return_reason_id', 'return_reason_notes',
+                      'return_reason_id', 'return_reason_notes', 'pos_retail_return_unlinked',
                       'pos_retail_credit_manager_id', 'pos_retail_credit_over_amount',
                       'pos_retail_credit_before', 'pos_retail_credit_after',
                       'pos_retail_credit_limit'):
