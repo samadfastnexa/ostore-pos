@@ -92,6 +92,13 @@ export class PosRetailDashboard extends Component {
         return { today: "Today", week: "This Week", month: "This Month" }[this.state.period];
     }
 
+    canSee(sectionKey) {
+        if (!this.state.data || !this.state.data.visible_sections) {
+            return true;
+        }
+        return !!this.state.data.visible_sections[sectionKey];
+    }
+
     // --- formatting -----------------------------------------------------
     money(value) {
         return formatMonetary(value ?? 0, { currencyId: this.state.data.currency_id });
@@ -351,6 +358,17 @@ export class PosRetailDashboard extends Component {
             views: [[false, "list"], [false, "form"]],
             domain: domain || [],
         });
+    }
+
+    openPayments(name) {
+        this.openList(
+            "pos.payment",
+            [
+                ...this.periodDomain("pos_order_id.date_order"),
+                ["pos_order_id.state", "in", ["paid", "done"]],
+            ],
+            `${name} — ${this.periodLabel}`
+        );
     }
 
     openRegister() {

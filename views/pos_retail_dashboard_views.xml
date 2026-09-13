@@ -11,7 +11,7 @@
         parent="point_of_sale.menu_point_root"
         action="action_pos_retail_dashboard"
         sequence="1"
-        groups="point_of_sale.group_pos_manager"/>
+        groups="point_of_sale.group_pos_manager,pos_retail.perm_dash_sales_res_groups,pos_retail.perm_dash_financials_res_groups,pos_retail.perm_dash_payments_res_groups,pos_retail.perm_dash_inventory_res_groups,pos_retail.perm_dash_stock_movement_res_groups,pos_retail.perm_dash_product_movement_res_groups,pos_retail.perm_dash_sales_trend_res_groups,pos_retail.perm_dash_top_lists_res_groups,pos_retail.perm_dash_alerts_res_groups"/>
 
     <!--
         Hide the native "Dashboard" menu (the pos.config kanban used to open/

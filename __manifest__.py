@@ -55,6 +55,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'data/pos_retail_access_permission_crud_data.xml',
         'data/pos_retail_access_permission_extra_data.xml',
         'data/pos_retail_access_permission_partners_data.xml',
+        'data/pos_retail_access_permission_dashboard_data.xml',
         'data/pos_retail_refunds_data.xml',
         'data/pos_retail_ledgers_data.xml',
         'data/pos_retail_access_role_data.xml',

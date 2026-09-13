@@ -7,6 +7,18 @@ from odoo.exceptions import AccessError
 
 SALE_STATES = ('paid', 'done')
 
+DASHBOARD_SECTION_PERMISSIONS = {
+    'sales_kpis': 'pos_retail.perm_dash_sales_res_groups',
+    'financial_kpis': 'pos_retail.perm_dash_financials_res_groups',
+    'payment_kpis': 'pos_retail.perm_dash_payments_res_groups',
+    'inventory_snapshot': 'pos_retail.perm_dash_inventory_res_groups',
+    'stock_movement': 'pos_retail.perm_dash_stock_movement_res_groups',
+    'product_movement': 'pos_retail.perm_dash_product_movement_res_groups',
+    'sales_trend': 'pos_retail.perm_dash_sales_trend_res_groups',
+    'top_lists': 'pos_retail.perm_dash_top_lists_res_groups',
+    'alerts': 'pos_retail.perm_dash_alerts_res_groups',
+}
+
 
 class PosRetailDashboard(models.AbstractModel):
     _name = 'pos.retail.dashboard'
@@ -73,29 +85,19 @@ class PosRetailDashboard(models.AbstractModel):
     # ------------------------------------------------------------------
     @api.model
     def get_dashboard_data(self, period='month', date_from=None, date_to=None, company_id=None):
-        # This model is abstract: it owns no table, so ir.model.access never
-        # runs for it and the ACL layer that protects every other model here is
-        # simply absent. The menu is restricted to POS managers
-        # (pos_retail_dashboard_views.xml), but a menu only hides a button --
-        # any logged-in user, a cashier included, can still reach this method
-        # over /web/dataset/call_kw and read the whole financial picture:
-        # takings, margin, cost of goods sold, expenses, stock valuation.
-        # Re-state the menu's restriction where it is actually enforceable.
-        if not self.env.user.has_group('point_of_sale.group_pos_manager'):
+        # Section-level visibility: POS Managers see all sections; role members
+        # see only sections matching their assigned perm_dash_* permissions.
+        is_manager = self.env.user.has_group('point_of_sale.group_pos_manager')
+        visible_sections = {}
+        for sec_key, group_xmlid in DASHBOARD_SECTION_PERMISSIONS.items():
+            visible_sections[sec_key] = is_manager or self.env.user.has_group(group_xmlid)
+
+        if not is_manager and not any(visible_sections.values()):
             raise AccessError(_(
-                "The Point of Sale dashboard is available to Point of Sale "
-                "managers only."
+                "You do not have access to any section of the Point of Sale dashboard."
             ))
-        # Branch selector. Every figure below is gathered through the ORM, so
-        # scoping the whole method to one company is a matter of narrowing the
-        # environment once rather than threading a company through twenty
-        # queries: allowed_company_ids is what the multi-company record rules
-        # actually read, and with_company fixes the currency the totals are
-        # expressed in.
-        # The access check runs against everything this user holds, NOT the
-        # filtered shop list below. A stale branch id sitting in a browser tab
-        # must not start raising "no access" about a company they demonstrably
-        # do have.
+
+        # Branch selector.
         branches = self.env.user.company_ids
         shops = branches.filtered(lambda c: not c.child_ids)
         selected = branches.browse()
@@ -103,21 +105,8 @@ class PosRetailDashboard(models.AbstractModel):
             branch = branches.filtered(lambda c: c.id == int(company_id))
             selected = branch
             if not branch:
-                # Never fall back to "all branches" here: silently widening the
-                # scope would show a manager takings from a branch they were
-                # not granted, which is exactly what company_ids exists to stop.
                 raise AccessError(_("You do not have access to that branch."))
             self = self.with_company(branch).with_context(allowed_company_ids=branch.ids)
-        # With no branch picked the environment is deliberately left ALONE, so
-        # the figures cover exactly what the company switcher has on. An
-        # earlier attempt forced the scope to the shop list here, and it went
-        # wrong three ways at once: MURSHID still holds two closed-till sales
-        # and the only stock scrap in the database, so a total labelled the
-        # whole business quietly lost them; every drill-through opened under
-        # the switcher instead and so disagreed with the tile above it; and
-        # pinning env.company to one shop valued stock from all shops against
-        # that one company's cost book, since standard_price is
-        # company-dependent. Naming the scope honestly costs none of that.
 
         if period not in ('today', 'week', 'month', 'custom'):
             period = 'month'
@@ -125,58 +114,102 @@ class PosRetailDashboard(models.AbstractModel):
         start, end = self._resolve_period_bounds(period, date_from, date_to, today_local)
         trend_start = self._local_midnight_utc(today_local - timedelta(days=29))
 
-        kpis = self._get_kpis(start, end)
-        kpis.update(self._get_inventory_kpis())
-        kpis.update(self._get_expense_kpis())
-        kpis.update(self._get_stock_flow_today())
-        kpis.update(self._get_damaged_expired_kpis(start, end))
-        kpis.update(self._get_turnover_kpis(start, end))
-        kpis.update(self._get_reorder_cost())
-        movement = self._get_movement_analysis(start, end)
+        # Selectively gather data only for visible sections
+        kpis = {}
+        if visible_sections['sales_kpis'] or visible_sections['financial_kpis'] or visible_sections['payment_kpis']:
+            kpis.update(self._get_kpis(start, end))
+        else:
+            kpis.update({
+                'sales': 0.0, 'transactions': 0, 'avg_basket': 0.0,
+                'gross_profit': 0.0, 'margin_pct': 0.0, 'cogs': 0.0,
+                'net_sales': 0.0, 'taxes_collected': 0.0, 'discounts_given': 0.0,
+                'customers': 0, 'cash_in_drawer': 0.0, 'open_sessions': 0,
+            })
+
+        if visible_sections['payment_kpis']:
+            kpis.update(self._get_payment_type_kpis(start, end))
+        else:
+            kpis.update({'cash_total': 0.0, 'card_total': 0.0, 'online_total': 0.0})
+
+        if visible_sections['inventory_snapshot'] or visible_sections['alerts']:
+            kpis.update(self._get_inventory_kpis())
+        else:
+            kpis.update({
+                'total_products': 0, 'total_stock_qty': 0.0,
+                'inventory_value_cost': 0.0, 'inventory_value_selling': 0.0,
+                'out_of_stock_count': 0, 'negative_stock_count': 0,
+            })
+
+        if visible_sections['financial_kpis']:
+            kpis.update(self._get_expense_kpis())
+        else:
+            kpis.update({'expenses_today': 0.0, 'expenses_month': 0.0})
+
+        if visible_sections['stock_movement']:
+            kpis.update(self._get_stock_flow_today())
+            kpis.update(self._get_turnover_kpis(start, end))
+            kpis.update(self._get_reorder_cost())
+        else:
+            kpis.update({
+                'stock_in_qty_today': 0.0, 'stock_in_value_today': 0.0,
+                'stock_out_qty_today': 0.0, 'stock_out_value_today': 0.0,
+                'cogs_period': 0.0, 'stock_turnover': 0.0,
+                'reorder_cost': 0.0, 'reorder_product_count': 0,
+            })
+
+        if visible_sections['stock_movement'] or visible_sections['alerts']:
+            kpis.update(self._get_damaged_expired_kpis(start, end))
+        else:
+            kpis.update({
+                'damaged_qty': 0.0, 'damaged_value': 0.0,
+                'expired_qty': 0.0, 'expired_value': 0.0, 'expired_lot_count': 0,
+            })
+
+        if visible_sections['product_movement']:
+            movement = self._get_movement_analysis(start, end)
+        else:
+            movement = {
+                'fast_movers': [], 'slow_movers': [], 'dead_stock': [],
+                'dead_stock_count': 0, 'dead_stock_value': 0.0,
+                'dead_stock_all_ids': [], 'fast_mover_all_ids': [], 'slow_mover_all_ids': [],
+            }
+
         kpis['dead_stock_count'] = movement['dead_stock_count']
         kpis['dead_stock_value'] = movement['dead_stock_value']
 
+        sales_trend = self._get_sales_trend(trend_start) if visible_sections['sales_trend'] else []
+        payment_breakdown = self._get_payment_breakdown(start, end) if visible_sections['payment_kpis'] else []
+        top_products = self._get_top_products(start, end) if visible_sections['top_lists'] else []
+        sales_by_cashier = self._get_sales_by_cashier(start, end) if visible_sections['top_lists'] else []
+        top_customers = self._get_top_customers(start, end) if visible_sections['top_lists'] else []
+        low_stock = self._get_low_stock() if visible_sections['alerts'] else []
+        expiring_soon = self._get_expiring_soon() if visible_sections['alerts'] else []
+        refunds = self._get_refund_stats(start, end) if visible_sections['sales_kpis'] else {'count': 0, 'amount': 0.0}
+        trend = self._get_trend(period, start, end, today_local, kpis) if visible_sections['sales_kpis'] or visible_sections['financial_kpis'] else {}
+
         return {
             'period': period,
-            # The resolved window, so a card's drill-through opens exactly the
-            # records that produced the figure rather than re-deriving dates
-            # client-side and drifting from them.
             'period_start': fields.Datetime.to_string(start) if start else False,
             'period_end': fields.Datetime.to_string(end) if end else False,
             'drill': self._get_drill_targets(start, end, movement),
             'currency_id': self.env.company.currency_id.id,
-            # Name what the figures below ACTUALLY cover. With no branch
-            # chosen that is every company currently switched on, which is not
-            # always every branch -- so say which ones rather than printing a
-            # single shop's name, or a blanket "All Branches" that a narrowed
-            # switcher would turn into a quiet lie.
-            'company_name': selected.name if selected
-                            else ", ".join(self.env.companies.mapped('name')),
-            # Drives the branch dropdown. Only the branches this user may see,
-            # so the list itself never leaks the existence of others -- and
-            # only the ones that actually trade. The holding company has no
-            # till, no shelves and no expenses, so choosing it returned a
-            # screen of zeroes with nothing to say why.
-            #
-            # False means no branch is chosen, which the dropdown shows as
-            # "All Branches" and which every figure below is already scoped to.
-            # That consolidated view is the whole-business number, and it is
-            # the one the dashboard opens on.
+            'company_name': selected.name if selected else ", ".join(self.env.companies.mapped('name')),
             'company_id': selected.id if selected else False,
             'branches': [{'id': c.id, 'name': c.name} for c in shops],
+            'visible_sections': visible_sections,
             'kpis': kpis,
-            'trend': self._get_trend(period, start, end, today_local, kpis),
-            'sales_trend': self._get_sales_trend(trend_start),
-            'payment_breakdown': self._get_payment_breakdown(start, end),
-            'top_products': self._get_top_products(start, end),
-            'sales_by_cashier': self._get_sales_by_cashier(start, end),
-            'top_customers': self._get_top_customers(start, end),
-            'low_stock': self._get_low_stock(),
-            'expiring_soon': self._get_expiring_soon(),
+            'trend': trend,
+            'sales_trend': sales_trend,
+            'payment_breakdown': payment_breakdown,
+            'top_products': top_products,
+            'sales_by_cashier': sales_by_cashier,
+            'top_customers': top_customers,
+            'low_stock': low_stock,
+            'expiring_soon': expiring_soon,
             'fast_movers': movement['fast_movers'],
             'slow_movers': movement['slow_movers'],
             'dead_stock': movement['dead_stock'],
-            'refunds': self._get_refund_stats(start, end),
+            'refunds': refunds,
         }
 
     # ------------------------------------------------------------------
@@ -353,6 +386,35 @@ class PosRetailDashboard(models.AbstractModel):
         data = [{'name': method.name, 'amount': amount or 0.0} for method, amount in groups if method]
         data.sort(key=lambda d: -d['amount'])
         return data
+
+    def _get_payment_type_kpis(self, start, end=None):
+        """Categorize payments into Cash, Card, and Online payment totals."""
+        groups = self.env['pos.payment']._read_group(
+            domain=self._date_domain('pos_order_id.date_order', start, end)
+            + [('pos_order_id.state', 'in', SALE_STATES)],
+            groupby=['payment_method_id'],
+            aggregates=['amount:sum'],
+        )
+        cash_total = 0.0
+        card_total = 0.0
+        online_total = 0.0
+
+        for method, amount in groups:
+            if not method or not amount:
+                continue
+            mtype = method.type
+            if mtype == 'cash':
+                cash_total += amount
+            elif mtype == 'bank':
+                card_total += amount
+            else:
+                online_total += amount
+
+        return {
+            'cash_total': cash_total,
+            'card_total': card_total,
+            'online_total': online_total,
+        }
 
     # ------------------------------------------------------------------
     # Top products (by qty, this period)

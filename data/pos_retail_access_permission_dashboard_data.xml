@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- ============ Dashboard Section Permissions ============ -->
+
+    <record id="perm_dash_sales" model="pos.retail.access.permission">
+        <field name="name">Dashboard: Sales &amp; Transactions</field>
+        <field name="category">reporting</field>
+        <field name="sequence">100</field>
+        <field name="description">See the Sales, Transactions, Avg Basket, and Refunds KPI cards on the POS dashboard.</field>
+    </record>
+
+    <record id="perm_dash_financials" model="pos.retail.access.permission">
+        <field name="name">Dashboard: Financials &amp; Margin</field>
+        <field name="category">reporting</field>
+        <field name="sequence">110</field>
+        <field name="description">See Gross Profit, Net Sales, COGS, Taxes Collected, Discounts Given, and Store Expenses tiles on the POS dashboard.</field>
+    </record>
+
+    <record id="perm_dash_payments" model="pos.retail.access.permission">
+        <field name="name">Dashboard: Payment Methods &amp; Stats</field>
+        <field name="category">reporting</field>
+        <field name="sequence">120</field>
+        <field name="description">See Cash in Drawer, Cash/Card/Online Payment KPI cards, and Payment Method breakdown on the POS dashboard.</field>
+    </record>
+
+    <record id="perm_dash_inventory" model="pos.retail.access.permission">
+        <field name="name">Dashboard: Inventory Snapshot</field>
+        <field name="category">reporting</field>
+        <field name="sequence">130</field>
+        <field name="description">See the Inventory Snapshot panel (Total Products, Stock Qty, Valuation at Cost/Selling, Out of Stock, Negative Stock counts).</field>
+    </record>
+
+    <record id="perm_dash_stock_movement" model="pos.retail.access.permission">
+        <field name="name">Dashboard: Stock Flow &amp; Restock</field>
+        <field name="category">reporting</field>
+        <field name="sequence">140</field>
+        <field name="description">See Stock In/Out today, Damaged (scrapped) stock, Expired stock, Stock Turnover ratio, and Expected Reorder Cost on the POS dashboard.</field>
+    </record>
+
+    <record id="perm_dash_product_movement" model="pos.retail.access.permission">
+        <field name="name">Dashboard: Fast/Slow/Dead Stock</field>
+        <field name="category">reporting</field>
+        <field name="sequence">150</field>
+        <field name="description">See Fast Moving, Slow Moving, and Dead Stock product ranking panels on the POS dashboard.</field>
+    </record>
+
+    <record id="perm_dash_sales_trend" model="pos.retail.access.permission">
+        <field name="name">Dashboard: 30-Day Sales Trend</field>
+        <field name="category">reporting</field>
+        <field name="sequence">160</field>
+        <field name="description">See the 30-day sales trend chart on the POS dashboard.</field>
+    </record>
+
+    <record id="perm_dash_top_lists" model="pos.retail.access.permission">
+        <field name="name">Dashboard: Top Products, Cashiers &amp; Customers</field>
+        <field name="category">reporting</field>
+        <field name="sequence">170</field>
+        <field name="description">See Top Selling Products, Sales by Cashier, and Top Customers performance tables on the POS dashboard.</field>
+    </record>
+
+    <record id="perm_dash_alerts" model="pos.retail.access.permission">
+        <field name="name">Dashboard: Alerts &amp; Warnings</field>
+        <field name="category">reporting</field>
+        <field name="sequence">180</field>
+        <field name="description">See Low Stock Alerts, Expiring Soon table, and Negative Stock warning banner on the POS dashboard.</field>
+    </record>
+
+</odoo>
