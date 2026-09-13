@@ -38,16 +38,33 @@
 
                 <!-- Section switcher -->
                 <div class="pos-retail-history__tabs d-flex flex-wrap gap-1 mb-2">
-                    <button t-foreach="tabs" t-as="tab" t-key="tab.id"
-                            class="btn btn-sm"
-                            t-att-class="state.tab === tab.id ? 'btn-primary' : 'btn-secondary'"
-                            t-on-click="() => this.setTab(tab.id)">
-                        <t t-esc="tab.label"/>
-                        <span class="badge text-bg-light ms-1" t-esc="tab.count"/>
-                    </button>
+                    <!-- Customer tabs group -->
+                    <span class="pos-retail-history__tab-label text-muted small align-self-center me-1">Customer:</span>
+                    <t t-foreach="tabs.filter(t => t.side === 'customer')" t-as="tab" t-key="tab.id">
+                        <button class="btn btn-sm"
+                                t-att-class="state.tab === tab.id ? 'btn-primary' : 'btn-secondary'"
+                                t-on-click="() => this.setTab(tab.id)">
+                            <t t-esc="tab.label"/>
+                            <span class="badge text-bg-light ms-1" t-esc="tab.count"/>
+                        </button>
+                    </t>
+                    <!-- Vendor tabs group (only shown when partner is a supplier) -->
+                    <t t-if="state.data.is_vendor">
+                        <span class="pos-retail-history__tab-label text-muted small align-self-center ms-2 me-1">Vendor:</span>
+                        <t t-foreach="tabs.filter(t => t.side === 'vendor')" t-as="tab" t-key="tab.id">
+                            <button class="btn btn-sm"
+                                    t-att-class="state.tab === tab.id ? 'btn-warning' : 'btn-outline-warning'"
+                                    t-on-click="() => this.setTab(tab.id)">
+                                <t t-esc="tab.label"/>
+                                <span class="badge text-bg-light ms-1" t-esc="tab.count"/>
+                            </button>
+                        </t>
+                    </t>
                 </div>
 
                 <div class="pos-retail-history__body">
+                    <!-- ===== CUSTOMER SIDE ===== -->
+
                     <!-- What they usually buy -->
                     <t t-if="state.tab === 'purchases'">
                         <div t-if="!state.data.top_products.length" class="text-muted p-3">
@@ -69,7 +86,7 @@
                         </table>
                     </t>
 
-                    <!-- Order-shaped sections -->
+                    <!-- Order-shaped sections: sales, credit sales, refunds -->
                     <t t-if="['sales', 'credit', 'refunds'].includes(state.tab)">
                         <t t-set="rows"
                            t-value="state.tab === 'sales' ? state.data.sales : (state.tab === 'credit' ? state.data.credit_sales : state.data.refunds)"/>
@@ -94,7 +111,7 @@
                         </table>
                     </t>
 
-                    <!-- Money in, and what is still owed -->
+                    <!-- Money in (customer payments) and what is still owed -->
                     <t t-if="['payments', 'open'].includes(state.tab)">
                         <t t-set="rows"
                            t-value="state.tab === 'payments' ? state.data.payments : state.data.open_invoices"/>
@@ -137,6 +154,98 @@
                                     <td t-esc="q.name"/>
                                     <td t-esc="q.state"/>
                                     <td class="text-end" t-esc="q.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- ===== VENDOR SIDE ===== -->
+
+                    <!-- Purchase Orders placed with this vendor -->
+                    <t t-if="state.tab === 'purchase_orders'">
+                        <div t-if="!state.data.purchase_orders.length" class="text-muted p-3">
+                            No purchase orders found for this vendor.
+                        </div>
+                        <table t-else="" class="table table-sm">
+                            <thead>
+                                <tr><th>Date</th><th>PO Reference</th><th>Status</th>
+                                    <th class="text-end">Amount</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.purchase_orders" t-as="po" t-key="po.id">
+                                    <td t-esc="po.date"/>
+                                    <td t-esc="po.name"/>
+                                    <td>
+                                        <span t-att-class="po.state === 'purchase' ? 'badge text-bg-success' :
+                                                           po.state === 'done' ? 'badge text-bg-secondary' :
+                                                           po.state === 'cancel' ? 'badge text-bg-danger' :
+                                                           'badge text-bg-warning'"
+                                              t-esc="po.state"/>
+                                    </td>
+                                    <td class="text-end fw-bold" t-esc="po.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- Vendor bills received -->
+                    <t t-if="state.tab === 'vendor_bills'">
+                        <div t-if="!state.data.vendor_bills.length" class="text-muted p-3">
+                            No vendor bills recorded.
+                        </div>
+                        <table t-else="" class="table table-sm">
+                            <thead>
+                                <tr><th>Date</th><th>Reference</th><th>Description</th>
+                                    <th class="text-end">Amount</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.vendor_bills" t-as="row" t-key="row.ref + row.date">
+                                    <td t-esc="row.date"/>
+                                    <td t-esc="row.ref"/>
+                                    <td class="text-muted small" t-esc="row.label"/>
+                                    <td class="text-end" t-esc="row.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- Payments made to vendor -->
+                    <t t-if="state.tab === 'vendor_payments'">
+                        <div t-if="!state.data.vendor_payments.length" class="text-muted p-3">
+                            No payments made to this vendor yet.
+                        </div>
+                        <table t-else="" class="table table-sm">
+                            <thead>
+                                <tr><th>Date</th><th>Reference</th><th>Description</th>
+                                    <th class="text-end">Paid</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.vendor_payments" t-as="row" t-key="row.ref + row.date">
+                                    <td t-esc="row.date"/>
+                                    <td t-esc="row.ref"/>
+                                    <td class="text-muted small" t-esc="row.label"/>
+                                    <td class="text-end fw-bold text-success" t-esc="row.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- Unpaid vendor bills -->
+                    <t t-if="state.tab === 'unpaid_bills'">
+                        <div t-if="!state.data.unpaid_bills.length" class="text-muted p-3">
+                            All bills from this vendor are settled.
+                        </div>
+                        <table t-else="" class="table table-sm">
+                            <thead>
+                                <tr><th>Date</th><th>Reference</th>
+                                    <th class="text-end">Still Owed</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.unpaid_bills" t-as="row"
+                                    t-key="row.ref + row.date">
+                                    <td t-esc="row.date"/>
+                                    <td><t t-esc="row.ref"/> <span class="text-muted small" t-esc="row.label"/></td>
+                                    <td class="text-end fw-bold text-danger" t-esc="row.residual_formatted"/>
                                 </tr>
                             </tbody>
                         </table>

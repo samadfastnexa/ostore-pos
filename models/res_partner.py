@@ -360,6 +360,48 @@ class ResPartner(models.Model):
                 'state': so.state,
             })
 
+        # --- Vendor / Supplier history -----------------------------------
+        # Purchase orders placed with this vendor.
+        purchase_orders = []
+        po_model = self.env['purchase.order'].sudo()
+        for po in po_model.search(
+            [('partner_id', 'child_of', partner.id)],
+            order='date_order desc, id desc', limit=limit,
+        ):
+            purchase_orders.append({
+                'id': po.id,
+                'name': po.name,
+                'date': po.date_order and str(po.date_order)[:16] or '',
+                'amount': po.amount_total,
+                'amount_formatted': currency.format(po.amount_total),
+                'state': po.state,
+            })
+
+        # Payable journal lines: bills we owe the vendor and payments we've made.
+        payable = self.env['account.move.line'].sudo().search(
+            [('partner_id', '=', partner.id),
+             ('account_id.account_type', '=', 'liability_payable'),
+             ('parent_state', '=', 'posted')],
+            order='date desc, id desc', limit=limit,
+        )
+        vendor_payments, vendor_bills, unpaid_bills = [], [], []
+        for line in payable:
+            row = {
+                'date': str(line.date),
+                'ref': line.move_id.name or '',
+                'label': line.name or '',
+                'debit': line.debit,
+                'credit': line.credit,
+                'amount_formatted': currency.format(line.debit or line.credit),
+                'residual': line.amount_residual,
+            }
+            # debit on payable = payment made to vendor; credit = bill/charge
+            (vendor_payments if line.debit else vendor_bills).append(row)
+            # Still-outstanding bills (credit side, residual != 0)
+            if line.credit and line.amount_residual:
+                unpaid_bills.append(dict(
+                    row, residual_formatted=currency.format(abs(line.amount_residual))))
+
         return {
             'partner_id': partner.id,
             'sales': [order_row(o) for o in sales[:limit]],
@@ -381,6 +423,13 @@ class ResPartner(models.Model):
             'last_order_date': last_order.date_order and str(last_order.date_order) or '',
             'last_order_total': last_order and currency.format(last_order.amount_total) or '',
             'outstanding': money(partner.credit or 0.0),
+            # Vendor side
+            'is_vendor': bool(partner.supplier_rank),
+            'purchase_orders': purchase_orders,
+            'purchase_orders_count': len(purchase_orders),
+            'vendor_payments': vendor_payments,
+            'vendor_bills': vendor_bills,
+            'unpaid_bills': unpaid_bills,
         }
 
     def _compute_pos_loyalty_points(self):

@@ -38,6 +38,10 @@ export class PosRetailCustomerHistory extends Component {
                     [[this.props.partner.id]]
                 );
                 this.state.data = data;
+                // Default to purchase orders tab if partner is a vendor only
+                if (data.is_vendor && !data.sales_count) {
+                    this.state.tab = "purchase_orders";
+                }
             } catch {
                 this.state.failed = true;
             } finally {
@@ -48,15 +52,23 @@ export class PosRetailCustomerHistory extends Component {
 
     get tabs() {
         const d = this.state.data;
-        return [
-            { id: "purchases", label: _t("Buys Often"), count: d?.top_products?.length || 0 },
-            { id: "sales", label: _t("Sales"), count: d?.sales_count || 0 },
-            { id: "credit", label: _t("Credit Sales"), count: d?.credit_sales?.length || 0 },
-            { id: "payments", label: _t("Payments"), count: d?.payments?.length || 0 },
-            { id: "open", label: _t("Unpaid"), count: d?.open_invoices?.length || 0 },
-            { id: "refunds", label: _t("Returns"), count: d?.refunds_count || 0 },
-            { id: "quotations", label: _t("Quotations"), count: d?.quotations?.length || 0 },
+        const all = [
+            // --- Customer side ---
+            { id: "purchases", label: _t("Buys Often"), count: d?.top_products?.length || 0, side: "customer" },
+            { id: "sales", label: _t("Sales"), count: d?.sales_count || 0, side: "customer" },
+            { id: "credit", label: _t("Credit Sales"), count: d?.credit_sales?.length || 0, side: "customer" },
+            { id: "payments", label: _t("Payments"), count: d?.payments?.length || 0, side: "customer" },
+            { id: "open", label: _t("Unpaid"), count: d?.open_invoices?.length || 0, side: "customer" },
+            { id: "refunds", label: _t("Returns"), count: d?.refunds_count || 0, side: "customer" },
+            { id: "quotations", label: _t("Quotations"), count: d?.quotations?.length || 0, side: "customer" },
+            // --- Vendor side ---
+            { id: "purchase_orders", label: _t("POs"), count: d?.purchase_orders?.length || 0, side: "vendor" },
+            { id: "vendor_bills", label: _t("Bills"), count: d?.vendor_bills?.length || 0, side: "vendor" },
+            { id: "vendor_payments", label: _t("Paid to Vendor"), count: d?.vendor_payments?.length || 0, side: "vendor" },
+            { id: "unpaid_bills", label: _t("Unpaid Bills"), count: d?.unpaid_bills?.length || 0, side: "vendor" },
         ];
+        // Always show customer tabs. Vendor tabs only when the partner is a supplier.
+        return all.filter(t => t.side === "customer" || d?.is_vendor);
     }
 
     setTab(id) {
