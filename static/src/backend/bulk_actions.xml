@@ -5,7 +5,7 @@
          view's control panel, visible only when records are selected and
          the model has reports registered. -->
     <t t-name="pos_retail.BulkActions" t-inherit="web.ListView.Buttons" t-inherit-mode="extension">
-        <xpath expr="//div[1]" position="inside">
+        <xpath expr="." position="inside">
             <t t-if="this.posRetailReportConfig and this.posRetailSelectedIds.length">
                 <button class="btn btn-light pos-retail-bulk-action ms-1"
                         t-on-click="() => this.posRetailDownloadPdf()">
