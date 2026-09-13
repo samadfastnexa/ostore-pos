@@ -44,6 +44,7 @@
                 <!-- Preset Quick Buttons -->
                 <div class="d-flex flex-wrap gap-1 align-items-center">
                     <span class="small text-muted me-1">Presets:</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" t-on-click="() => this.applyPreset(2)">2%</button>
                     <button type="button" class="btn btn-sm btn-outline-primary" t-on-click="() => this.applyPreset(5)">5%</button>
                     <button type="button" class="btn btn-sm btn-outline-primary" t-on-click="() => this.applyPreset(10)">10%</button>
                     <button type="button" class="btn btn-sm btn-outline-primary" t-on-click="() => this.applyPreset(15)">15%</button>

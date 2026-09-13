@@ -13,11 +13,21 @@ import { usePos } from "@point_of_sale/app/hooks/pos_hook";
 export class PriceSelectionPopup extends Component {
     static template = "pos_retail.PriceSelectionPopup";
     static components = { Dialog };
-    static props = { close: Function, getPayload: Function, product: Object };
+    static props = {
+        close: Function,
+        getPayload: Function,
+        product: Object,
+        // When changing the price of a line already in the cart, retain the
+        // price the cashier is looking at instead of unexpectedly resetting
+        // the input to the product's default price.
+        initialPrice: { type: Number, optional: true },
+    };
 
     setup() {
         this.pos = usePos();
-        this.state = useState({ price: String(this.defaultPrice) });
+        this.state = useState({
+            price: String(this.props.initialPrice ?? this.defaultPrice),
+        });
     }
 
     get product() {

@@ -2,8 +2,13 @@
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.PriceSelectionPopup">
-        <Dialog title="props.product.display_name" size="'md'">
+        <Dialog title="'Set Selling Price'" size="'md'">
             <div class="pos-retail-price-popup d-flex flex-column gap-3">
+
+                <div class="fw-bold fs-5 text-truncate">
+                    <i class="fa fa-tag text-primary me-2"/>
+                    <t t-esc="props.product.display_name"/>
+                </div>
 
                 <div class="pos-retail-price-range-banner">
                     <span class="label">Allowed range</span>

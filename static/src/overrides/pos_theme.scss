@@ -718,6 +718,16 @@ $o_retail_blue: #2563eb;
     &.pos-retail-line-overridden .product-price { color: $o_retail_red_dark; }
 }
 
+// Keep the two money actions visually related and large enough for a counter
+// touchscreen.  The price action remains outlined: Discount is the primary,
+// frequent operation while changing a selling price is deliberate.
+.pos .pos-retail-line-price-action .btn {
+    border-radius: .45rem;
+    font-size: .72rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
 // ---- Per-line quantity buttons in the cart --------------------------------
 .pos .pos-retail-qty-btn {
     width: 1.7rem;

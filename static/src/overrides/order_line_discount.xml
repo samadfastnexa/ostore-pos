@@ -1,7 +1,9 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Add discount trigger button on the order line -->
+    <!-- Clear, touch-friendly actions on each cart line.  Cashiers no longer
+         have to remember that the keypad's % / Price modes act on a selected
+         line: Discount and Set Price are named where the product is shown. -->
     <t t-name="pos_retail.OrderlineDiscountButton" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('product-name')]" position="inside">
             <button t-if="props.onDiscount and line.qty &gt; 0 and !line.refunded_orderline_id and !line.isGlobalDiscountLine?.()"
@@ -17,9 +19,22 @@
                     <t t-esc="line.discount"/>%
                 </t>
                 <t t-else="">
-                    Disc
+                    Discount
                 </t>
             </button>
+        </xpath>
+
+        <xpath expr="//div[hasclass('product-name')]" position="after">
+            <div t-if="props.onSetPrice and line.qty &gt; 0 and !line.refunded_orderline_id and !line.isGlobalDiscountLine?.()"
+                 class="pos-retail-line-price-action ms-2 mt-1">
+                <button class="btn btn-sm btn-outline-primary"
+                        title="Set this product's selling price"
+                        t-on-pointerdown.stop="() => {}"
+                        t-on-pointerup.stop="() => {}"
+                        t-on-click.stop="() => props.onSetPrice(line)">
+                    <i class="fa fa-pencil me-1"/>Set Price
+                </button>
+            </div>
         </xpath>
 
         <!-- Enhance the discount display line to show % and amount off -->
@@ -35,6 +50,7 @@
     <t t-name="pos_retail.OrderSummaryLineDiscount" t-inherit="point_of_sale.OrderSummary" t-inherit-mode="extension">
         <xpath expr="//Orderline" position="attributes">
             <attribute name="onDiscount">(line) => this.posRetailOpenLineDiscount(line)</attribute>
+            <attribute name="onSetPrice">(line) => this.posRetailOpenLinePrice(line)</attribute>
         </xpath>
     </t>
 

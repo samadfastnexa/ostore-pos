@@ -27,6 +27,7 @@ Run every command as `root`. Allow about **an hour**, most of it waiting on step
 | 11 | Run it as a service | Survives logout, crash and reboot |
 | 12 | Web server | Reachable on port 80, POS live-sync included |
 | 13 | Nightly backup, proven | Before there is anything to lose |
+| 14 | Routine update & redeploy | Single command to pull git changes, upgrade modules, and restart |
 
 Each step is written the same way: **what you are doing**, the commands, an **Expect**
 line telling you what success looks like, and **why** — because the reasons are the part
@@ -763,6 +764,66 @@ why `.gitignore` in this repository excludes `*.dump` and `*.sql`.
 
 **Copy these off the server.** A backup that only exists on the machine it came from
 does not survive that machine dying. `rsync` them somewhere else on a schedule too.
+
+---
+
+## 14. Routine updates and deployments
+
+**What you are doing:** pulling the pushed code, upgrading `pos_retail`, then
+restarting and checking the live Odoo service. Run this as `root` after every addon
+release. Replace `YOUR_BRANCH` with the branch you pushed (for example,
+`feature/branch-scoped-users-and-dashboard`).
+
+```bash
+set -e
+
+cd /opt/odoo/custom_addons/pos_retail
+git fetch origin
+git checkout YOUR_BRANCH
+git pull --ff-only origin YOUR_BRANCH
+
+# Odoo must always use its virtualenv Python. Calling odoo-bin directly can
+# select Ubuntu's system Python and fail with: ModuleNotFoundError: passlib.
+su -s /bin/bash odoo -c '/opt/odoo/venv/bin/pip install -r /opt/odoo/odoo/requirements.txt'
+su -s /bin/bash odoo -c '/opt/odoo/venv/bin/python3 -c "from passlib.context import CryptContext; print(\"passlib OK\")"'
+
+systemctl stop odoo
+su -s /bin/bash odoo -c '/opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin -c /etc/odoo/odoo.conf -d ostore_live -u pos_retail --stop-after-init'
+systemctl start odoo
+
+systemctl is-active odoo
+curl -sI http://127.0.0.1:8069/web/login | head -1
+journalctl -u odoo -n 50 --no-pager
+```
+
+### Verification
+
+Confirm Odoo is active and serving requests:
+
+```bash
+systemctl status odoo --no-pager
+tail -n 30 /var/log/odoo/odoo.log
+```
+
+**Expect:**
+
+- `passlib OK`
+- Odoo's upgrade completes with `Odoo server stopped`
+- `systemctl is-active odoo` prints `active`
+- `curl` reports HTTP `200`
+
+If the upgrade fails, correct the traceback and run the command again. Start Odoo with
+`systemctl start odoo` first if it was stopped, so the previous working service is
+restored while you investigate.
+
+### Why `-u pos_retail` is Mandatory
+
+A simple service restart (`systemctl restart odoo`) only reloads Python code files in memory. It **does NOT**:
+1. Create new database tables or columns for newly introduced models (e.g. `pos.retail.line.discount.log`, `pos_retail_line_discount_manager_id`).
+2. Load newly declared XML views, menus, actions, and reports.
+3. Update security access rules (`ir.model.access.csv`) and record rules (`ir.rule`).
+
+Running `-u pos_retail --stop-after-init` executes the full ORM schema migration, applies data files, and compiles assets before the live service starts, preventing 500 errors and missing view crashes.
 
 ---
 
