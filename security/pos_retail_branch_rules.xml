@@ -220,11 +220,56 @@
             <field name="global" eval="True"/>
         </record>
 
-        <!-- Deliberately NOT covered here: account.journal and account.account.
-             branch 1 owns no journals at all and posts through the parent's, so
-             a strict rule on those would stop it invoicing rather than merely
-             tidying what it can see. Accounting separation needs each branch to
-             have its own journals first; that is a data change, not a rule. -->
+        <!-- POS Models & Ledgers: strict branch access for registers, sessions, orders, lines, payments & journals -->
+
+        <record id="pos_config_branch_rule" model="ir.rule">
+            <field name="name">POS Register: visible to its own branch</field>
+            <field name="model_id" ref="point_of_sale.model_pos_config"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_session_branch_rule" model="ir.rule">
+            <field name="name">POS Session: visible to its own branch</field>
+            <field name="model_id" ref="point_of_sale.model_pos_session"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_order_branch_rule" model="ir.rule">
+            <field name="name">POS Order: visible to its own branch</field>
+            <field name="model_id" ref="point_of_sale.model_pos_order"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_order_line_branch_rule" model="ir.rule">
+            <field name="name">POS Order Line: visible to its own branch</field>
+            <field name="model_id" ref="point_of_sale.model_pos_order_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_payment_branch_rule" model="ir.rule">
+            <field name="name">POS Payment: visible to its own branch</field>
+            <field name="model_id" ref="point_of_sale.model_pos_payment"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_inventory_movement_branch_rule" model="ir.rule">
+            <field name="name">POS Inventory Movement Audit: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_inventory_movement"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="account_journal_branch_rule" model="ir.rule">
+            <field name="name">Account Journal: visible to its own branch</field>
+            <field name="model_id" ref="account.model_account_journal"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
 
     </data>
 

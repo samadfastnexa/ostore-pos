@@ -30,6 +30,23 @@ from odoo.exceptions import ValidationError
 from .res_company import TRADING_COMPANY_DOMAIN, pos_retail_trading_company
 
 
+class PosConfig(models.Model):
+    _inherit = 'pos.config'
+
+    company_id = fields.Many2one(
+        domain=TRADING_COMPANY_DOMAIN,
+        default=lambda self: pos_retail_trading_company(self.env))
+
+    @api.constrains('company_id')
+    def _check_trading_company(self):
+        for record in self:
+            if record.company_id and record.company_id.child_ids:
+                raise ValidationError(
+                    _("Cannot assign POS Register to '%(company)s' because it is a holding company, not a branch. "
+                      "Choose one of its branches instead.",
+                      company=record.company_id.name))
+
+
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
