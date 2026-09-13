@@ -271,6 +271,50 @@
             <field name="global" eval="True"/>
         </record>
 
+        <!-- Custom Report & Ledger Models: strict branch access -->
+
+        <record id="pos_customer_ledger_line_branch_rule" model="ir.rule">
+            <field name="name">Customer Ledger Line: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_customer_ledger_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_vendor_ledger_line_branch_rule" model="ir.rule">
+            <field name="name">Vendor Ledger Line: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_vendor_ledger_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_outstanding_customer_branch_rule" model="ir.rule">
+            <field name="name">Outstanding Customer: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_outstanding_customer"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_outstanding_vendor_branch_rule" model="ir.rule">
+            <field name="name">Outstanding Vendor: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_outstanding_vendor"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_customer_refund_line_branch_rule" model="ir.rule">
+            <field name="name">Customer Refund Line: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_customer_refund_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_vendor_refund_line_branch_rule" model="ir.rule">
+            <field name="name">Vendor Refund Line: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_vendor_refund_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
     </data>
 
 </odoo>
