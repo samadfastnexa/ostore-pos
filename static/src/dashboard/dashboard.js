@@ -99,6 +99,13 @@ export class PosRetailDashboard extends Component {
         return !!this.state.data.visible_sections[sectionKey];
     }
 
+    get hasVisibleSections() {
+        if (!this.state.data || !this.state.data.visible_sections) {
+            return true;
+        }
+        return Object.values(this.state.data.visible_sections).some(Boolean);
+    }
+
     // --- formatting -----------------------------------------------------
     money(value) {
         return formatMonetary(value ?? 0, { currencyId: this.state.data.currency_id });

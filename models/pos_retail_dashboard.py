@@ -85,17 +85,24 @@ class PosRetailDashboard(models.AbstractModel):
     # ------------------------------------------------------------------
     @api.model
     def get_dashboard_data(self, period='month', date_from=None, date_to=None, company_id=None):
-        # Section-level visibility: POS Managers see all sections; role members
-        # see only sections matching their assigned perm_dash_* permissions.
-        is_manager = self.env.user.has_group('point_of_sale.group_pos_manager')
+        # Section-level visibility:
+        # 1. Super Admins see all sections.
+        # 2. Users assigned to Shop Roles see ONLY sections granted by their role's permissions.
+        # 3. POS Managers without custom shop roles see all sections by default.
+        is_super_admin = self.env.user.has_group('base.group_system')
+        is_pos_manager = self.env.user.has_group('point_of_sale.group_pos_manager')
+        has_roles = bool(self.env.user.pos_retail_role_ids)
+
         visible_sections = {}
         for sec_key, group_xmlid in DASHBOARD_SECTION_PERMISSIONS.items():
-            visible_sections[sec_key] = is_manager or self.env.user.has_group(group_xmlid)
-
-        if not is_manager and not any(visible_sections.values()):
-            raise AccessError(_(
-                "You do not have access to any section of the Point of Sale dashboard."
-            ))
+            if is_super_admin:
+                visible_sections[sec_key] = True
+            elif has_roles:
+                visible_sections[sec_key] = self.env.user.has_group(group_xmlid)
+            elif is_pos_manager:
+                visible_sections[sec_key] = True
+            else:
+                visible_sections[sec_key] = self.env.user.has_group(group_xmlid)
 
         # Branch selector.
         branches = self.env.user.company_ids

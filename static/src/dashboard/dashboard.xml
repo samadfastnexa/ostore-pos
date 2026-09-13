@@ -70,7 +70,15 @@ How to use: switch Today/Week/Month/Custom above to change the period; click any
             </t>
 
             <t t-else="">
-                <!-- Negative stock alert banner -->
+                <t t-if="!hasVisibleSections">
+                    <div class="alert alert-info text-center p-5 my-4 shadow-sm rounded">
+                        <i class="fa fa-shield fa-3x text-secondary mb-3"/>
+                        <h4 class="fw-bold">No Dashboard Access</h4>
+                        <p class="text-muted mb-0">You do not have permission to view any dashboard sections. Please contact your administrator if you need access.</p>
+                    </div>
+                </t>
+                <t t-else="">
+                    <!-- Negative stock alert banner -->
                 <t t-if="canSee('alerts')">
                     <div class="alert alert-danger d-flex align-items-center justify-content-between py-2 px-3 mb-3"
                          t-if="state.data.kpis.negative_stock_count &gt; 0">
@@ -573,7 +581,7 @@ How to use: switch Today/Week/Month/Custom above to change the period; click any
                         </div>
                     </div>
                 </t>
-
+            </t>
             </t>
         </div>
         </div>
