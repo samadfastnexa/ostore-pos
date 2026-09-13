@@ -389,6 +389,8 @@ else:
         parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_by_reason" sequence="70"/>
     <menuitem id="pos_retail_menu_discount_high_value" name="High Discount Transactions"
         parent="pos_retail_menu_discount_reports" action="pos_retail_discount_report_high_value" sequence="80"/>
+    <menuitem id="pos_retail_menu_line_discount_log" name="Product Line Discounts"
+        parent="pos_retail_menu_discount_reports" action="action_pos_retail_line_discount_log" sequence="90"/>
 
     <!-- ================= PEOPLE, UNDER ONE ROOF =================
 

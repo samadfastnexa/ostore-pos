@@ -112,6 +112,25 @@ class PosConfig(models.Model):
         help="Ask for a reason whenever a manager approves a price outside the "
              "allowed range. The reason is stored on the order line for auditing.",
     )
+    # --- Product-Line Discounts ---
+    pos_retail_line_discount_enabled = fields.Boolean(
+        string="Enable Product-Line Discounts", default=True,
+        help="Show a '% Disc' button on each cart line so cashiers can apply a "
+             "percentage or fixed-amount discount to individual products. The "
+             "product's Minimum Selling Price is always enforced.",
+    )
+    pos_retail_line_discount_manager_below_min = fields.Boolean(
+        string="Require Manager Approval Below Minimum Price", default=True,
+        help="When a line discount would push the final price below the product's "
+             "Minimum Selling Price, require a manager to authenticate via PIN "
+             "before allowing it. If disabled, below-minimum discounts are blocked "
+             "outright with no override path.",
+    )
+    pos_retail_line_discount_require_reason = fields.Boolean(
+        string="Require Reason for Line Discount", default=False,
+        help="Force the cashier to type a reason every time a product-line "
+             "discount is applied.",
+    )
     # --- Appearance ---
     pos_retail_theme_color = fields.Selection(
         POS_RETAIL_THEME_COLORS, string="Shop Colour", default='purple', required=True,
@@ -624,6 +643,21 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.pos_retail_price_override_requires_reason',
         readonly=False,
         string="Require Reason for Price Override",
+    )
+    pos_retail_line_discount_enabled = fields.Boolean(
+        related='pos_config_id.pos_retail_line_discount_enabled',
+        readonly=False,
+        string="Enable Product-Line Discounts",
+    )
+    pos_retail_line_discount_manager_below_min = fields.Boolean(
+        related='pos_config_id.pos_retail_line_discount_manager_below_min',
+        readonly=False,
+        string="Require Manager Approval Below Minimum Price",
+    )
+    pos_retail_line_discount_require_reason = fields.Boolean(
+        related='pos_config_id.pos_retail_line_discount_require_reason',
+        readonly=False,
+        string="Require Reason for Line Discount",
     )
     pos_retail_allow_manager_override = fields.Boolean(
         related='pos_config_id.pos_retail_allow_manager_override',

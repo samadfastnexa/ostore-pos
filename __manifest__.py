@@ -74,6 +74,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/pos_retail_return_reason_views.xml',
         'views/pos_retail_price_reason_views.xml',
         'views/pos_retail_discount_log_views.xml',
+        'views/pos_retail_line_discount_log_views.xml',
         'report/pos_retail_discount_log_report.xml',
         'report/pos_retail_receipt_report.xml',
         'report/pos_retail_khata_statement_report.xml',
@@ -253,6 +254,10 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/quotation.xml',
             'pos_retail/static/src/overrides/quotation_picker.js',
             'pos_retail/static/src/overrides/quotation_picker.xml',
+            'pos_retail/static/src/overrides/line_discount_popup.js',
+            'pos_retail/static/src/overrides/line_discount_popup.xml',
+            'pos_retail/static/src/overrides/order_line_discount.js',
+            'pos_retail/static/src/overrides/order_line_discount.xml',
         ],
         # The customer display page is served from its own bundle, separate
         # from the main POS assets.

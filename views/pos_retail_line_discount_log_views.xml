@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="pos_retail_line_discount_log_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.line.discount.log.list</field>
+        <field name="model">pos.retail.line.discount.log</field>
+        <field name="arch" type="xml">
+            <list string="Product-Line Discounts" create="false" decoration-warning="below_minimum" decoration-info="manager_id">
+                <field name="date"/>
+                <field name="pos_order_ref"/>
+                <field name="product_id"/>
+                <field name="original_price"/>
+                <field name="discount_percentage" string="Discount %"/>
+                <field name="discount_amount"/>
+                <field name="final_price"/>
+                <field name="minimum_selling_price"/>
+                <field name="below_minimum" widget="badge" decoration-danger="below_minimum" decoration-success="not below_minimum"/>
+                <field name="cashier_name" string="Cashier"/>
+                <field name="manager_name" string="Manager"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="config_id" string="Branch"/>
+                <field name="reason"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_retail_line_discount_log_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.line.discount.log.form</field>
+        <field name="model">pos.retail.line.discount.log</field>
+        <field name="arch" type="xml">
+            <form string="Product-Line Discount Audit" create="false" edit="false">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="product_id" string="Discounted Product"/>
+                        <h1><field name="product_id"/></h1>
+                        <h3><field name="pos_order_ref"/></h3>
+                    </div>
+                    <group>
+                        <group string="Pricing &amp; Discount">
+                            <field name="currency_id" invisible="1"/>
+                            <field name="original_price"/>
+                            <field name="discount_percentage"/>
+                            <field name="discount_amount"/>
+                            <field name="final_price"/>
+                            <field name="minimum_selling_price"/>
+                            <field name="below_minimum"/>
+                            <field name="discount_input_type"/>
+                        </group>
+                        <group string="Transaction Details">
+                            <field name="order_id"/>
+                            <field name="cashier_id"/>
+                            <field name="manager_id"/>
+                            <field name="partner_id"/>
+                            <field name="config_id"/>
+                            <field name="date"/>
+                            <field name="reason"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_retail_line_discount_log_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.line.discount.log.search</field>
+        <field name="model">pos.retail.line.discount.log</field>
+        <field name="arch" type="xml">
+            <search string="Product-Line Discounts">
+                <field name="product_id"/>
+                <field name="pos_order_ref"/>
+                <field name="partner_id"/>
+                <field name="cashier_id"/>
+                <field name="manager_id"/>
+                <field name="config_id"/>
+                <field name="reason"/>
+                <separator/>
+                <filter string="Today" name="filter_today"
+                        domain="[('date', '&gt;=', context_today().strftime('%Y-%m-%d 00:00:00'))]"/>
+                <filter string="Last 7 Days" name="filter_last_7_days"
+                        domain="[('date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d 00:00:00'))]"/>
+                <filter string="This Month" name="filter_this_month"
+                        domain="[('date', '&gt;=', context_today().strftime('%Y-%m-01 00:00:00'))]"/>
+                <separator/>
+                <filter string="Below Minimum Price" name="filter_below_min" domain="[('below_minimum', '=', True)]"/>
+                <filter string="Manager Approved" name="filter_manager_approved" domain="[('manager_id', '!=', False)]"/>
+                <group>
+                    <filter string="Product" name="group_product" context="{'group_by': 'product_id'}"/>
+                    <filter string="Cashier" name="group_cashier" context="{'group_by': 'cashier_id'}"/>
+                    <filter string="Manager" name="group_manager" context="{'group_by': 'manager_id'}"/>
+                    <filter string="Customer" name="group_customer" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Branch" name="group_branch" context="{'group_by': 'config_id'}"/>
+                    <filter string="Date" name="group_date_day" context="{'group_by': 'date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="pos_retail_line_discount_log_view_pivot" model="ir.ui.view">
+        <field name="name">pos.retail.line.discount.log.pivot</field>
+        <field name="model">pos.retail.line.discount.log</field>
+        <field name="arch" type="xml">
+            <pivot string="Product-Line Discount Analysis" sample="1">
+                <field name="product_id" type="row"/>
+                <field name="date" interval="month" type="col"/>
+                <field name="discount_amount" type="measure"/>
+                <field name="final_price" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="pos_retail_line_discount_log_view_graph" model="ir.ui.view">
+        <field name="name">pos.retail.line.discount.log.graph</field>
+        <field name="model">pos.retail.line.discount.log</field>
+        <field name="arch" type="xml">
+            <graph string="Product-Line Discounts" type="bar" sample="1">
+                <field name="product_id"/>
+                <field name="discount_amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_line_discount_log" model="ir.actions.act_window">
+        <field name="name">Product Line Discounts</field>
+        <field name="res_model">pos.retail.line.discount.log</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="search_view_id" ref="pos_retail_line_discount_log_view_search"/>
+        <field name="context">{'search_default_filter_this_month': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No product-line discounts recorded yet
+            </p>
+            <p>
+                Product-level discounts applied by cashiers at the POS cart will appear here automatically with full price and approval audit trail.
+            </p>
+        </field>
+    </record>
+
+</odoo>

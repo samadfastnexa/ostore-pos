@@ -206,6 +206,13 @@
             <field name="global" eval="True"/>
         </record>
 
+        <record id="line_discount_log_branch_rule" model="ir.rule">
+            <field name="name">Line Discount Log: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_line_discount_log"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
         <record id="brand_campaign_branch_rule" model="ir.rule">
             <field name="name">Brand Campaign: visible to its own branch</field>
             <field name="model_id" ref="model_pos_retail_brand_campaign"/>
@@ -220,7 +227,9 @@
             <field name="global" eval="True"/>
         </record>
 
-        <!-- POS Models & Ledgers: strict branch access for registers, sessions, orders, lines, payments & journals -->
+        <!-- POS Models & Ledgers: strict branch access for registers, sessions, orders, lines and payments.
+             Journals (account.journal) are intentionally NOT restricted here — branches share
+             their parent company's chart of accounts and payment journals (see comment above). -->
 
         <record id="pos_config_branch_rule" model="ir.rule">
             <field name="name">POS Register: visible to its own active branch</field>
@@ -264,12 +273,6 @@
             <field name="global" eval="True"/>
         </record>
 
-        <record id="account_journal_branch_rule" model="ir.rule">
-            <field name="name">Account Journal: visible to its own branch</field>
-            <field name="model_id" ref="account.model_account_journal"/>
-            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
-            <field name="global" eval="True"/>
-        </record>
 
         <!-- Custom Report & Ledger Models: strict branch access -->
 

@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Add discount trigger button on the order line -->
+    <t t-name="pos_retail.OrderlineDiscountButton" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('product-name')]" position="inside">
+            <button t-if="props.onDiscount and line.qty &gt; 0 and !line.refunded_orderline_id and !line.isGlobalDiscountLine?.()"
+                    class="pos-retail-line-disc-btn btn btn-sm py-0 px-2 ms-2 align-self-start"
+                    t-att-class="line.discount ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
+                    style="font-size: 0.72rem; line-height: 1.3; border-radius: 4px;"
+                    title="Apply or Edit Line Discount"
+                    t-on-pointerdown.stop="() => {}"
+                    t-on-pointerup.stop="() => {}"
+                    t-on-click.stop="() => props.onDiscount(line)">
+                <i class="fa fa-percent me-1"/>
+                <t t-if="line.discount">
+                    <t t-esc="line.discount"/>%
+                </t>
+                <t t-else="">
+                    Disc
+                </t>
+            </button>
+        </xpath>
+
+        <!-- Enhance the discount display line to show % and amount off -->
+        <xpath expr="//li[@t-if='vals.discount']" position="replace">
+            <li t-if="vals.discount" class="price-per-unit text-danger fw-semibold">
+                <i class="fa fa-tag pe-1"/>Discount: <t t-esc="vals.discount"/>% (-<t t-esc="this.posRetailDiscountAmount(line)"/>)
+                <span class="text-muted fw-normal ms-1">| Original: <t t-esc="vals.noDiscountPrice"/></span>
+            </li>
+        </xpath>
+    </t>
+
+    <!-- Pass onDiscount callback from OrderSummary to Orderline -->
+    <t t-name="pos_retail.OrderSummaryLineDiscount" t-inherit="point_of_sale.OrderSummary" t-inherit-mode="extension">
+        <xpath expr="//Orderline" position="attributes">
+            <attribute name="onDiscount">(line) => this.posRetailOpenLineDiscount(line)</attribute>
+        </xpath>
+    </t>
+
+</templates>

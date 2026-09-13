@@ -398,6 +398,7 @@ class PosOrder(models.Model):
 
         if not draft and self.state != 'cancel':
             self.env['pos.retail.discount.log'].sudo()._create_from_order(self)
+            self.env['pos.retail.line.discount.log'].sudo()._create_from_order(self)
 
         return result
 
@@ -494,7 +495,10 @@ class PosOrderLine(models.Model):
                       'pos_retail_price_state', 'pos_retail_price_manager_id',
                       'pos_retail_price_reason_id', 'pos_retail_package_id',
                       'pos_retail_is_roundoff', 'pos_retail_returned_qty',
-                      'pos_retail_returnable_qty'):
+                       'pos_retail_returnable_qty',
+                      'pos_retail_line_discount_manager_id',
+                      'pos_retail_line_discount_input_type',
+                      'pos_retail_line_discount_reason'):
             if field not in result:
                 result.append(field)
         return result
@@ -508,6 +512,27 @@ class PosOrderLine(models.Model):
         string="Returnable Qty",
         compute='_compute_pos_retail_return_quantities',
         help="Maximum quantity that can still be returned (Original Quantity - Previously Returned Quantity).",
+    )
+
+    # ── Per-line discount fields ─────────────────────────────────────────────
+    pos_retail_line_discount_manager_id = fields.Many2one(
+        'hr.employee',
+        string="Line Discount Approved By",
+        help="Set when the cashier applied a discount that pushed the final price "
+             "below the product's minimum_selling_price and a manager approved it "
+             "by PIN. Blank means no approval was required (either the discount "
+             "stayed above the minimum or the product has no minimum).",
+    )
+    pos_retail_line_discount_input_type = fields.Selection(
+        [('percent', "Percentage"), ('fixed', "Fixed Amount")],
+        string="Line Discount Entry Type",
+        help="Whether the cashier keyed the line discount as a percentage or a "
+             "flat amount off. Both compile to the same core discount% field; "
+             "this records how it was entered for the audit log.",
+    )
+    pos_retail_line_discount_reason = fields.Char(
+        string="Line Discount Reason",
+        help="Free-text note the cashier entered when applying a line discount.",
     )
 
     @api.depends('qty', 'refund_orderline_ids.qty', 'refund_orderline_ids.order_id.state')
@@ -592,4 +617,42 @@ class PosOrderLine(models.Model):
                     "selling price of %(maximum).2f. A manager must approve it.",
                     price=line.price_unit, product=line.product_id.display_name,
                     maximum=maximum,
+                ))
+
+    @api.constrains('discount', 'price_unit', 'pos_retail_line_discount_manager_id')
+    def _check_pos_retail_line_discount(self):
+        """Enforce minimum selling price against line-level discounts server-side.
+
+        A cashier who manipulates the browser payload or calls the JSON-RPC
+        endpoint directly could send a discount that pushes the final price
+        below minimum_selling_price without the manager approval the UI
+        enforces.  This constraint is the backend backstop.
+
+        The check intentionally skips:
+          * Refund/negative-qty lines (their price derives from the original).
+          * Lines with no discount (nothing to validate).
+          * Lines where a manager already approved (pos_retail_line_discount_manager_id set).
+          * Synthetic order-level discount lines on config.discount_product_id.
+          * Products with minimum_selling_price = 0 (not configured).
+        """
+        precision = self.env['decimal.precision'].precision_get('Product Price')
+        for line in self:
+            if line.pos_retail_line_discount_manager_id:
+                continue
+            if not line.discount or not line._pos_retail_price_check_applies():
+                continue
+            min_price = line.product_id.product_tmpl_id.minimum_selling_price
+            if not min_price:
+                continue
+            final_price = line.price_unit * (1.0 - line.discount / 100.0)
+            if float_compare(final_price, min_price, precision_digits=precision) < 0:
+                raise ValidationError(_(
+                    "Product \"%(product)s\": the %(discount).2f%% discount brings "
+                    "the final price to %(final).2f, which is below the minimum "
+                    "selling price of %(minimum).2f. "
+                    "A manager must approve this discount.",
+                    product=line.product_id.display_name,
+                    discount=line.discount,
+                    final=final_price,
+                    minimum=min_price,
                 ))

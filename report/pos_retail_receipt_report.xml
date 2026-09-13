@@ -82,7 +82,9 @@
                             <t t-esc="line.qty"/> x
                             <span t-esc="line.price_unit"
                                   t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
-                            <t t-if="line.discount"> (-<t t-esc="line.discount"/>%)</t>
+                            <t t-if="line.discount">
+                                <span class="pos-retail-pdf-sku"> (-<t t-esc="line.discount"/>% / -<span t-esc="(line.price_unit * line.qty) * (line.discount / 100.0)" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>)</span>
+                            </t>
                         </td>
                         <td class="text-end">
                             <span t-esc="line.price_subtotal_incl"

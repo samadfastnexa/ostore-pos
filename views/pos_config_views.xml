@@ -187,6 +187,23 @@
                     </div>
                 </div>
                 <div class="mt-3">
+                    <span class="o_form_label fw-bold">Product-Line Discounts</span>
+                </div>
+                <div class="content-group">
+                    <div class="row mt8">
+                        <label string="Enable Line Discounts" for="pos_retail_line_discount_enabled" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_line_discount_enabled"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_line_discount_enabled">
+                        <label string="Require Manager Approval Below Min Price" for="pos_retail_line_discount_manager_below_min" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_line_discount_manager_below_min"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_line_discount_enabled">
+                        <label string="Require Reason for Line Discount" for="pos_retail_line_discount_require_reason" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_line_discount_require_reason"/>
+                    </div>
+                </div>
+                <div class="mt-3">
                     <span class="o_form_label fw-bold">Appearance</span>
                 </div>
                 <div class="content-group">

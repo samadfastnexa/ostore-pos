@@ -21,6 +21,8 @@ access_pos_retail_access_permission_user,pos.retail.access.permission.user,model
 access_pos_retail_access_permission_admin,pos.retail.access.permission.admin,model_pos_retail_access_permission,base.group_system,1,1,1,1
 access_pos_retail_discount_log_user,pos.retail.discount.log.user,model_pos_retail_discount_log,base.group_user,1,0,0,0
 access_pos_retail_discount_log_manager,pos.retail.discount.log.manager,model_pos_retail_discount_log,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_line_discount_log_user,pos.retail.line.discount.log.user,model_pos_retail_line_discount_log,base.group_user,1,0,0,0
+access_pos_retail_line_discount_log_manager,pos.retail.line.discount.log.manager,model_pos_retail_line_discount_log,point_of_sale.group_pos_manager,1,1,1,1
 access_pos_retail_ledger_adjustment_invoice,pos.retail.ledger.adjustment.invoice,model_pos_retail_ledger_adjustment,account.group_account_invoice,1,1,1,1
 access_pos_retail_ledger_adjustment_admin,pos.retail.ledger.adjustment.admin,model_pos_retail_ledger_adjustment,base.group_system,1,1,1,1
 access_pos_retail_khata_payment_invoice,pos.retail.khata.payment.invoice,model_pos_retail_khata_payment,account.group_account_invoice,1,1,1,1

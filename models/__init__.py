@@ -45,3 +45,4 @@ from . import pos_retail_ledger_lines
 from . import pos_retail_outstanding_ledger
 from . import pos_retail_report_service
 from . import pos_retail_vendor_statement
+from . import pos_retail_line_discount_log
