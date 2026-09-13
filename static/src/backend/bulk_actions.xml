@@ -6,7 +6,7 @@
          the model has reports registered. -->
     <t t-name="pos_retail.BulkActions" t-inherit="web.ListView.Buttons" t-inherit-mode="extension">
         <xpath expr="." position="inside">
-            <t t-if="this.posRetailReportConfig and this.posRetailSelectedIds.length">
+            <t t-if="this.posRetailHasSelectedReports">
                 <button class="btn btn-light pos-retail-bulk-action ms-1"
                         t-on-click="() => this.posRetailDownloadPdf()">
                     <i class="fa fa-file-pdf-o me-1"/>Download PDF

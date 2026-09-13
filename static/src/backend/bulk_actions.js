@@ -25,6 +25,7 @@ patch(ListController.prototype, {
 
     get posRetailReportConfig() {
         try {
+            if (!this.props || !this.props.resModel) return null;
             return posRetailReportRegistry.get(this.props.resModel);
         } catch {
             return null;
@@ -32,7 +33,19 @@ patch(ListController.prototype, {
     },
 
     get posRetailSelectedIds() {
-        return this.model.root.selection.map((r) => r.resId);
+        try {
+            return (this.model?.root?.selection || []).map((r) => r.resId);
+        } catch {
+            return [];
+        }
+    },
+
+    get posRetailHasSelectedReports() {
+        try {
+            return !!(this.posRetailReportConfig && (this.posRetailSelectedIds || []).length);
+        } catch {
+            return false;
+        }
     },
 
     // ── Download PDF ────────────────────────────────────────────────────
