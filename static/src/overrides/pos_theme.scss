@@ -721,11 +721,15 @@ $o_retail_blue: #2563eb;
 // Keep the two money actions visually related and large enough for a counter
 // touchscreen.  The price action remains outlined: Discount is the primary,
 // frequent operation while changing a selling price is deliberate.
-.pos .pos-retail-line-price-action .btn {
-    border-radius: .45rem;
-    font-size: .72rem;
-    font-weight: 700;
-    line-height: 1.35;
+.pos .pos-retail-line-actions {
+    .btn {
+        border-radius: .45rem;
+        font-size: .72rem;
+        font-weight: 700;
+        line-height: 1.35;
+        padding: 0.15rem 0.45rem;
+        transition: all 0.15s ease-in-out;
+    }
 }
 
 // ---- Per-line quantity buttons in the cart --------------------------------

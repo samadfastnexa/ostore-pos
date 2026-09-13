@@ -15,6 +15,7 @@ export class LineDiscountPopup extends Component {
         close: Function,
         getPayload: Function,
         line: Object,
+        initialMode: { type: String, optional: true },
     };
 
     setup() {
@@ -26,11 +27,13 @@ export class LineDiscountPopup extends Component {
         const origPrice = line.price_unit || 0;
         const currentDiscount = line.discount || 0;
         const initialFixed = currentDiscount > 0 ? (origPrice * currentDiscount / 100) : 0;
+        const initialTargetPrice = currentDiscount > 0 ? Math.max(0, origPrice - initialFixed) : origPrice;
 
         this.state = useState({
-            mode: line.pos_retail_line_discount_input_type || "percent",
+            mode: this.props.initialMode || line.pos_retail_line_discount_input_type || "percent",
             discountPct: currentDiscount > 0 ? String(currentDiscount) : "",
             discountFixed: initialFixed > 0 ? initialFixed.toFixed(2) : "",
+            targetPrice: currentDiscount > 0 ? initialTargetPrice.toFixed(2) : "",
             reason: line.pos_retail_line_discount_reason || "",
             applyToAll: false,
         });
@@ -78,8 +81,16 @@ export class LineDiscountPopup extends Component {
         return (this.originalUnitPrice * this.enteredPercent) / 100;
     }
 
+    get totalDiscountAmount() {
+        return this.discountAmountUnit * (this.line.qty || 1);
+    }
+
     get finalUnitPrice() {
         return Math.max(0, this.originalUnitPrice - this.discountAmountUnit);
+    }
+
+    get totalFinalPrice() {
+        return this.finalUnitPrice * (this.line.qty || 1);
     }
 
     get maxAllowedDiscountAmount() {
@@ -122,8 +133,10 @@ export class LineDiscountPopup extends Component {
         if (Number.isFinite(num) && num >= 0 && this.originalUnitPrice > 0) {
             const fixed = (this.originalUnitPrice * num) / 100;
             this.state.discountFixed = fixed.toFixed(2);
+            this.state.targetPrice = Math.max(0, this.originalUnitPrice - fixed).toFixed(2);
         } else {
             this.state.discountFixed = "";
+            this.state.targetPrice = "";
         }
     }
 
@@ -135,7 +148,25 @@ export class LineDiscountPopup extends Component {
         if (Number.isFinite(num) && num >= 0 && this.originalUnitPrice > 0) {
             const pct = (num / this.originalUnitPrice) * 100;
             this.state.discountPct = pct.toFixed(2);
+            this.state.targetPrice = Math.max(0, this.originalUnitPrice - num).toFixed(2);
         } else {
+            this.state.discountPct = "";
+            this.state.targetPrice = "";
+        }
+    }
+
+    onTargetPriceInput(ev) {
+        const val = ev.target.value;
+        this.state.targetPrice = val;
+        this.state.mode = "price";
+        const num = parseFloat(val);
+        if (Number.isFinite(num) && num >= 0 && this.originalUnitPrice > 0) {
+            const fixed = Math.max(0, this.originalUnitPrice - num);
+            const pct = (fixed / this.originalUnitPrice) * 100;
+            this.state.discountFixed = fixed.toFixed(2);
+            this.state.discountPct = pct.toFixed(2);
+        } else {
+            this.state.discountFixed = "";
             this.state.discountPct = "";
         }
     }
@@ -146,17 +177,35 @@ export class LineDiscountPopup extends Component {
         if (this.originalUnitPrice > 0) {
             const fixed = (this.originalUnitPrice * pct) / 100;
             this.state.discountFixed = fixed.toFixed(2);
+            this.state.targetPrice = Math.max(0, this.originalUnitPrice - fixed).toFixed(2);
+        }
+    }
+
+    applyTargetPrice(price) {
+        const num = parseFloat(price);
+        if (Number.isFinite(num) && this.originalUnitPrice > 0) {
+            const fixed = Math.max(0, this.originalUnitPrice - num);
+            const pct = (fixed / this.originalUnitPrice) * 100;
+            this.state.targetPrice = num.toFixed(2);
+            this.state.discountFixed = fixed.toFixed(2);
+            this.state.discountPct = pct.toFixed(2);
+            this.state.mode = "price";
         }
     }
 
     applyMaxAllowed() {
-        const maxPct = Math.floor(this.maxAllowedDiscountPercent * 100) / 100;
-        this.applyPreset(maxPct);
+        if (this.minPrice > 0) {
+            this.applyTargetPrice(this.minPrice);
+        } else {
+            this.applyPreset(100);
+        }
     }
 
     clearDiscount() {
         this.state.discountPct = "0";
         this.state.discountFixed = "0.00";
+        this.state.targetPrice = this.originalUnitPrice.toFixed(2);
+        this.state.mode = "percent";
     }
 
     async confirm() {
@@ -186,8 +235,8 @@ export class LineDiscountPopup extends Component {
 
             // Manager Override flow
             manager = await posRetailRequestManagerPin(this.pos, this.dialog, this.notification, {
-                title: _t("Manager Override — Below Minimum Discount"),
-                noManagerMessage: _t("No manager is configured to approve discounts below minimum price."),
+                title: _t("Manager Override — Below Minimum Price"),
+                noManagerMessage: _t("No manager is configured to approve selling below minimum price."),
             });
             if (!manager) {
                 return;
@@ -196,7 +245,7 @@ export class LineDiscountPopup extends Component {
 
         // Check if discount reason is required
         if (this.pos.config.pos_retail_line_discount_require_reason && pct > 0 && !this.state.reason.trim()) {
-            this.notification.add(_t("Please provide a reason for the line discount."), { type: "warning" });
+            this.notification.add(_t("Please provide a reason for the discount."), { type: "warning" });
             return;
         }
 
@@ -241,7 +290,6 @@ export class LineDiscountPopup extends Component {
 
             if (min && finalPrice < min - 0.001) {
                 if (manager) {
-                    // Approved by manager for all
                     this.applyDiscountToLine(line, pct, mode, reason, manager);
                     appliedCount++;
                 } else {

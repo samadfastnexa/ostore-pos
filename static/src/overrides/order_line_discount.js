@@ -7,10 +7,9 @@ import { OrderSummary } from "@point_of_sale/app/screens/product_screen/order_su
 import { PosStore } from "@point_of_sale/app/services/pos_store";
 import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { LineDiscountPopup } from "./line_discount_popup";
-import { PriceSelectionPopup } from "./price_popup";
 import { posRetailRequestManagerPin } from "../utils/manager_pin";
 
-// Register onDiscount callback prop on Orderline
+// Register onDiscount and onSetPrice callback props on Orderline
 Orderline.props = {
     ...Orderline.props,
     onDiscount: { type: Function, optional: true },
@@ -34,40 +33,20 @@ patch(Orderline.prototype, {
     },
 });
 
-// Patch OrderSummary to open LineDiscountPopup when cashier clicks discount button
+// Patch OrderSummary to open LineDiscountPopup when cashier clicks discount or price button
 patch(OrderSummary.prototype, {
-    async posRetailOpenLineDiscount(line) {
+    async posRetailOpenLineDiscount(line, mode = "discount") {
         if (!line || line.qty <= 0 || line.refunded_orderline_id || line.isGlobalDiscountLine?.()) {
             return;
         }
         if (!this.pos.config.pos_retail_line_discount_enabled) {
             return;
         }
-        await makeAwaitable(this.dialog, LineDiscountPopup, { line });
+        await makeAwaitable(this.dialog, LineDiscountPopup, { line, initialMode: mode });
     },
 
-    /**
-     * A direct, labelled price action is easier to discover than switching
-     * the keypad to Price mode.  It reuses the same range-aware popup used
-     * when a ranged product is first added, then delegates to setLinePrice so
-     * the existing manager-PIN and minimum/maximum checks still apply.
-     */
     async posRetailOpenLinePrice(line) {
-        if (!line || line.qty <= 0 || line.refunded_orderline_id || line.isGlobalDiscountLine?.()) {
-            return;
-        }
-        const product = line.product_id?.product_tmpl_id;
-        if (!product) {
-            return;
-        }
-        const payload = await makeAwaitable(this.dialog, PriceSelectionPopup, {
-            product,
-            initialPrice: line.price_unit || 0,
-        });
-        if (!payload) {
-            return;
-        }
-        await this.setLinePrice(line, payload.price);
+        return await this.posRetailOpenLineDiscount(line, "price");
     },
 });
 

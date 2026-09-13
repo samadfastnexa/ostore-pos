@@ -779,14 +779,14 @@ set -e
 
 cd /opt/odoo/custom_addons/pos_retail
 git fetch origin
-git checkout YOUR_BRANCH
-git pull --ff-only origin YOUR_BRANCH
+git checkout feature/branch-scoped-users-and-dashboard
+git pull --ff-only origin feature/branch-scoped-users-and-dashboard
 
-# Odoo must always use its virtualenv Python. Calling odoo-bin directly can
-# select Ubuntu's system Python and fail with: ModuleNotFoundError: passlib.
+# Repair/install the dependencies in Odoo's actual virtual environment.
 su -s /bin/bash odoo -c '/opt/odoo/venv/bin/pip install -r /opt/odoo/odoo/requirements.txt'
 su -s /bin/bash odoo -c '/opt/odoo/venv/bin/python3 -c "from passlib.context import CryptContext; print(\"passlib OK\")"'
 
+# Upgrade the addon using that same virtualenv, then start Odoo.
 systemctl stop odoo
 su -s /bin/bash odoo -c '/opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin -c /etc/odoo/odoo.conf -d ostore_live -u pos_retail --stop-after-init'
 systemctl start odoo
