@@ -73,6 +73,20 @@
         <field name="active">False</field>
     </record>
 
+    <!-- Hide HR Skills / Learning / Certifications / Training Attendance menus -->
+    <record id="hr_skills.hr_skill_learning_menu" model="ir.ui.menu">
+        <field name="active">False</field>
+    </record>
+    <record id="hr_skills.hr_certification_menu" model="ir.ui.menu">
+        <field name="active">False</field>
+    </record>
+    <record id="hr_skills.menu_learnings_training_attendances" model="ir.ui.menu">
+        <field name="active">False</field>
+    </record>
+    <record id="hr_skills.hr_employee_certification_report_menu" model="ir.ui.menu">
+        <field name="active">False</field>
+    </record>
+
     <!-- Invoicing had "Customers" as a section AND as an item inside it,
          while the contact list already lives in its own app: the same word
          meant three different things on one screen. The section is named for

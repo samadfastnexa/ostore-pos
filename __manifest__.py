@@ -36,6 +36,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'pos_discount',     # order-level % discount button in POS (product-screen);
                             # pos_retail adds a Fixed Amount mode + limits/approval on the payment screen
         'pos_hr',           # cashier login, employee on session
+        'hr_skills',        # skills, learning, certifications (hidden in pos_retail_menus.xml)
         'product_expiry',   # expiry/lot tracking
         'purchase',         # purchase orders + vendor bills (pulls stock/account)
         'pos_sale',         # quotations: create a sale.order from POS and settle

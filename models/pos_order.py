@@ -1,3 +1,5 @@
+from dateutil.relativedelta import relativedelta
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 from odoo.tools import float_compare
@@ -129,7 +131,7 @@ class PosOrder(models.Model):
     # --- Fast physical returns -----------------------------------------------
 
     @api.model
-    def pos_retail_find_return_source(self, reference, product_id):
+    def pos_retail_find_return_source(self, reference, product_id, config_id=False):
         """Look up an order by its receipt number, for the OPTIONAL "link to
         original order" step on a fast return.
 
@@ -157,6 +159,20 @@ class PosOrder(models.Model):
         ], limit=1, order='date_order desc')
         if not order:
             return {'found': False, 'reason': 'no_order'}
+
+        config = self.env['pos.config'].browse(int(config_id or 0)).exists()
+        if config and config.company_id not in self.env.companies:
+            return {'found': False, 'reason': 'no_order'}
+        if config and config.pos_retail_return_window_days and order.date_order:
+            return_deadline = fields.Datetime.to_datetime(order.date_order).date() + \
+                relativedelta(days=config.pos_retail_return_window_days)
+            if fields.Date.context_today(self) > return_deadline:
+                return {
+                    'found': False,
+                    'reason': 'outside_return_policy',
+                    'order_name': order.pos_reference or order.name,
+                    'return_deadline': fields.Date.to_string(return_deadline),
+                }
 
         line = order.lines.filtered(
             lambda l: l.product_id.id == int(product_id) and l.qty > 0)[:1]
@@ -278,8 +294,6 @@ class PosOrder(models.Model):
 
         if credit_payment:
             partner = self.partner_id
-            info['disposition'] = _(
-                "Credited to %s", credit_payment.payment_method_id.name)
             if partner:
                 # sudo: a cashier printing a receipt has no reason to hold
                 # accounting rights, and the figure itself is already shown
@@ -288,9 +302,22 @@ class PosOrder(models.Model):
                 info['balance_before'] = balance_before
                 info['balance_after'] = balance_before - info['refund_amount']
                 info['balance_is_estimate'] = True
+                if balance_before > 0:
+                    info['disposition'] = _("Adjusted against Outstanding Balance")
+                else:
+                    info['disposition'] = _("Added as Credit")
+            else:
+                info['disposition'] = _("Added as Credit (%s)", credit_payment.payment_method_id.name)
         else:
-            methods = self.payment_ids.mapped('payment_method_id.name')
-            info['disposition'] = ", ".join(methods) if methods else _("Not yet paid")
+            cash_payment = self.payment_ids.filtered(lambda p: p.payment_method_id.is_cash_count)[:1]
+            if cash_payment and len(self.payment_ids) == 1:
+                info['disposition'] = _("Refunded in Cash")
+            else:
+                methods = self.payment_ids.mapped('payment_method_id.name')
+                if methods:
+                    info['disposition'] = _("Refunded through Payment Method (%s)") % ", ".join(methods)
+                else:
+                    info['disposition'] = _("Not yet paid")
 
         return info
 
@@ -466,10 +493,60 @@ class PosOrderLine(models.Model):
         for field in ('pos_retail_default_price', 'pos_retail_min_price', 'pos_retail_max_price',
                       'pos_retail_price_state', 'pos_retail_price_manager_id',
                       'pos_retail_price_reason_id', 'pos_retail_package_id',
-                      'pos_retail_is_roundoff'):
+                      'pos_retail_is_roundoff', 'pos_retail_returned_qty',
+                      'pos_retail_returnable_qty'):
             if field not in result:
                 result.append(field)
         return result
+
+    pos_retail_returned_qty = fields.Float(
+        string="Already Returned Qty",
+        compute='_compute_pos_retail_return_quantities',
+        help="Total quantity already returned against this sale line across all refund transactions.",
+    )
+    pos_retail_returnable_qty = fields.Float(
+        string="Returnable Qty",
+        compute='_compute_pos_retail_return_quantities',
+        help="Maximum quantity that can still be returned (Original Quantity - Previously Returned Quantity).",
+    )
+
+    @api.depends('qty', 'refund_orderline_ids.qty', 'refund_orderline_ids.order_id.state')
+    def _compute_pos_retail_return_quantities(self):
+        for line in self:
+            if line.qty > 0:
+                refunds = line.refund_orderline_ids.filtered(lambda l: l.order_id.state != 'cancel')
+                returned = abs(sum(refunds.mapped('qty')))
+                line.pos_retail_returned_qty = returned
+                line.pos_retail_returnable_qty = max(0.0, line.qty - returned)
+            else:
+                line.pos_retail_returned_qty = 0.0
+                line.pos_retail_returnable_qty = 0.0
+
+    @api.constrains('qty', 'refunded_orderline_id')
+    def _check_pos_retail_return_quantity(self):
+        """Enforce: Original Quantity - Previously Returned Quantity = Returnable Quantity.
+        A user must never be able to return more than the remaining returnable quantity.
+        """
+        precision = self.env['decimal.precision'].precision_get('Product Unit of Measure')
+        for line in self:
+            if line.qty < 0 and line.refunded_orderline_id:
+                orig = line.refunded_orderline_id
+                other_refunds = orig.refund_orderline_ids.filtered(
+                    lambda l: l.id != line.id and l.order_id.state != 'cancel'
+                )
+                already_returned = abs(sum(other_refunds.mapped('qty')))
+                returnable = max(0.0, orig.qty - already_returned)
+                return_qty = abs(line.qty)
+                if float_compare(return_qty, returnable, precision_digits=precision) > 0:
+                    raise ValidationError(_(
+                        "Cannot return %(return_qty)s units of \"%(product)s\". "
+                        "Only %(returnable)s units remaining to return (Original: %(orig)s, Already returned: %(returned)s).",
+                        product=line.product_id.display_name,
+                        return_qty=return_qty,
+                        returnable=returnable,
+                        orig=orig.qty,
+                        returned=already_returned,
+                    ))
 
     def _pos_retail_price_check_applies(self):
         """Only ordinary positive-quantity sale lines are range-checked.

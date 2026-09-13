@@ -14,6 +14,13 @@
                 <i t-attf-class="fa {{ posRetailPdf.busy ? 'fa-fw fa-spin fa-circle-o-notch' : 'fa-file-pdf-o' }} me-1"/>PDF Receipt
             </button>
         </xpath>
+        <xpath expr="//li[hasclass('refund-note') and not(hasclass('to-refund-highlight'))]" position="replace">
+            <li t-if="isOrderSynced" class="info refund-qty-breakdown small mt-1 text-muted">
+                <span>Original: <strong t-esc="env.utils.formatProductQty(line.qty)"/></span>
+                <span t-if="!pos.isProductQtyZero(line.refundedQty)" class="ms-1">| Returned: <strong t-esc="env.utils.formatProductQty(line.refundedQty)"/></span>
+                <span class="ms-1">| Returnable: <strong class="text-success" t-esc="env.utils.formatProductQty(line.qty - (line.refundedQty || 0))"/></span>
+            </li>
+        </xpath>
     </t>
 
 </templates>

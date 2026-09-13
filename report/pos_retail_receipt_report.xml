@@ -51,11 +51,12 @@
 
             <div class="pos-retail-pdf-rule"/>
             <div>
-                <div>Receipt: <span t-esc="o.pos_reference or o.name"/></div>
+                <div t-if="o.is_refund" class="fw-bold text-center" style="font-size:110%; margin-bottom: 4px;">*** CREDIT RETURN RECEIPT ***</div>
+                <div><t t-if="o.is_refund">Return Receipt:</t><t t-else="">Receipt:</t> <span t-esc="o.pos_reference or o.name"/></div>
                 <div t-if="o.account_move">Invoice: <span t-esc="o.account_move.name"/></div>
                 <div>Terminal: <span t-esc="cfg.name"/></div>
                 <div>Cashier: <span t-esc="o.employee_id.name or o.user_id.name"/></div>
-                <div>Date: <span t-field="o.date_order" t-options='{"widget": "datetime"}'/></div>
+                <div><t t-if="o.is_refund">Return Date:</t><t t-else="">Date:</t> <span t-field="o.date_order" t-options='{"widget": "datetime"}'/></div>
             </div>
 
             <div class="pos-retail-pdf-rule"/>
@@ -227,9 +228,9 @@
                 <div class="row mt-3">
                     <div class="col-6">
                         <table class="table table-sm table-borderless">
-                            <tr><td class="fw-bold">Receipt No</td><td t-esc="o.pos_reference or o.name"/></tr>
+                            <tr><td class="fw-bold"><t t-if="o.is_refund">Return Receipt No</t><t t-else="">Receipt No</t></td><td t-esc="o.pos_reference or o.name"/></tr>
                             <tr t-if="o.account_move"><td class="fw-bold">Invoice No</td><td t-esc="o.account_move.name"/></tr>
-                            <tr><td class="fw-bold">Date</td><td><span t-field="o.date_order" t-options='{"widget": "datetime"}'/></td></tr>
+                            <tr><td class="fw-bold"><t t-if="o.is_refund">Return Date</t><t t-else="">Date</t></td><td><span t-field="o.date_order" t-options='{"widget": "datetime"}'/></td></tr>
                         </table>
                     </div>
                     <div class="col-6">
@@ -396,7 +397,7 @@
         <field name="report_name">pos_retail.report_pos_receipt_thermal</field>
         <field name="report_file">pos_retail.report_pos_receipt_thermal</field>
         <field name="paperformat_id" ref="paperformat_pos_receipt_80"/>
-        <field name="print_report_name">'Receipt - %s' % ((object.pos_reference or object.name or '').replace('/', '-'))</field>
+        <field name="print_report_name">('Credit Return Receipt - %s' if object.is_refund else 'Receipt - %s') % ((object.pos_reference or object.name or '').replace('/', '-'))</field>
         <field name="binding_model_id" ref="point_of_sale.model_pos_order"/>
         <field name="binding_type">report</field>
     </record>
@@ -407,7 +408,7 @@
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">pos_retail.report_pos_receipt_a4</field>
         <field name="report_file">pos_retail.report_pos_receipt_a4</field>
-        <field name="print_report_name">'Receipt A4 - %s' % ((object.pos_reference or object.name or '').replace('/', '-'))</field>
+        <field name="print_report_name">('Credit Return Receipt A4 - %s' if object.is_refund else 'Receipt A4 - %s') % ((object.pos_reference or object.name or '').replace('/', '-'))</field>
         <field name="binding_model_id" ref="point_of_sale.model_pos_order"/>
         <field name="binding_type">report</field>
     </record>

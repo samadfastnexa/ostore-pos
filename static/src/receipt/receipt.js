@@ -114,17 +114,28 @@ patch(OrderReceipt.prototype, {
         };
 
         if (creditPayment) {
-            info.disposition = _t("Credited to %s", creditPayment.payment_method_id.name);
             const before = this.posRetailPreviousBalanceAmount;
             info.hasBalance = true;
             info.balanceBefore = this.formatCurrency(before);
             info.balanceAfter = this.formatCurrency(before - refundAmount);
+            if (before > 0) {
+                info.disposition = _t("Adjusted against Outstanding Balance");
+            } else {
+                info.disposition = _t("Added as Credit");
+            }
         } else {
-            const methodNames = this.paymentLines
-                .map((p) => p.payment_method_id?.name)
-                .filter(Boolean);
-            info.hasBalance = false;
-            info.disposition = methodNames.length ? methodNames.join(", ") : _t("Not yet paid");
+            const isCash = this.paymentLines.length === 1 && this.paymentLines[0].payment_method_id?.is_cash_count;
+            if (isCash) {
+                info.disposition = _t("Refunded in Cash");
+            } else {
+                const methodNames = this.paymentLines
+                    .map((p) => p.payment_method_id?.name)
+                    .filter(Boolean);
+                info.hasBalance = false;
+                info.disposition = methodNames.length
+                    ? _t("Refunded through Payment Method (%s)", methodNames.join(", "))
+                    : _t("Not yet paid");
+            }
         }
         return info;
     },

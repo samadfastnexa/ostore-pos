@@ -93,11 +93,28 @@
                         </div>
                     </div>
                 </div>
+                <div t-if="state.lines.length" class="border rounded p-2">
+                    <div class="fw-bold mb-2">Return cart</div>
+                    <div t-foreach="state.lines" t-as="line" t-key="line.product.id + ':' + line.originalOrderLineId + ':' + line.price"
+                         class="d-flex align-items-center justify-content-between py-1 border-top">
+                        <span><t t-esc="line.product.display_name"/> × <t t-esc="line.qty"/></span>
+                        <span class="d-flex align-items-center gap-2">
+                            <span t-esc="line.price"/>
+                            <button class="btn btn-sm btn-link text-danger" t-on-click="() => this.removeLine(state.lines.indexOf(line))">
+                                <i class="fa fa-times"/>
+                            </button>
+                        </span>
+                    </div>
+                </div>
             </div>
             <t t-set-slot="footer">
+                <button t-if="selectedProduct" class="btn btn-outline-primary" t-att-disabled="!canAddLine"
+                        t-on-click="() => this.addLine()">
+                    <i class="fa fa-plus me-1"/>Add Product
+                </button>
                 <button class="btn btn-primary" t-att-disabled="!canConfirm"
                         t-on-click="() => this.confirm()">
-                    <i class="fa fa-undo me-1"/>Add Return Line
+                    <i class="fa fa-undo me-1"/>Continue to Refund
                 </button>
                 <button class="btn btn-secondary" t-on-click="() => this.props.close()">Cancel</button>
             </t>

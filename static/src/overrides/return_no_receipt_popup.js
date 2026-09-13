@@ -29,7 +29,7 @@ export class ReturnNoReceiptPopup extends Component {
             search: "", productId: false, qty: "1", price: "",
             // The optional link. Blank means "proceed unlinked", which is the
             // fast path and the default; nothing here forces a lookup.
-            reference: "", linking: false, linkResult: null,
+            reference: "", linking: false, linkResult: null, lines: [],
         });
     }
 
@@ -86,7 +86,7 @@ export class ReturnNoReceiptPopup extends Component {
         try {
             const result = await this.orm.call(
                 "pos.order", "pos_retail_find_return_source",
-                [reference, this.selectedProduct.id]
+                [reference, this.selectedProduct.id, this.pos.config.id]
             );
             this.state.linkResult = result;
             if (result.found) {
@@ -111,7 +111,13 @@ export class ReturnNoReceiptPopup extends Component {
     // template for the max= on the quantity field and by canConfirm, so the
     // two can never disagree about what is allowed.
     get maxQty() {
-        return this.state.linkResult?.found ? this.state.linkResult.returnable_qty : Infinity;
+        if (!this.state.linkResult?.found) {
+            return Infinity;
+        }
+        const reserved = this.state.lines
+            .filter((line) => line.originalOrderLineId === this.state.linkResult.order_line_id)
+            .reduce((total, line) => total + line.qty, 0);
+        return Math.max(0, this.state.linkResult.returnable_qty - reserved);
     }
 
     clearLink() {
@@ -119,7 +125,7 @@ export class ReturnNoReceiptPopup extends Component {
         this.state.linkResult = null;
     }
 
-    get canConfirm() {
+    get canAddLine() {
         return Boolean(
             this.selectedProduct &&
                 parseFloat(this.state.qty) > 0 &&
@@ -128,20 +134,51 @@ export class ReturnNoReceiptPopup extends Component {
         );
     }
 
+    get canConfirm() {
+        return this.state.lines.length > 0;
+    }
+
+    addLine() {
+        if (!this.canAddLine) {
+            return;
+        }
+        const link = this.state.linkResult?.found ? this.state.linkResult : false;
+        const line = {
+            product: this.selectedProduct,
+            qty: parseFloat(this.state.qty),
+            price: parseFloat(this.state.price),
+            originalOrderId: link ? link.order_id : false,
+            originalOrderLineId: link ? link.order_line_id : false,
+            unlinked: !link,
+        };
+        const existing = this.state.lines.find((candidate) =>
+            candidate.product.id === line.product.id
+            && candidate.price === line.price
+            && candidate.originalOrderLineId === line.originalOrderLineId
+        );
+        if (existing) {
+            existing.qty += line.qty;
+        } else {
+            this.state.lines.push(line);
+        }
+        this.clearProduct();
+        this.state.search = "";
+        this.state.qty = "1";
+        this.state.price = "";
+        this.state.reference = "";
+    }
+
+    removeLine(index) {
+        this.state.lines.splice(index, 1);
+    }
+
     confirm() {
         if (!this.canConfirm) {
             return;
         }
         this.props.getPayload({
-            product: this.selectedProduct,
-            qty: parseFloat(this.state.qty),
-            price: parseFloat(this.state.price),
-            // Only a genuine match links the order. A reference that was
-            // typed but not found, or found on an order without this
-            // product, still leaves this return correctly marked unlinked --
-            // half a lookup is not a link.
-            originalOrderId: this.state.linkResult?.found ? this.state.linkResult.order_id : false,
-            unlinked: !this.state.linkResult?.found,
+            lines: this.state.lines,
+            unlinked: this.state.lines.some((line) => line.unlinked),
         });
         this.props.close();
     }
@@ -153,6 +190,9 @@ export class ReturnNoReceiptPopup extends Component {
         }
         if (r.reason === "no_matching_product") {
             return _t("Order %s does not have this product on it. Continuing without a link.", r.order_name);
+        }
+        if (r.reason === "outside_return_policy") {
+            return _t("%s is outside the configured return window. A manager-approved unlinked return is still possible.", r.order_name);
         }
         return _t("No order found for that reference. Continuing without a link.");
     }

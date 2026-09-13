@@ -88,6 +88,16 @@ class PosConfig(models.Model):
         string="Return Needs Manager Approval", default=True,
         help="Require a manager PIN for a return without a receipt.",
     )
+    pos_retail_return_window_days = fields.Integer(
+        string="Return Window (Days)", default=0,
+        help="Maximum age of a receipt-linked return. Set 0 for no date limit. "
+             "A receipt-free return remains subject to manager approval because "
+             "its original sale date is not known.",
+    )
+    @api.constrains('pos_retail_return_window_days')
+    def _check_pos_retail_return_window_days(self):
+        if any(config.pos_retail_return_window_days < 0 for config in self):
+            raise ValidationError(_("Return Window (Days) cannot be negative."))
     # --- Flexible pricing ---
     pos_retail_price_range_enabled = fields.Boolean(
         string="Allow Price Within Range", default=True,
@@ -564,6 +574,11 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.pos_retail_return_requires_manager',
         readonly=False,
         string="Return Needs Manager Approval",
+    )
+    pos_retail_return_window_days = fields.Integer(
+        related='pos_config_id.pos_retail_return_window_days',
+        readonly=False,
+        string="Return Window (Days)",
     )
     pos_retail_quote_show_images = fields.Boolean(
         related='company_id.pos_retail_quote_show_images',

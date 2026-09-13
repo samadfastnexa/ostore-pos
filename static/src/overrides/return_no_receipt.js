@@ -8,9 +8,9 @@ import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { ReturnNoReceiptPopup } from "./return_no_receipt_popup";
 import { posRetailRequestManagerPin } from "../utils/manager_pin";
 
-// "Return (No Receipt)" flow: manager PIN -> return reason -> product/qty/price
-// (+ optional customer, + optional link to the original sale) -> a negative
-// line on a fresh is_refund order -> straight to Payment, where Cash, Card or
+// "Return (No Receipt)" flow: manager PIN -> return reason -> products/qty/price
+// (+ optional customer, + optional link to an original sale) -> negative
+// lines on a fresh is_refund order -> straight to Payment, where Cash, Card or
 // Customer Credit stands in for "how should we handle the refund" -- the shop
 // asked for that choice and core's own payment buttons already are it, so
 // nothing new was built to duplicate them.
@@ -78,31 +78,30 @@ patch(ControlButtons.prototype, {
             order.pos_retail_return_unlinked = true;
         }
 
-        const line = await this.pos.addLineToOrder(
-            {
-                product_id: payload.product,
-                product_tmpl_id: payload.product.product_tmpl_id,
-                qty: -Math.abs(payload.qty),
-                price_unit: payload.price,
-                price_type: "manual",
-            },
-            order,
-            { force: true },
-            false
-        );
-
-        if (payload.originalOrderId && line) {
-            // The link the report reads: which sale this undoes. Set on the
-            // line itself, the same field a same-receipt refund uses, so a
-            // linked fast return and an ordinary refund look identical to
-            // every report built on refunded_orderline_id -- there is only
-            // one notion of "linked" in this codebase, not two competing ones.
-            const originalOrder = this.pos.models["pos.order"].get(payload.originalOrderId);
-            const originalLine = originalOrder?.lines.find(
-                (l) => l.product_id.id === payload.product.id && l.getQuantity() > 0
+        for (const returnLine of payload.lines) {
+            const line = await this.pos.addLineToOrder(
+                {
+                    product_id: returnLine.product.id,
+                    product_tmpl_id: returnLine.product.product_tmpl_id,
+                    qty: -Math.abs(returnLine.qty),
+                    price_unit: returnLine.price,
+                    price_type: "manual",
+                },
+                order,
+                { force: true },
+                false
             );
-            if (originalLine) {
-                line.refunded_orderline_id = originalLine;
+
+            if (returnLine.originalOrderId && line) {
+                // Use core's own link so linked quick returns share the same
+                // cumulative-quantity constraint and reporting as receipt returns.
+                const originalOrder = this.pos.models["pos.order"].get(returnLine.originalOrderId);
+                const originalLine = originalOrder?.lines.find(
+                    (candidate) => candidate.id === returnLine.originalOrderLineId
+                );
+                if (originalLine) {
+                    line.refunded_orderline_id = originalLine;
+                }
             }
         }
 

@@ -221,6 +221,11 @@
                         <label string="Return Needs Manager Approval" for="pos_retail_return_requires_manager" class="col-lg-4 o_light_label"/>
                         <field name="pos_retail_return_requires_manager"/>
                     </div>
+                    <div class="row mt8">
+                        <label string="Return Window (Days)" for="pos_retail_return_window_days" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_return_window_days"/>
+                        <div class="text-muted small">Set 0 to allow linked returns of any age. Receipt-free returns still require manager approval.</div>
+                    </div>
                 </div>
             </xpath>
         </field>

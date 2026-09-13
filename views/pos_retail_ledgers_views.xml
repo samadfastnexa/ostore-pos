@@ -230,17 +230,35 @@
         <field name="model">pos.retail.outstanding.customer</field>
         <field name="arch" type="xml">
             <search string="Outstanding Customers">
-                <field name="partner_id"/>
-                <field name="last_move_name"/>
-                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="user_id" string="Salesperson"/>
+                <field name="company_id" string="Branch" groups="base.group_multi_company"/>
+                <field name="due_date"/>
                 <separator/>
-                <filter string="Currently Owing" name="owing" domain="[('outstanding', '&gt;', 0)]"/>
-                <filter string="Credit Balance (shop owes them)" name="in_credit" domain="[('outstanding', '&lt;', 0)]"/>
+                <filter string="Unpaid" name="status_unpaid" domain="[('status', '=', 'unpaid')]"/>
+                <filter string="Outstanding" name="status_outstanding" domain="[('status', '=', 'outstanding')]"/>
                 <separator/>
-                <filter string="Last Transaction" name="filter_date" date="last_transaction_date"/>
+                <filter string="Company" name="type_company" domain="[('customer_type', '=', 'company')]"/>
+                <filter string="Individual" name="type_individual" domain="[('customer_type', '=', 'individual')]"/>
+                <separator/>
+                <filter string="Overdue" name="filter_overdue" domain="[('due_date', '&lt;', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="Outstanding &gt;= 10,000" name="outstanding_10k" domain="[('outstanding', '&gt;=', 10000)]"/>
+                <filter string="Outstanding &gt;= 50,000" name="outstanding_50k" domain="[('outstanding', '&gt;=', 50000)]"/>
+                <separator/>
+                <filter string="Last Transaction Date" name="filter_date" date="last_transaction_date"/>
+                <filter string="Due Date" name="filter_due_date" date="due_date"/>
+                <separator/>
+                <filter string="Highest Outstanding" name="sort_highest" context="{'order': 'outstanding desc'}"/>
+                <filter string="Oldest Outstanding" name="sort_oldest" context="{'order': 'oldest_unpaid_date asc'}"/>
+                <filter string="Customer Name" name="sort_name" context="{'order': 'partner_id asc'}"/>
                 <group>
+                    <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Salesperson" name="group_salesperson" context="{'group_by': 'user_id'}"/>
                     <filter string="Branch" name="group_company" context="{'group_by': 'company_id'}"/>
-                    <filter string="Last Transaction Type" name="group_type" context="{'group_by': 'last_transaction_type'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                    <filter string="Customer Type" name="group_type" context="{'group_by': 'customer_type'}"/>
+                    <filter string="Due Month" name="group_due_month" context="{'group_by': 'due_date:month'}"/>
+                    <filter string="Last Transaction Month" name="group_month" context="{'group_by': 'last_transaction_date:month'}"/>
                 </group>
             </search>
         </field>
@@ -253,18 +271,20 @@
             <list string="Outstanding Customers" js_class="pos_retail_ledger_list"
                   create="false" edit="false" delete="false" default_order="outstanding desc">
                 <field name="currency_id" column_invisible="True"/>
-                <field name="partner_id"/>
-                <field name="outstanding" sum="Total Outstanding"
+                <field name="partner_id" string="Customer"/>
+                <field name="total_credit" string="Total Credit" sum="Total Credit"/>
+                <field name="total_paid" string="Paid" sum="Total Paid"/>
+                <field name="outstanding" string="Outstanding" sum="Total Outstanding"
                        decoration-danger="outstanding &gt; 0"
                        decoration-success="outstanding &lt;= 0"/>
-                <field name="age_days" string="Days Since"/>
-                <field name="last_transaction_date"/>
-                <field name="last_move_name" optional="show"/>
-                <field name="last_transaction_type" optional="show" widget="badge"
-                       decoration-info="last_transaction_type in ('sale', 'pos_sale')"
-                       decoration-success="last_transaction_type == 'payment'"
-                       decoration-warning="last_transaction_type == 'refund'"
-                       decoration-muted="last_transaction_type == 'adjustment'"/>
+                <field name="last_transaction_date" string="Last Transaction"/>
+                <field name="due_date" optional="show"/>
+                <field name="status" widget="badge"
+                       decoration-danger="status == 'unpaid'"
+                       decoration-warning="status == 'outstanding'"/>
+                <field name="user_id" string="Salesperson" optional="hide"/>
+                <field name="customer_type" optional="hide"/>
+                <field name="age_days" string="Days Since" optional="hide"/>
                 <field name="company_id" optional="hide" groups="base.group_multi_company"/>
             </list>
         </field>
@@ -276,12 +296,10 @@
         <field name="view_mode">list</field>
         <field name="view_id" ref="pos_retail_outstanding_customer_list"/>
         <field name="search_view_id" ref="pos_retail_outstanding_customer_search"/>
-        <field name="context">{'search_default_owing': 1}</field>
         <field name="domain">[('company_id', 'in', allowed_company_ids)]</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">No customer balances yet</p>
-            <p>One row per customer, their balance as of their last transaction.
-               The full history behind any of these is the Customer Ledger.</p>
+            <p>One row per customer who currently has an unpaid balance. Shows Total Credit, Paid, Outstanding, Last Transaction, and Status.</p>
         </field>
     </record>
 
@@ -292,17 +310,35 @@
         <field name="model">pos.retail.outstanding.vendor</field>
         <field name="arch" type="xml">
             <search string="Outstanding Vendors">
-                <field name="partner_id"/>
-                <field name="last_move_name"/>
-                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="partner_id" string="Vendor"/>
+                <field name="user_id" string="Salesperson / Buyer"/>
+                <field name="company_id" string="Branch" groups="base.group_multi_company"/>
+                <field name="due_date"/>
                 <separator/>
-                <filter string="Currently Owed" name="owed" domain="[('outstanding', '&gt;', 0)]"/>
-                <filter string="Credit Balance (they owe the shop)" name="in_credit" domain="[('outstanding', '&lt;', 0)]"/>
+                <filter string="Unpaid" name="status_unpaid" domain="[('status', '=', 'unpaid')]"/>
+                <filter string="Outstanding" name="status_outstanding" domain="[('status', '=', 'outstanding')]"/>
                 <separator/>
-                <filter string="Last Transaction" name="filter_date" date="last_transaction_date"/>
+                <filter string="Company" name="type_company" domain="[('vendor_type', '=', 'company')]"/>
+                <filter string="Individual" name="type_individual" domain="[('vendor_type', '=', 'individual')]"/>
+                <separator/>
+                <filter string="Overdue" name="filter_overdue" domain="[('due_date', '&lt;', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="Payable &gt;= 10,000" name="payable_10k" domain="[('outstanding', '&gt;=', 10000)]"/>
+                <filter string="Payable &gt;= 50,000" name="payable_50k" domain="[('outstanding', '&gt;=', 50000)]"/>
+                <separator/>
+                <filter string="Last Transaction Date" name="filter_date" date="last_transaction_date"/>
+                <filter string="Due Date" name="filter_due_date" date="due_date"/>
+                <separator/>
+                <filter string="Highest Payable" name="sort_highest" context="{'order': 'outstanding desc'}"/>
+                <filter string="Oldest Payable" name="sort_oldest" context="{'order': 'oldest_unpaid_date asc'}"/>
+                <filter string="Vendor Name" name="sort_name" context="{'order': 'partner_id asc'}"/>
                 <group>
+                    <filter string="Vendor" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Salesperson / Buyer" name="group_salesperson" context="{'group_by': 'user_id'}"/>
                     <filter string="Branch" name="group_company" context="{'group_by': 'company_id'}"/>
-                    <filter string="Last Transaction Type" name="group_type" context="{'group_by': 'last_transaction_type'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                    <filter string="Vendor Type" name="group_type" context="{'group_by': 'vendor_type'}"/>
+                    <filter string="Due Month" name="group_due_month" context="{'group_by': 'due_date:month'}"/>
+                    <filter string="Last Transaction Month" name="group_month" context="{'group_by': 'last_transaction_date:month'}"/>
                 </group>
             </search>
         </field>
@@ -315,18 +351,20 @@
             <list string="Outstanding Vendors" js_class="pos_retail_ledger_list"
                   create="false" edit="false" delete="false" default_order="outstanding desc">
                 <field name="currency_id" column_invisible="True"/>
-                <field name="partner_id"/>
-                <field name="outstanding" sum="Total Payable"
+                <field name="partner_id" string="Vendor"/>
+                <field name="total_credit" string="Total Purchases" sum="Total Purchases"/>
+                <field name="total_paid" string="Paid" sum="Total Paid"/>
+                <field name="outstanding" string="Outstanding Payable" sum="Total Payable"
                        decoration-danger="outstanding &gt; 0"
                        decoration-success="outstanding &lt;= 0"/>
-                <field name="age_days" string="Days Since"/>
-                <field name="last_transaction_date"/>
-                <field name="last_move_name" optional="show"/>
-                <field name="last_transaction_type" optional="show" widget="badge"
-                       decoration-info="last_transaction_type == 'bill'"
-                       decoration-success="last_transaction_type == 'payment'"
-                       decoration-warning="last_transaction_type == 'refund'"
-                       decoration-muted="last_transaction_type == 'adjustment'"/>
+                <field name="last_transaction_date" string="Last Transaction"/>
+                <field name="due_date" optional="show"/>
+                <field name="status" widget="badge"
+                       decoration-danger="status == 'unpaid'"
+                       decoration-warning="status == 'outstanding'"/>
+                <field name="user_id" string="Salesperson / Buyer" optional="hide"/>
+                <field name="vendor_type" optional="hide"/>
+                <field name="age_days" string="Days Since" optional="hide"/>
                 <field name="company_id" optional="hide" groups="base.group_multi_company"/>
             </list>
         </field>
@@ -338,12 +376,10 @@
         <field name="view_mode">list</field>
         <field name="view_id" ref="pos_retail_outstanding_vendor_list"/>
         <field name="search_view_id" ref="pos_retail_outstanding_vendor_search"/>
-        <field name="context">{'search_default_owed': 1}</field>
         <field name="domain">[('company_id', 'in', allowed_company_ids)]</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">No supplier balances yet</p>
-            <p>One row per supplier, what the shop owes as of the last transaction.
-               The full history behind any of these is the Vendor Ledger.</p>
+            <p>One row per supplier where there is still an amount payable. Shows Total Purchases, Paid, Outstanding Payable, Last Transaction, and Status.</p>
         </field>
     </record>
 
@@ -424,6 +460,11 @@
     <menuitem id="pos_retail_menu_outstanding_vendor" name="Outstanding Vendors"
         parent="point_of_sale.menu_point_rep" action="action_pos_retail_outstanding_vendor"
         sequence="9"
+        groups="base.group_system,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
+
+    <menuitem id="pos_retail_menu_purchase_outstanding_vendor" name="Outstanding Vendors"
+        parent="pos_retail.pos_retail_menu_vendor_reports" action="action_pos_retail_outstanding_vendor"
+        sequence="15"
         groups="base.group_system,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
 
 </odoo>
