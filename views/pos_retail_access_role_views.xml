@@ -103,6 +103,11 @@
                                            widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'expenses')]"/>
                                 </group>
+                                <group string="Dashboard">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="pos_retail_checkboxes_select_all"
+                                           domain="[('category', '=', 'dashboard')]"/>
+                                </group>
                                 <group string="Reporting">
                                     <field name="permission_ids" nolabel="1" colspan="2"
                                            widget="pos_retail_checkboxes_select_all"

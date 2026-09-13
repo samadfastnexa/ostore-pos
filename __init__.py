@@ -91,6 +91,36 @@ def _pos_retail_post_init(env):
 
     _pos_retail_setup_wallet_methods(env)
     _pos_retail_seed_till_capabilities(env)
+    _pos_retail_seed_dashboard_permissions(env)
+
+
+def _pos_retail_seed_dashboard_permissions(env):
+    """Ensure all 9 dashboard permissions are attached to the default Admin role.
+
+    Done programmatically in post_init because access_role_data.xml has noupdate=1,
+    so upgrades on existing databases would not automatically update permission_ids.
+    """
+    admin_role = env.ref('pos_retail.access_role_admin', raise_if_not_found=False)
+    if not admin_role:
+        return
+    dash_perms = [
+        'pos_retail.perm_dash_sales',
+        'pos_retail.perm_dash_financials',
+        'pos_retail.perm_dash_payments',
+        'pos_retail.perm_dash_inventory',
+        'pos_retail.perm_dash_stock_movement',
+        'pos_retail.perm_dash_product_movement',
+        'pos_retail.perm_dash_sales_trend',
+        'pos_retail.perm_dash_top_lists',
+        'pos_retail.perm_dash_alerts',
+    ]
+    perm_ids = []
+    for xmlid in dash_perms:
+        perm = env.ref(xmlid, raise_if_not_found=False)
+        if perm and perm.id not in admin_role.permission_ids.ids:
+            perm_ids.append(perm.id)
+    if perm_ids:
+        admin_role.write({'permission_ids': [(4, pid) for pid in perm_ids]})
 
 
 def _pos_retail_seed_till_capabilities(env):

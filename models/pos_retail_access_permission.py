@@ -66,6 +66,7 @@ class PosRetailAccessPermission(models.Model):
             ('accounting', "Invoicing"),
             ('expenses', "Store Expenses"),
             ('reporting', "Reporting"),
+            ('dashboard', "Dashboard"),
             ('configuration', "Configuration"),
         ],
         required=True, default='products', index=True,
