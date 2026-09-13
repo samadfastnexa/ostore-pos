@@ -95,14 +95,12 @@ def _pos_retail_post_init(env):
 
 
 def _pos_retail_seed_dashboard_permissions(env):
-    """Ensure all 9 dashboard permissions are attached to the default Admin role.
+    """Ensure all 9 dashboard permissions have category='dashboard' and are attached to Admin role.
 
-    Done programmatically in post_init because access_role_data.xml has noupdate=1,
-    so upgrades on existing databases would not automatically update permission_ids.
+    Programmatically forced because noupdate=1 on earlier data imports prevented field updates
+    during module upgrade.
     """
     admin_role = env.ref('pos_retail.access_role_admin', raise_if_not_found=False)
-    if not admin_role:
-        return
     dash_perms = [
         'pos_retail.perm_dash_sales',
         'pos_retail.perm_dash_financials',
@@ -117,9 +115,18 @@ def _pos_retail_seed_dashboard_permissions(env):
     perm_ids = []
     for xmlid in dash_perms:
         perm = env.ref(xmlid, raise_if_not_found=False)
-        if perm and perm.id not in admin_role.permission_ids.ids:
-            perm_ids.append(perm.id)
-    if perm_ids:
+        if perm:
+            if perm.category != 'dashboard':
+                perm.write({'category': 'dashboard'})
+            if admin_role and perm.id not in admin_role.permission_ids.ids:
+                perm_ids.append(perm.id)
+            data_rec = env['ir.model.data'].search([
+                ('module', '=', 'pos_retail'),
+                ('name', '=', xmlid.split('.')[1]),
+            ], limit=1)
+            if data_rec and data_rec.noupdate:
+                data_rec.noupdate = False
+    if admin_role and perm_ids:
         admin_role.write({'permission_ids': [(4, pid) for pid in perm_ids]})
 
 
