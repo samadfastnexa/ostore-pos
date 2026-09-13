@@ -93,6 +93,15 @@ def _pos_retail_post_init(env):
     _pos_retail_seed_till_capabilities(env)
     _pos_retail_seed_dashboard_permissions(env)
     _pos_retail_refresh_branch_rules(env)
+    _pos_retail_sync_cashier_companies(env)
+
+
+def _pos_retail_sync_cashier_companies(env):
+    """Ensure non-super-admin shop staff are restricted to their primary branch."""
+    for user in env['res.users'].sudo().search([('share', '=', False)]):
+        if not user.has_group('base.group_system') and user.company_id:
+            if set(user.company_ids.ids) != {user.company_id.id}:
+                user.write({'company_ids': [(6, 0, [user.company_id.id])]})
 
 
 def _pos_retail_refresh_branch_rules(env):
