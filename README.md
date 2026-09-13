@@ -26,21 +26,18 @@ module only adds the missing pieces.
 The module lives in `custom_addons/`, already added to `addons_path` in
 `odoo.conf`. Run Odoo in your **own** terminal:
 
-```powershell
+```bash
 # First install (creates/updates the module in DB <your_db>)
-venv\Scripts\python.exe odoo\odoo-bin -c odoo.conf -d <your_db> -i pos_retail --stop-after-init
+venv/Scripts/python.exe odoo/odoo-bin -c odoo.conf -d <your_db> -i pos_retail --stop-after-init
 
 # After code changes, upgrade:
-venv\Scripts\python.exe odoo\odoo-bin -c odoo.conf -d <your_db> -u pos_retail --stop-after-init
+venv/Scripts/python.exe odoo/odoo-bin -c odoo.conf -d <your_db> -u pos_retail --stop-after-init
 
 # Then run normally:
-venv\Scripts\python.exe odoo\odoo-bin -c odoo.conf
+venv/Scripts/python.exe odoo/odoo-bin -c odoo.conf
 ```
 
-`pos_retail` depends on the full MVP stack — `point_of_sale`, `contacts`,
-`pos_loyalty`, `pos_discount`, `pos_hr`, `product_expiry`, `purchase` — so a single
-`-i pos_retail` installs everything (Sales, Inventory, Accounting, Loyalty are
-pulled transitively).
+`pos_retail` depends on the full MVP stack — `point_of_sale`, `contacts`, `pos_loyalty`, `pos_discount`, `pos_hr`, `product_expiry`, `purchase` — so a single `-i pos_retail` installs everything (Sales, Inventory, Accounting, Loyalty are pulled transitively).
 
 See [docs/SETUP_CHECKLIST.md](docs/SETUP_CHECKLIST.md) for the full Week 0–1
 configuration checklist (maps every discount/offer to a standard Loyalty program).
