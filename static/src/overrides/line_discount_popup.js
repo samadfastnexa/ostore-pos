@@ -27,13 +27,14 @@ export class LineDiscountPopup extends Component {
         const origPrice = line.price_unit || 0;
         const currentDiscount = line.discount || 0;
         const initialFixed = currentDiscount > 0 ? (origPrice * currentDiscount / 100) : 0;
-        const initialTargetPrice = currentDiscount > 0 ? Math.max(0, origPrice - initialFixed) : origPrice;
+        const initialFinalPrice = currentDiscount > 0 ? Math.max(0, origPrice - initialFixed) : origPrice;
+
+        const defaultTab = this.props.initialMode === "price" ? "price" : "percent";
 
         this.state = useState({
-            mode: this.props.initialMode || line.pos_retail_line_discount_input_type || "percent",
-            discountPct: currentDiscount > 0 ? String(currentDiscount) : "",
-            discountFixed: initialFixed > 0 ? initialFixed.toFixed(2) : "",
-            targetPrice: currentDiscount > 0 ? initialTargetPrice.toFixed(2) : "",
+            tab: defaultTab, // "percent" or "price"
+            pctInput: currentDiscount > 0 ? String(currentDiscount) : "",
+            priceInput: currentDiscount > 0 ? initialFinalPrice.toFixed(2) : origPrice.toFixed(2),
             reason: line.pos_retail_line_discount_reason || "",
             applyToAll: false,
         });
@@ -67,51 +68,44 @@ export class LineDiscountPopup extends Component {
         return this.line.pos_retail_max_price || this.productTemplate?.mrp || 0;
     }
 
-    get enteredPercent() {
-        const val = parseFloat(this.state.discountPct);
+    get currentPercent() {
+        const val = parseFloat(this.state.pctInput);
         return Number.isFinite(val) && val >= 0 ? val : 0;
     }
 
-    get enteredFixed() {
-        const val = parseFloat(this.state.discountFixed);
-        return Number.isFinite(val) && val >= 0 ? val : 0;
+    get currentFinalPrice() {
+        if (this.state.tab === "price") {
+            const val = parseFloat(this.state.priceInput);
+            return Number.isFinite(val) && val >= 0 ? val : this.originalUnitPrice;
+        }
+        return Math.max(0, this.originalUnitPrice * (1 - this.currentPercent / 100));
     }
 
-    get discountAmountUnit() {
-        return (this.originalUnitPrice * this.enteredPercent) / 100;
+    get currentDiscountAmount() {
+        return Math.max(0, this.originalUnitPrice - this.currentFinalPrice);
     }
 
     get totalDiscountAmount() {
-        return this.discountAmountUnit * (this.line.qty || 1);
-    }
-
-    get finalUnitPrice() {
-        return Math.max(0, this.originalUnitPrice - this.discountAmountUnit);
+        return this.currentDiscountAmount * (this.line.qty || 1);
     }
 
     get totalFinalPrice() {
-        return this.finalUnitPrice * (this.line.qty || 1);
-    }
-
-    get maxAllowedDiscountAmount() {
-        if (!this.minPrice) {
-            return this.originalUnitPrice;
-        }
-        return Math.max(0, this.originalUnitPrice - this.minPrice);
+        return this.currentFinalPrice * (this.line.qty || 1);
     }
 
     get maxAllowedDiscountPercent() {
         if (!this.minPrice || this.originalUnitPrice <= 0) {
             return 100;
         }
-        return Math.min(100, (this.maxAllowedDiscountAmount / this.originalUnitPrice) * 100);
+        const maxOff = Math.max(0, this.originalUnitPrice - this.minPrice);
+        return Math.min(100, (maxOff / this.originalUnitPrice) * 100);
     }
 
     get isBelowMinimum() {
         if (!this.minPrice) {
             return false;
         }
-        return this.finalUnitPrice < this.minPrice - 0.001;
+        return this.currentFinalPrice < this.minPrice - 0.001;
     }
 
     get canManagerOverride() {
@@ -125,95 +119,75 @@ export class LineDiscountPopup extends Component {
         return (amount || 0).toFixed(2);
     }
 
-    onPercentInput(ev) {
-        const val = ev.target.value;
-        this.state.discountPct = val;
-        this.state.mode = "percent";
-        const num = parseFloat(val);
-        if (Number.isFinite(num) && num >= 0 && this.originalUnitPrice > 0) {
-            const fixed = (this.originalUnitPrice * num) / 100;
-            this.state.discountFixed = fixed.toFixed(2);
-            this.state.targetPrice = Math.max(0, this.originalUnitPrice - fixed).toFixed(2);
+    setTab(newTab) {
+        this.state.tab = newTab;
+        if (newTab === "price") {
+            this.state.priceInput = this.currentFinalPrice.toFixed(2);
         } else {
-            this.state.discountFixed = "";
-            this.state.targetPrice = "";
+            this.state.pctInput = this.currentPercent > 0 ? this.currentPercent.toFixed(2) : "";
         }
     }
 
-    onFixedInput(ev) {
+    onPctInput(ev) {
         const val = ev.target.value;
-        this.state.discountFixed = val;
-        this.state.mode = "fixed";
+        this.state.pctInput = val;
         const num = parseFloat(val);
         if (Number.isFinite(num) && num >= 0 && this.originalUnitPrice > 0) {
-            const pct = (num / this.originalUnitPrice) * 100;
-            this.state.discountPct = pct.toFixed(2);
-            this.state.targetPrice = Math.max(0, this.originalUnitPrice - num).toFixed(2);
+            const fp = Math.max(0, this.originalUnitPrice * (1 - num / 100));
+            this.state.priceInput = fp.toFixed(2);
         } else {
-            this.state.discountPct = "";
-            this.state.targetPrice = "";
+            this.state.priceInput = this.originalUnitPrice.toFixed(2);
         }
     }
 
-    onTargetPriceInput(ev) {
+    onPriceInput(ev) {
         const val = ev.target.value;
-        this.state.targetPrice = val;
-        this.state.mode = "price";
+        this.state.priceInput = val;
         const num = parseFloat(val);
         if (Number.isFinite(num) && num >= 0 && this.originalUnitPrice > 0) {
-            const fixed = Math.max(0, this.originalUnitPrice - num);
-            const pct = (fixed / this.originalUnitPrice) * 100;
-            this.state.discountFixed = fixed.toFixed(2);
-            this.state.discountPct = pct.toFixed(2);
+            const disc = Math.max(0, this.originalUnitPrice - num);
+            const pct = (disc / this.originalUnitPrice) * 100;
+            this.state.pctInput = pct.toFixed(2);
         } else {
-            this.state.discountFixed = "";
-            this.state.discountPct = "";
+            this.state.pctInput = "";
         }
     }
 
-    applyPreset(pct) {
-        this.state.discountPct = String(pct);
-        this.state.mode = "percent";
+    applyPresetPercent(pct) {
+        this.state.tab = "percent";
+        this.state.pctInput = String(pct);
         if (this.originalUnitPrice > 0) {
-            const fixed = (this.originalUnitPrice * pct) / 100;
-            this.state.discountFixed = fixed.toFixed(2);
-            this.state.targetPrice = Math.max(0, this.originalUnitPrice - fixed).toFixed(2);
+            const fp = Math.max(0, this.originalUnitPrice * (1 - pct / 100));
+            this.state.priceInput = fp.toFixed(2);
         }
     }
 
-    applyTargetPrice(price) {
+    applyPresetPrice(price) {
+        this.state.tab = "price";
         const num = parseFloat(price);
         if (Number.isFinite(num) && this.originalUnitPrice > 0) {
-            const fixed = Math.max(0, this.originalUnitPrice - num);
-            const pct = (fixed / this.originalUnitPrice) * 100;
-            this.state.targetPrice = num.toFixed(2);
-            this.state.discountFixed = fixed.toFixed(2);
-            this.state.discountPct = pct.toFixed(2);
-            this.state.mode = "price";
+            this.state.priceInput = num.toFixed(2);
+            const disc = Math.max(0, this.originalUnitPrice - num);
+            const pct = (disc / this.originalUnitPrice) * 100;
+            this.state.pctInput = pct.toFixed(2);
         }
     }
 
     applyMaxAllowed() {
         if (this.minPrice > 0) {
-            this.applyTargetPrice(this.minPrice);
+            this.applyPresetPrice(this.minPrice);
         } else {
-            this.applyPreset(100);
+            this.applyPresetPercent(100);
         }
     }
 
-    clearDiscount() {
-        this.state.discountPct = "0";
-        this.state.discountFixed = "0.00";
-        this.state.targetPrice = this.originalUnitPrice.toFixed(2);
-        this.state.mode = "percent";
+    clearAll() {
+        this.state.pctInput = "0";
+        this.state.priceInput = this.originalUnitPrice.toFixed(2);
     }
 
     async confirm() {
-        const pct = this.enteredPercent;
-        if (pct < 0 || pct > 100) {
-            this.notification.add(_t("Please enter a discount percentage between 0 and 100."), { type: "danger" });
-            return;
-        }
+        const pct = Math.min(100, Math.max(0, this.currentPercent));
 
         // Enforce Minimum Selling Price
         let manager = false;
@@ -222,12 +196,12 @@ export class LineDiscountPopup extends Component {
                 this.dialog.add(AlertDialog, {
                     title: _t("⚠️ Discount Not Allowed"),
                     body: _t(
-                        "This discount would reduce the selling price below the minimum allowed price.\n\n" +
+                        "The entered price is below the minimum allowed price.\n\n" +
                         "Minimum Selling Price: %s\n" +
-                        "Current Final Price: %s\n\n" +
-                        "Please reduce the discount.",
+                        "Entered Price: %s\n\n" +
+                        "Please adjust the discount or price.",
                         this.formatCurrency(this.minPrice),
-                        this.formatCurrency(this.finalUnitPrice)
+                        this.formatCurrency(this.currentFinalPrice)
                     ),
                 });
                 return;
@@ -235,7 +209,7 @@ export class LineDiscountPopup extends Component {
 
             // Manager Override flow
             manager = await posRetailRequestManagerPin(this.pos, this.dialog, this.notification, {
-                title: _t("Manager Override — Below Minimum Price"),
+                title: _t("Manager PIN — Below Minimum Price Approval"),
                 noManagerMessage: _t("No manager is configured to approve selling below minimum price."),
             });
             if (!manager) {
@@ -245,16 +219,18 @@ export class LineDiscountPopup extends Component {
 
         // Check if discount reason is required
         if (this.pos.config.pos_retail_line_discount_require_reason && pct > 0 && !this.state.reason.trim()) {
-            this.notification.add(_t("Please provide a reason for the discount."), { type: "warning" });
+            this.notification.add(_t("Please enter a reason for the discount."), { type: "warning" });
             return;
         }
 
+        const inputType = this.state.tab === "price" ? "fixed" : "percent";
+
         // Apply to all products if checked
         if (this.state.applyToAll) {
-            await this.applyDiscountToAll(pct, this.state.mode, this.state.reason, manager);
+            await this.applyDiscountToAll(pct, inputType, this.state.reason, manager);
         } else {
             // Apply only to selected line
-            this.applyDiscountToLine(this.line, pct, this.state.mode, this.state.reason, manager);
+            this.applyDiscountToLine(this.line, pct, inputType, this.state.reason, manager);
         }
 
         this.props.close();
@@ -308,7 +284,7 @@ export class LineDiscountPopup extends Component {
 
         if (blockedLines.length > 0) {
             const listStr = blockedLines
-                .map((b) => `• ${b.name}: Minimum ${this.formatCurrency(b.minPrice)} (Max Allowed: ${b.maxAllowedPct}%)`)
+                .map((b) => `• ${b.name}: Min ${this.formatCurrency(b.minPrice)} (Max Allowed: ${b.maxAllowedPct}%)`)
                 .join("\n");
 
             this.dialog.add(AlertDialog, {

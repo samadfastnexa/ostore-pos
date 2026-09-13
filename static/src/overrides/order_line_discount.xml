@@ -1,31 +1,25 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Clear, touch-friendly Discount and Price action buttons on each cart line -->
+    <!-- Clear, touch-friendly Discount button on each cart line -->
     <t t-name="pos_retail.OrderlineDiscountButton" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('product-name')]" position="inside">
-            <div t-if="line.qty &gt; 0 and !line.refunded_orderline_id and !line.isGlobalDiscountLine?.()"
+            <div t-if="props.onDiscount and line.qty &gt; 0 and !line.refunded_orderline_id and !line.isGlobalDiscountLine?.()"
                  class="pos-retail-line-actions d-inline-flex align-items-center gap-1 ms-2">
-                <button t-if="props.onDiscount"
-                        class="pos-retail-line-disc-btn btn btn-sm py-0 px-2"
+                <button class="pos-retail-line-disc-btn btn btn-sm py-0 px-2 shadow-sm"
                         t-att-class="line.discount ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
-                        style="font-size: 0.72rem; line-height: 1.4; border-radius: 4px;"
-                        title="Apply Discount (% or Amount or Target Price)"
+                        style="font-size: 0.75rem; line-height: 1.4; border-radius: 4px;"
+                        title="Apply or edit product discount"
                         t-on-pointerdown.stop="() => {}"
                         t-on-pointerup.stop="() => {}"
-                        t-on-click.stop="() => props.onDiscount(line, 'discount')">
+                        t-on-click.stop="() => props.onDiscount(line)">
                     <i class="fa fa-percent me-1"/>
-                    <t t-if="line.discount"><t t-esc="line.discount"/>%</t>
-                    <t t-else="">Discount</t>
-                </button>
-                <button t-if="props.onDiscount"
-                        class="pos-retail-line-price-btn btn btn-sm btn-outline-primary py-0 px-2"
-                        style="font-size: 0.72rem; line-height: 1.4; border-radius: 4px;"
-                        title="Set Selling Price directly"
-                        t-on-pointerdown.stop="() => {}"
-                        t-on-pointerup.stop="() => {}"
-                        t-on-click.stop="() => props.onDiscount(line, 'price')">
-                    <i class="fa fa-tag me-1"/>Price
+                    <t t-if="line.discount">
+                        <t t-esc="line.discount"/>% OFF
+                    </t>
+                    <t t-else="">
+                        Discount
+                    </t>
                 </button>
             </div>
         </xpath>
@@ -43,7 +37,6 @@
     <t t-name="pos_retail.OrderSummaryLineDiscount" t-inherit="point_of_sale.OrderSummary" t-inherit-mode="extension">
         <xpath expr="//Orderline" position="attributes">
             <attribute name="onDiscount">(line, mode) => this.posRetailOpenLineDiscount(line, mode)</attribute>
-            <attribute name="onSetPrice">(line) => this.posRetailOpenLineDiscount(line, 'price')</attribute>
         </xpath>
     </t>
 
