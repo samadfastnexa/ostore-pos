@@ -1,30 +1,70 @@
 // Customer & Vendor profile card and ledger shown at the till.
 // Big, legible figures and high-contrast badges for quick cashier scanning.
 
+.modal-dialog:has(.pos-retail-profile) {
+    max-width: 1120px;
+    width: 95vw;
+}
+
 .pos-retail-profile {
-    width: 880px;
-    max-width: 94vw;
+    width: 100%;
+
+    // High contrast button overrides to guarantee text visibility
+    .btn-outline-primary {
+        color: #6d28d9 !important;
+        border-color: #7c3aed !important;
+        background-color: #fff !important;
+
+        i, span {
+            color: #6d28d9 !important;
+        }
+
+        &:hover, &:active, &.active {
+            color: #fff !important;
+            background-color: #6d28d9 !important;
+            border-color: #6d28d9 !important;
+
+            i, span {
+                color: #fff !important;
+            }
+        }
+    }
+
+    .btn-primary {
+        background-color: #6d28d9 !important;
+        border-color: #6d28d9 !important;
+        color: #ffffff !important;
+
+        i, span {
+            color: #ffffff !important;
+        }
+
+        &:hover, &:active {
+            background-color: #5b21b6 !important;
+            border-color: #5b21b6 !important;
+        }
+    }
 
     &__avatar {
-        width: 52px;
-        height: 52px;
+        width: 40px;
+        height: 40px;
         flex: none;
         border-radius: 50%;
         display: grid;
         place-items: center;
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         font-weight: 800;
         color: #fff;
         background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
-        box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3);
+        box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
     }
 
     &__tier {
         display: inline-block;
-        padding: 0.15rem 0.55rem;
+        padding: 0.12rem 0.5rem;
         border-radius: 1rem;
         font-weight: 700;
-        font-size: 0.72rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: #6d28d9;
@@ -34,18 +74,18 @@
     &__grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0.6rem;
+        gap: 0.5rem;
     }
 
     &__stat {
         display: flex;
         flex-direction: column;
-        gap: 0.15rem;
-        padding: 0.7rem 0.85rem;
+        gap: 0.1rem;
+        padding: 0.4rem 0.65rem;
         border: 1px solid rgba(0, 0, 0, 0.09);
-        border-radius: 0.65rem;
+        border-radius: 0.5rem;
         background: #fff;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
         transition: transform 0.1s ease, box-shadow 0.1s ease;
 
         &.is-debit {
@@ -75,15 +115,15 @@
     }
 
     &__label {
-        font-size: 0.72rem;
+        font-size: 0.68rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.03em;
         color: #4b5563;
     }
 
     &__value {
-        font-size: 1.25rem;
+        font-size: 1.15rem;
         font-weight: 800;
         line-height: 1.2;
     }
@@ -106,11 +146,11 @@
     }
 
     &__note {
-        padding: 0.55rem 0.75rem;
+        padding: 0.45rem 0.65rem;
         border-left: 3px solid #d97706;
         border-radius: 0.35rem;
         background: rgba(217, 119, 6, 0.08);
-        font-size: 0.88rem;
+        font-size: 0.85rem;
         white-space: pre-line;
     }
 }
@@ -119,13 +159,15 @@
 .pos-retail-main-tabs {
     .btn {
         border-width: 2px;
-        font-size: 1.05rem;
+        font-size: 0.95rem;
     }
 }
 
 .pos-retail-sub-tabs {
     .btn {
         font-weight: 600;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
         border-radius: 0.45rem;
     }
 }
@@ -133,27 +175,33 @@
 // Customer & Vendor history table container
 .pos-retail-history {
     &__last {
-        background: rgba(124, 58, 237, 0.05);
+        background: rgba(124, 58, 237, 0.04);
         border-color: rgba(124, 58, 237, 0.15) !important;
     }
 
     &__body {
-        max-height: 42vh;
-        min-height: 200px;
+        max-height: 48vh;
+        min-height: 220px;
         overflow-y: auto;
 
         table {
             margin-bottom: 0;
-            font-size: 0.88rem;
+            font-size: 0.84rem;
 
             th {
                 font-weight: 700;
                 color: #374151;
                 white-space: nowrap;
+                position: sticky;
+                top: 0;
+                background: #f8fafc;
+                z-index: 2;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
             }
 
             td {
                 vertical-align: middle;
+                padding: 0.32rem 0.5rem;
             }
         }
     }

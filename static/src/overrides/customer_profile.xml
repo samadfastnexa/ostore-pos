@@ -2,14 +2,14 @@
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.CustomerProfile">
-        <Dialog title="(partner ? partner.name : '') + ' — Ledger &amp; History'" bodyClass="'pos-retail-profile'">
+        <Dialog size="'xl'" title="(partner ? partner.name : '') + ' — Ledger &amp; History'" bodyClass="'pos-retail-profile'">
             <!-- Header: Partner Info & Quick Tags & Action Controls -->
-            <div class="pos-retail-profile__head d-flex align-items-center justify-content-between gap-3 mb-2">
-                <div class="d-flex align-items-center gap-3 min-w-0 flex-grow-1">
+            <div class="pos-retail-profile__head d-flex align-items-center justify-content-between gap-3 mb-2 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1">
                     <div class="pos-retail-profile__avatar flex-shrink-0" t-esc="(partner ? partner.name : '?').charAt(0).toUpperCase()"/>
                     <div class="min-w-0 flex-grow-1">
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <span class="fs-4 fw-bolder text-truncate" t-esc="partner ? partner.name : ''"/>
+                            <span class="fs-5 fw-bold text-truncate" t-esc="partner ? partner.name : ''"/>
                             <span t-if="partner and partner.membership_level_id"
                                   class="pos-retail-profile__tier"
                                   t-esc="partner.membership_level_id.name"/>
@@ -22,7 +22,7 @@
                                 <i class="fa fa-user me-1"/>Customer
                             </span>
                         </div>
-                        <div class="text-muted small d-flex flex-wrap gap-3 mt-1">
+                        <div class="text-muted small d-flex flex-wrap gap-3 mt-1" style="font-size: 0.8rem;">
                             <span t-if="partner and (partner.phone or (state.data and state.data.phone))">
                                 <i class="fa fa-phone me-1 text-primary"/>
                                 <t t-esc="state.data ? state.data.phone : partner.phone"/>
@@ -40,11 +40,22 @@
                 </div>
 
                 <!-- Right Header Actions: Switch/Change partner & Cart sync -->
-                <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    <span t-if="isCurrentOrderPartner" class="badge text-bg-success py-1 px-2" style="font-size: 0.75rem;">
+                        <i class="fa fa-check-circle me-1"/>In Current Cart
+                    </span>
+                    <button t-else=""
+                            type="button"
+                            class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 py-1 px-2"
+                            style="font-size: 0.78rem;"
+                            t-on-click="setAsCurrentOrderCustomer"
+                            title="Set this partner to active POS Cart">
+                        <i class="fa fa-shopping-cart"/> Set to Cart
+                    </button>
                     <div class="btn-group shadow-sm">
                         <button type="button"
-                                class="btn btn-primary btn-sm fw-bold d-flex align-items-center gap-1"
-                                t-att-class="{ 'btn-outline-primary': !state.showSwitcher, 'btn-primary text-white': state.showSwitcher }"
+                                class="btn btn-sm fw-bold d-flex align-items-center gap-1"
+                                t-att-class="state.showSwitcher ? 'btn-primary text-white shadow-sm' : 'btn-outline-primary'"
                                 t-on-click="toggleSwitcher"
                                 title="Change or Search another Customer or Vendor">
                             <i class="fa fa-users"/>
@@ -57,17 +68,6 @@
                             <i class="fa fa-list"/>
                         </button>
                     </div>
-                    <button t-if="!isCurrentOrderPartner"
-                            type="button"
-                            class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 py-0 px-2 mt-1"
-                            style="font-size: 0.78rem;"
-                            t-on-click="setAsCurrentOrderCustomer"
-                            title="Set this partner to active POS Cart">
-                        <i class="fa fa-shopping-cart"/> Set to Order
-                    </button>
-                    <span t-else="" class="badge text-bg-success py-1 px-2 mt-1" style="font-size: 0.72rem;">
-                        <i class="fa fa-check-circle me-1"/>In Current Cart
-                    </span>
                 </div>
             </div>
 
@@ -203,22 +203,22 @@
             </div>
 
             <!-- PRIMARY NAVIGATION: SIDE-BY-SIDE TABS FOR CUSTOMER AND VENDOR -->
-            <div class="pos-retail-main-tabs btn-group w-100 mb-3" role="group">
+            <div class="pos-retail-main-tabs btn-group w-100 mb-2" role="group">
                 <button type="button"
-                        class="btn btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-2"
+                        class="btn fw-bold d-flex align-items-center justify-content-center gap-2 py-1"
                         t-att-class="state.activeSide === 'customer' ? 'btn-primary' : 'btn-outline-primary'"
                         t-on-click="() => this.setActiveSide('customer')">
-                    <i class="fa fa-user-circle fs-5"/>
+                    <i class="fa fa-user-circle fs-6"/>
                     <span>Customer Details &amp; Ledger</span>
                     <span t-if="state.data and state.data.sales_count" class="badge text-bg-light ms-1">
                         <t t-esc="state.data.sales_count"/> Orders
                     </span>
                 </button>
                 <button type="button"
-                        class="btn btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-2"
+                        class="btn fw-bold d-flex align-items-center justify-content-center gap-2 py-1"
                         t-att-class="state.activeSide === 'vendor' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
                         t-on-click="() => this.setActiveSide('vendor')">
-                    <i class="fa fa-truck fs-5"/>
+                    <i class="fa fa-truck fs-6"/>
                     <span>Vendor Details &amp; Ledger</span>
                     <span t-if="state.data and (state.data.purchase_orders_count or (state.data.vendor_bills and state.data.vendor_bills.length))" class="badge text-bg-dark ms-1">
                         <t t-esc="state.data.purchase_orders_count || state.data.vendor_bills.length"/> Records
@@ -243,79 +243,85 @@
             <!-- ======================================================== -->
             <div t-if="state.activeSide === 'customer'" class="pos-retail-tab-content">
                 <!-- KHATA / LEDGER KPI CARDS (Customer) -->
-                <div class="pos-retail-profile__grid mb-3">
+                <div class="pos-retail-profile__grid mb-2">
                     <!-- 1. Total Debit (Invoiced/Charges) -->
-                    <div class="pos-retail-profile__stat is-debit">
+                    <div class="pos-retail-profile__stat is-debit" title="All invoiced sales &amp; charges">
                         <span class="pos-retail-profile__label text-primary">Total Debit (Purchases)</span>
                         <span class="pos-retail-profile__value text-primary"
                               t-esc="state.data ? state.data.customer_debit.formatted : formatCurrency(partner.pos_total_spent)"/>
-                        <span class="small text-muted">All invoiced sales &amp; charges</span>
                     </div>
 
                     <!-- 2. Total Credit (Payments Received) -->
-                    <div class="pos-retail-profile__stat is-credit">
+                    <div class="pos-retail-profile__stat is-credit" title="Payments &amp; refunds credited">
                         <span class="pos-retail-profile__label text-success">Total Credit (Paid)</span>
                         <span class="pos-retail-profile__value text-success"
                               t-esc="state.data ? state.data.customer_credit.formatted : formatCurrency((partner.pos_total_spent || 0) - (partner.pos_outstanding_balance || 0))"/>
-                        <span class="small text-muted">Payments &amp; refunds credited</span>
                     </div>
 
                     <!-- 3. Net Balance (Outstanding) -->
                     <div class="pos-retail-profile__stat"
                          t-att-class="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0 ? 'is-danger' : 'is-success'">
-                        <span class="pos-retail-profile__label">Net Balance (Owed)</span>
+                        <div class="d-flex align-items-center justify-content-between gap-1">
+                            <span class="pos-retail-profile__label">Net Balance (Owed)</span>
+                            <span t-if="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0"
+                                  class="badge text-bg-danger" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
+                                Owed
+                            </span>
+                            <span t-elif="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) == 0"
+                                  class="badge text-bg-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
+                                Clear
+                            </span>
+                            <span t-else="" class="badge text-bg-info" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
+                                Advance
+                            </span>
+                        </div>
                         <span class="pos-retail-profile__value"
                               t-esc="state.data ? state.data.customer_balance.formatted : formatCurrency(partner.pos_outstanding_balance)"/>
-                        <span class="small text-muted">
-                            <t t-if="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0">
-                                <span class="badge text-bg-danger">Outstanding Owed</span>
-                            </t>
-                            <t t-elif="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) == 0">
-                                <span class="badge text-bg-success">Settled / Clear</span>
-                            </t>
-                            <t t-else="">
-                                <span class="badge text-bg-info">Advance Credit</span>
-                            </t>
-                        </span>
                     </div>
 
                     <!-- 4. Credit Limit & Available or Loyalty -->
                     <div t-if="hasCreditLimit" class="pos-retail-profile__stat"
                          t-att-class="{ 'is-danger': overLimit }">
-                        <span class="pos-retail-profile__label">Credit Available / Limit</span>
+                        <div class="d-flex align-items-center justify-content-between gap-1">
+                            <span class="pos-retail-profile__label">Credit Available</span>
+                            <span class="small text-muted" style="font-size: 0.68rem;">
+                                Limit: <strong t-esc="formatCurrency(state.data ? state.data.credit_limit : partner.pos_credit_limit)"/>
+                            </span>
+                        </div>
                         <span class="pos-retail-profile__value"
                               t-esc="formatCurrency(state.data ? state.data.credit_available : partner.pos_credit_available)"/>
-                        <span class="small text-muted">
-                            Limit: <strong t-esc="formatCurrency(state.data ? state.data.credit_limit : partner.pos_credit_limit)"/>
-                        </span>
                     </div>
                     <div t-else="" class="pos-retail-profile__stat">
-                        <span class="pos-retail-profile__label">Loyalty Points &amp; Orders</span>
+                        <div class="d-flex align-items-center justify-content-between gap-1">
+                            <span class="pos-retail-profile__label">Loyalty &amp; Orders</span>
+                            <span class="small text-muted" style="font-size: 0.68rem;">
+                                <strong t-esc="state.data ? state.data.sales_order_count : (partner.pos_sales_order_count || 0)"/> Orders
+                            </span>
+                        </div>
                         <span class="pos-retail-profile__value"
                               t-esc="(state.data ? state.data.loyalty_points : Math.round(partner.pos_loyalty_points || 0)) + ' Pts'"/>
-                        <span class="small text-muted">
-                            Orders: <strong t-esc="state.data ? state.data.sales_order_count : (partner.pos_sales_order_count || 0)"/>
-                            | Last: <span t-esc="lastPurchase"/>
-                        </span>
                     </div>
                 </div>
 
                 <!-- Repeat Last Order Banner -->
                 <div t-if="state.data and state.data.last_basket and state.data.last_basket.length"
-                     class="pos-retail-history__last d-flex align-items-center justify-content-between gap-3 mb-3 p-2 border rounded">
-                    <div>
-                        <div class="fw-bold">
-                            <i class="fa fa-shopping-basket me-1 text-primary"/>
-                            Last Order: <span class="text-primary" t-esc="state.data.last_order_name"/>
-                            — <span class="text-success fw-bold" t-esc="state.data.last_order_total"/>
-                        </div>
-                        <div class="small text-muted text-truncate" style="max-width: 480px;">
+                     class="pos-retail-history__last d-flex align-items-center justify-content-between gap-2 mb-2 py-1 px-2 border rounded">
+                    <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1" style="font-size: 0.82rem;">
+                        <i class="fa fa-shopping-basket text-primary flex-shrink-0"/>
+                        <span class="fw-bold flex-shrink-0">
+                            Last: <span class="text-primary" t-esc="state.data.last_order_name"/>
+                            (<span class="text-success fw-bold" t-esc="state.data.last_order_total"/>)
+                        </span>
+                        <span class="text-muted text-truncate" style="max-width: 500px;">
                             <t t-foreach="state.data.last_basket" t-as="item" t-key="item.product_id">
                                 <span t-esc="item.name"/> (x<t t-esc="item.qty"/>)<t t-if="!item_last">, </t>
                             </t>
-                        </div>
+                        </span>
                     </div>
-                    <button class="btn btn-sm btn-primary" t-on-click="() => this.repeatLastOrder()">
+                    <button class="btn btn-sm btn-primary py-0 px-2 flex-shrink-0"
+                            style="font-size: 0.78rem; height: 26px;"
+                            t-on-click="() => this.repeatLastOrder()"
+                            title="Load items from last order into cart">
                         <i class="fa fa-repeat me-1"/> Repeat Order
                     </button>
                 </div>
@@ -583,52 +589,49 @@
             <!-- ======================================================== -->
             <div t-if="state.activeSide === 'vendor'" class="pos-retail-tab-content">
                 <!-- VENDOR KHATA / LEDGER KPI CARDS -->
-                <div class="pos-retail-profile__grid mb-3">
+                <div class="pos-retail-profile__grid mb-2">
                     <!-- 1. Total Bills (Vendor Credit) -->
-                    <div class="pos-retail-profile__stat is-debit">
+                    <div class="pos-retail-profile__stat is-debit" title="Goods &amp; services billed by vendor">
                         <span class="pos-retail-profile__label text-primary">Total Bills (Credit)</span>
                         <span class="pos-retail-profile__value text-primary"
                               t-esc="state.data ? state.data.vendor_bills_total.formatted : '$ 0.00'"/>
-                        <span class="small text-muted">Goods &amp; services billed by vendor</span>
                     </div>
 
                     <!-- 2. Total Paid (Vendor Debit) -->
-                    <div class="pos-retail-profile__stat is-credit">
+                    <div class="pos-retail-profile__stat is-credit" title="Payments made to this vendor">
                         <span class="pos-retail-profile__label text-success">Total Paid (Debit)</span>
                         <span class="pos-retail-profile__value text-success"
                               t-esc="state.data ? state.data.vendor_paid_total.formatted : '$ 0.00'"/>
-                        <span class="small text-muted">Payments made to this vendor</span>
                     </div>
 
                     <!-- 3. Net Payable Balance -->
                     <div class="pos-retail-profile__stat"
                          t-att-class="(state.data and state.data.vendor_balance.amount > 0) ? 'is-danger' : 'is-success'">
-                        <span class="pos-retail-profile__label">Net Payable Balance</span>
+                        <div class="d-flex align-items-center justify-content-between gap-1">
+                            <span class="pos-retail-profile__label">Net Payable</span>
+                            <span t-if="state.data and state.data.vendor_balance.amount > 0"
+                                  class="badge text-bg-warning text-dark" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
+                                We Owe
+                            </span>
+                            <span t-else="" class="badge text-bg-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
+                                Clear
+                            </span>
+                        </div>
                         <span class="pos-retail-profile__value"
                               t-esc="state.data ? state.data.vendor_balance.formatted : '$ 0.00'"/>
-                        <span class="small text-muted">
-                            <t t-if="state.data and state.data.vendor_balance.amount > 0">
-                                <span class="badge text-bg-warning text-dark">We Owe Vendor</span>
-                            </t>
-                            <t t-else="">
-                                <span class="badge text-bg-success">Settled / Clear</span>
-                            </t>
-                        </span>
                     </div>
 
                     <!-- 4. Purchase Orders Count -->
                     <div class="pos-retail-profile__stat">
-                        <span class="pos-retail-profile__label">Purchase Orders</span>
+                        <div class="d-flex align-items-center justify-content-between gap-1">
+                            <span class="pos-retail-profile__label">Purchase Orders</span>
+                            <span t-if="state.data and state.data.is_vendor"
+                                  class="badge text-bg-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
+                                Supplier
+                            </span>
+                        </div>
                         <span class="pos-retail-profile__value"
                               t-esc="(state.data ? state.data.purchase_orders_count : 0) + ' Orders'"/>
-                        <span class="small text-muted">
-                            <t t-if="state.data and state.data.is_vendor">
-                                <span class="badge text-bg-success">Active Supplier</span>
-                            </t>
-                            <t t-else="">
-                                <span class="badge text-bg-secondary">Not Supplier</span>
-                            </t>
-                        </span>
                     </div>
                 </div>
 
@@ -805,7 +808,7 @@
                             <i class="fa fa-list me-1"/>Directory
                         </button>
                     </div>
-                    <button type="button" class="btn btn-secondary btn-lg px-4" t-on-click="() => this.props.close()">
+                    <button type="button" class="btn btn-secondary px-4" t-on-click="() => this.props.close()">
                         Close
                     </button>
                 </div>
