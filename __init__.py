@@ -93,7 +93,38 @@ def _pos_retail_post_init(env):
     _pos_retail_seed_till_capabilities(env)
     _pos_retail_seed_dashboard_permissions(env)
     _pos_retail_refresh_branch_rules(env)
+    _pos_retail_relax_journal_comp_rule(env)
+    _pos_retail_fix_company_hierarchy(env)
     _pos_retail_sync_cashier_companies(env)
+
+
+def _pos_retail_relax_journal_comp_rule(env):
+    """Ensure account.journal multi-company rule allows branches to read parent journals and vice-versa."""
+    rule = env.ref('account.journal_comp_rule', raise_if_not_found=False)
+    if rule:
+        desired_domain = "['|', '|', '|', '|', ('company_id', '=', False), ('company_id', 'parent_of', company_ids), ('company_id', 'child_of', company_ids), ('company_id', 'in', company_ids), ('company_id', 'in', user.company_ids.ids)]"
+        if rule.domain_force != desired_domain:
+            rule.sudo().write({
+                'name': 'Journal: visible to branches and parent',
+                'domain_force': desired_domain,
+            })
+
+
+def _pos_retail_fix_company_hierarchy(env):
+    """Ensure all branch companies have their parent_id set to the root holding company."""
+    Company = env['res.company'].sudo()
+    root = Company.search([('parent_id', '=', False)], order='id', limit=1)
+    if root:
+        branches = Company.search([('id', '!=', root.id), ('parent_id', '=', False)])
+        if branches:
+            branches.write({'parent_id': root.id})
+
+    # Ensure Administrator (user id=2) has access to all companies
+    admin_user = env.ref('base.user_admin', raise_if_not_found=False)
+    if admin_user:
+        all_companies = Company.search([])
+        if set(admin_user.company_ids.ids) != set(all_companies.ids):
+            admin_user.write({'company_ids': [(6, 0, all_companies.ids)]})
 
 
 def _pos_retail_sync_cashier_companies(env):

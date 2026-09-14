@@ -260,7 +260,7 @@ class ResPartner(models.Model):
         """
         self.ensure_one()
         partner = self.sudo()
-        currency = self.env.company.currency_id
+        currency = (partner.company_id or self.env.company).currency_id
 
         def money(amount):
             amt = round(amount or 0.0, 2)
@@ -277,9 +277,10 @@ class ResPartner(models.Model):
         def is_credit_pm(pm):
             if not pm:
                 return False
-            if pm.type == 'pay_later':
+            pm_sudo = pm.sudo()
+            if pm_sudo.type == 'pay_later':
                 return True
-            name = (pm.name or '').strip().lower()
+            name = (pm_sudo.name or '').strip().lower()
             return any(k in name for k in ('credit', 'khata', 'pay later', 'pay_later', 'udhar', 'customer account', 'on account'))
 
         def order_row(order):
@@ -670,7 +671,7 @@ class ResPartner(models.Model):
             for order in open_pos:
                 balance += sum(
                     p.amount for p in order.payment_ids
-                    if p.payment_method_id.type == 'pay_later' or
+                    if p.payment_method_id.sudo().type == 'pay_later' or
                        any(k in (p.payment_method_id.name or '').lower() for k in ('credit', 'khata', 'pay later', 'pay_later', 'udhar', 'customer account', 'on account'))
                 )
             limit = partner.credit_limit or 0.0

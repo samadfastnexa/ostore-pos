@@ -94,7 +94,7 @@ class PosRetailKhataPayment(models.TransientModel):
 
     @api.depends('company_id')
     def _compute_journal_id(self):
-        Journal = self.env['account.journal']
+        Journal = self.env['account.journal'].sudo()
         for wizard in self:
             company = wizard.company_id or self.env.company
             base = [('company_id', '=', company.id)]

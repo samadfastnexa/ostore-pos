@@ -320,4 +320,16 @@
 
     </data>
 
+    <!-- Update the global multi-company rule on account.journal with noupdate="0"
+         so branches can read parent company journals and users can read journals of
+         any assigned company without AccessErrors in POS. -->
+    <data noupdate="0">
+        <record id="account.journal_comp_rule" model="ir.rule">
+            <field name="name">Journal: visible to branches and parent</field>
+            <field name="model_id" ref="account.model_account_journal"/>
+            <field name="domain_force">['|', '|', '|', '|', ('company_id', '=', False), ('company_id', 'parent_of', company_ids), ('company_id', 'child_of', company_ids), ('company_id', 'in', company_ids), ('company_id', 'in', user.company_ids.ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+    </data>
+
 </odoo>

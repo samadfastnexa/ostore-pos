@@ -122,7 +122,7 @@ class PosRetailLedgerAdjustment(models.TransientModel):
         with a back-office adjustment, so look for a Miscellaneous journal
         first and only fall back if the branch has none.
         """
-        Journal = self.env['account.journal']
+        Journal = self.env['account.journal'].sudo()
         for wizard in self:
             company = wizard.company_id or self.env.company
             base = [('type', '=', 'general'), ('company_id', '=', company.id)]

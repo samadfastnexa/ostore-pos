@@ -53,3 +53,4 @@ access_pos_retail_outstanding_vendor_system,pos.retail.outstanding.vendor.system
 access_pos_retail_outstanding_vendor_purchase,pos.retail.outstanding.vendor.purchase,model_pos_retail_outstanding_vendor,purchase.group_purchase_manager,1,0,0,0
 access_pos_retail_outstanding_vendor_invoice,pos.retail.outstanding.vendor.invoice,model_pos_retail_outstanding_vendor,account.group_account_invoice,1,0,0,0
 access_pos_retail_outstanding_vendor_readonly,pos.retail.outstanding.vendor.readonly,model_pos_retail_outstanding_vendor,account.group_account_readonly,1,0,0,0
+access_account_journal_internal_user,account.journal.internal.user,account.model_account_journal,base.group_user,1,0,0,0
