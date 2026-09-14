@@ -11,18 +11,66 @@
             <attribute name="t-attf-class">pos-retail-style-{{order.config.pos_retail_receipt_style || 'standard'}} pos-retail-w{{order.config.pos_retail_receipt_width || '80'}} pos-retail-font-{{order.config.pos_retail_receipt_font || 'normal'}}</attribute>
 </xpath>
 
-        <!-- Package sold and SKU, under each product line (inside
-             Orderline's info list). The package line names the size the
-             customer actually bought; the quantity above it stays in the
-             product's own unit, which is what stock moved by. -->
-        <xpath expr="//Orderline" position="inside">
-            <li t-if="line.pos_retail_package_id" class="pos-retail-line-package">
-                Package: <t t-esc="line.pos_retail_package_id.package_name or line.pos_retail_package_id.uom_id?.name"/>
-            </li>
-            <li t-if="order.config.pos_retail_receipt_show_sku and (line.pos_retail_package_id?.sku or line.product_id?.default_code)"
-                class="pos-retail-line-sku">
-                SKU: <t t-esc="line.pos_retail_package_id?.sku or line.product_id?.default_code"/>
-            </li>
+        <!-- Replace core OrderDisplay with clean columnar table: ITEM | QTY | PRICE | TOTAL -->
+        <xpath expr="//OrderDisplay" position="replace">
+            <div class="pos-retail-receipt-table-wrapper my-2">
+                <table class="pos-retail-receipt-table w-100">
+                    <thead>
+                        <tr class="pos-retail-receipt-th-row">
+                            <th class="col-item text-start">ITEM</th>
+                            <th class="col-qty text-center">QTY</th>
+                            <th class="col-price text-end">PRICE</th>
+                            <th class="col-total text-end">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="posRetailReceiptLines" t-as="line" t-key="line.uuid"
+                            class="pos-retail-receipt-tr align-top">
+                            <td class="col-item text-start">
+                                <div class="fw-bold text-break" t-esc="line.full_product_name or line.product_id?.display_name"/>
+                                <div t-if="line.pos_retail_package_id" class="pos-retail-line-package small text-muted" style="font-size: 80%;">
+                                    Package: <t t-esc="line.pos_retail_package_id.package_name or line.pos_retail_package_id.uom_id?.name"/>
+                                </div>
+                                <div t-if="order.config.pos_retail_receipt_show_sku and (line.pos_retail_package_id?.sku or line.product_id?.default_code)"
+                                     class="pos-retail-line-sku small text-muted" style="font-size: 80%;">
+                                    SKU: <t t-esc="line.pos_retail_package_id?.sku or line.product_id?.default_code"/>
+                                </div>
+                                <div t-if="line.customer_note" class="customer-note small text-muted fst-italic" style="font-size: 80%;">
+                                    <i class="fa fa-sticky-note me-1"/> <t t-esc="line.customer_note"/>
+                                </div>
+                            </td>
+                            <td class="col-qty text-center font-monospace fw-semibold">
+                                <t t-esc="line.getQuantityStr().qtyStr"/>
+                            </td>
+                            <td class="col-price text-end font-monospace">
+                                <t t-esc="line.currencyDisplayPriceUnit"/>
+                            </td>
+                            <td class="col-total text-end font-monospace fw-bold">
+                                <t t-esc="line.currencyDisplayPrice"/>
+                                <span t-if="line.taxGroupLabels" class="small text-muted ms-1" style="font-size: 75%;" t-esc="line.taxGroupLabels"/>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div t-if="order.general_customer_note" class="pos-retail-general-note mt-1 p-1 small fst-italic">
+                    <t t-foreach="order.general_customer_note.trim().split('\n')" t-as="subNote" t-key="subNote_index">
+                        <div class="text-break"><t t-esc="subNote"/></div>
+                    </t>
+                </div>
+            </div>
+        </xpath>
+
+        <!-- Total Discount positioned next to Total -->
+        <xpath expr="//div[hasclass('receipt-total')]" position="after">
+            <div t-if="posRetailTotalDiscount" class="pos-receipt-amount receipt-discount text-start pt-1">
+                <span class="label-total-discount fw-normal">Total Discount</span>
+                <span t-out="posRetailTotalDiscount" class="pos-receipt-right-align font-monospace text-danger"/>
+            </div>
+        </xpath>
+
+        <!-- Suppress the old core Discounts line that appeared after Cash/payments -->
+        <xpath expr="//span[hasclass('label-discount')]/parent::div" position="replace">
+            <!-- Suppressed: Total Discount is shown above payment lines next to Total -->
         </xpath>
 
         <!-- The core template exposes an explicit `before-footer` anchor. -->

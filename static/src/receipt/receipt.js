@@ -6,6 +6,28 @@ import { OrderReceipt } from "@point_of_sale/app/screens/receipt_screen/receipt/
 import { generateQRCodeDataUrl } from "@point_of_sale/utils";
 
 patch(OrderReceipt.prototype, {
+    /** Lines for the columnar receipt table (handles combo ordering) */
+    get posRetailReceiptLines() {
+        const lines = this.order.lines || [];
+        return lines.reduce((acc, line) => {
+            if (line.combo_line_ids?.length > 0) {
+                acc.push(line, ...line.combo_line_ids);
+            } else if (!line.combo_parent_id) {
+                acc.push(line);
+            }
+            return acc;
+        }, []);
+    },
+
+    /** Total discount given on the order formatted as currency, or false if 0 */
+    get posRetailTotalDiscount() {
+        const disc = typeof this.order.getTotalDiscount === "function" ? this.order.getTotalDiscount() : 0;
+        if (disc && !this.order.currency.isZero(disc)) {
+            return this.formatCurrency(disc);
+        }
+        return this.posRetailInvoiceDiscount || false;
+    },
+
     // --- columned invoice layout (Receipt Studio style "invoice") -----------
 
     /** Total discount given on this sale, or false when there was none. */

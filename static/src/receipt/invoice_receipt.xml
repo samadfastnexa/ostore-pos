@@ -44,16 +44,14 @@
                                 <th class="col-item">ITEM</th>
                                 <th class="col-num">QTY</th>
                                 <th class="col-num">PRICE</th>
-                                <th class="col-disc">DISC</th>
                                 <th class="col-num">TOTAL</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr t-foreach="order.getOrderlines()" t-as="line" t-key="line.uuid">
                                 <td class="col-item"><t t-esc="line.full_product_name"/></td>
-                                <td class="col-num"><t t-esc="line.getQuantityStr().unitPart"/></td>
+                                <td class="col-num"><t t-esc="line.getQuantityStr().qtyStr"/></td>
                                 <td class="col-num"><t t-esc="line.currencyDisplayPriceUnit"/></td>
-                                <td class="col-disc"><t t-esc="line.getDiscountStr() or '0'"/>%</td>
                                 <td class="col-num"><t t-esc="line.currencyDisplayPrice"/></td>
                             </tr>
                         </tbody>
@@ -67,6 +65,15 @@
                         <div t-if="posRetailInvoiceDiscount">
                             <span>Total Discount</span>
                             <span t-esc="posRetailInvoiceDiscount"/>
+                        </div>
+                        <!-- Payment Lines (Cash, Card, etc.) -->
+                        <div t-foreach="paymentLines" t-as="pline" t-key="pline.uuid">
+                            <span t-esc="pline.payment_method_id?.name or 'Cash'"/>
+                            <span t-esc="formatCurrency(pline.getAmount())"/>
+                        </div>
+                        <div t-if="order.showChange">
+                            <span>Change</span>
+                            <span t-esc="formatCurrency(order.change)"/>
                         </div>
                         <!-- What they owed BEFORE this sale. Only shown for a
                              named customer: a walk-in has no running account,

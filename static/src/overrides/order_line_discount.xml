@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
     <!-- Clear, touch-friendly Discount button on each cart line -->
@@ -24,9 +24,9 @@
             </div>
         </xpath>
 
-        <!-- Enhance the discount display line to show % and amount off -->
+        <!-- Enhance the discount display line to show % and amount off (suppressed on receipt) -->
         <xpath expr="//li[@t-if='vals.discount']" position="replace">
-            <li t-if="vals.discount" class="price-per-unit text-danger fw-semibold">
+            <li t-if="vals.discount and !vals.isReceipt" class="price-per-unit text-danger fw-semibold">
                 <i class="fa fa-tag pe-1"/>Discount: <t t-esc="vals.discount"/>% (-<t t-esc="this.posRetailDiscountAmount(line)"/>)
                 <span class="text-muted fw-normal ms-1">| Original: <t t-esc="vals.noDiscountPrice"/></span>
             </li>
