@@ -1,4 +1,4 @@
-﻿/** @odoo-module **/
+/** @odoo-module **/
 
 import { Component, useState } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
@@ -66,6 +66,68 @@ export class LineDiscountPopup extends Component {
 
     get mrp() {
         return this.line.pos_retail_max_price || this.productTemplate?.mrp || 0;
+    }
+
+    get maxPrice() {
+        return this.mrp;
+    }
+
+    get hasPriceRange() {
+        return Boolean(this.minPrice || this.maxPrice);
+    }
+
+    get isAboveMaximum() {
+        if (!this.maxPrice) {
+            return false;
+        }
+        return this.currentFinalPrice > this.maxPrice + 0.001;
+    }
+
+    get suggestedPrice() {
+        const orig = this.originalUnitPrice;
+        if (orig <= 0) {
+            return 0;
+        }
+        // 1. If product template has wholesale_price and it's valid:
+        const wholesale = this.productTemplate?.wholesale_price || this.product?.wholesale_price || 0;
+        if (wholesale > 0 && wholesale < orig && (!this.minPrice || wholesale >= this.minPrice)) {
+            return wholesale;
+        }
+        // 2. Standard 10% discount if within allowed range:
+        const tenPct = Math.round(orig * 0.90 * 100) / 100;
+        if ((!this.minPrice || tenPct >= this.minPrice) && tenPct < orig) {
+            return tenPct;
+        }
+        // 3. Midpoint between original and minPrice:
+        if (this.minPrice > 0 && this.minPrice < orig) {
+            return Math.round(((orig + this.minPrice) / 2) * 100) / 100;
+        }
+        // 4. Default 5% off:
+        const fivePct = Math.round(orig * 0.95 * 100) / 100;
+        if (!this.minPrice || fivePct >= this.minPrice) {
+            return fivePct;
+        }
+        return this.minPrice || orig;
+    }
+
+    get suggestedDiscountPercent() {
+        if (this.originalUnitPrice <= 0 || !this.suggestedPrice) {
+            return 0;
+        }
+        const diff = Math.max(0, this.originalUnitPrice - this.suggestedPrice);
+        return (diff / this.originalUnitPrice) * 100;
+    }
+
+    get suggestedPriceLabel() {
+        const wholesale = this.productTemplate?.wholesale_price || this.product?.wholesale_price || 0;
+        if (wholesale > 0 && this.suggestedPrice === wholesale) {
+            return _t("Wholesale");
+        }
+        return _t("Suggested");
+    }
+
+    get isSuggestedPriceApplied() {
+        return Math.abs(this.currentFinalPrice - this.suggestedPrice) < 0.01 && this.currentDiscountAmount > 0;
     }
 
     get currentPercent() {
@@ -173,6 +235,14 @@ export class LineDiscountPopup extends Component {
         }
     }
 
+    applySuggestedPrice() {
+        if (this.state.tab === "price") {
+            this.applyPresetPrice(this.suggestedPrice);
+        } else {
+            this.applyPresetPercent(this.suggestedDiscountPercent);
+        }
+    }
+
     applyMaxAllowed() {
         if (this.minPrice > 0) {
             this.applyPresetPrice(this.minPrice);
@@ -189,7 +259,7 @@ export class LineDiscountPopup extends Component {
     async confirm() {
         const pct = Math.min(100, Math.max(0, this.currentPercent));
 
-        // Enforce Minimum Selling Price
+        // Enforce Minimum Selling Price & Maximum MRP
         let manager = false;
         if (this.isBelowMinimum) {
             if (!this.canManagerOverride) {
@@ -211,6 +281,14 @@ export class LineDiscountPopup extends Component {
             manager = await posRetailRequestManagerPin(this.pos, this.dialog, this.notification, {
                 title: _t("Manager PIN — Below Minimum Price Approval"),
                 noManagerMessage: _t("No manager is configured to approve selling below minimum price."),
+            });
+            if (!manager) {
+                return;
+            }
+        } else if (this.isAboveMaximum) {
+            manager = await posRetailRequestManagerPin(this.pos, this.dialog, this.notification, {
+                title: _t("Manager PIN — Above Maximum Price Approval"),
+                noManagerMessage: _t("No manager is configured to approve selling above maximum price."),
             });
             if (!manager) {
                 return;

@@ -1,26 +1,67 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.LineDiscountPopup">
         <Dialog title="'Product Discount'" size="'md'">
             <div class="pos-retail-line-discount-popup d-flex flex-column p-1">
 
-                <!-- 1. Product Header -->
-                <div class="d-flex justify-content-between align-items-center mb-1">
+                <!-- 1. Product Title & Qty -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="fw-bold fs-5 text-truncate" style="max-width: 75%;">
                         <i class="fa fa-cube text-primary me-2"/>
                         <t t-esc="product.display_name"/>
                     </span>
-                    <span class="badge bg-secondary">Qty: <t t-esc="line.qty"/></span>
+                    <span class="badge bg-secondary fs-6 px-2 py-1">Qty: <t t-esc="line.qty"/></span>
                 </div>
 
-                <div class="d-flex flex-wrap gap-3 text-muted small mb-3 pb-2 border-bottom">
-                    <div>Original: <strong class="text-dark"><t t-esc="formatCurrency(originalUnitPrice)"/></strong></div>
-                    <div t-if="minPrice">Minimum Allowed: <strong class="text-danger"><t t-esc="formatCurrency(minPrice)"/></strong></div>
-                    <div t-if="minPrice">Max Discount: <strong class="text-success"><t t-esc="maxAllowedDiscountPercent.toFixed(1)"/>%</strong></div>
+                <!-- 2. Price Range & Suggested Price Summary Card -->
+                <div class="card bg-light border p-2 mb-3 shadow-sm rounded-3">
+                    <!-- Selling Range Row -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 small pb-2 border-bottom">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary text-white px-2 py-1">
+                                <i class="fa fa-arrows-h me-1"/>Selling Range:
+                            </span>
+                            <strong class="text-dark fs-6">
+                                <t t-if="minPrice and maxPrice">
+                                    <t t-esc="formatCurrency(minPrice)"/> — <t t-esc="formatCurrency(maxPrice)"/>
+                                </t>
+                                <t t-elif="minPrice">
+                                    Min <t t-esc="formatCurrency(minPrice)"/> (No Max limit)
+                                </t>
+                                <t t-elif="maxPrice">
+                                    Up to <t t-esc="formatCurrency(maxPrice)"/>
+                                </t>
+                                <t t-else="">
+                                    <t t-esc="formatCurrency(originalUnitPrice)"/> (No Min/Max limits)
+                                </t>
+                            </strong>
+                        </div>
+                        <div t-if="minPrice" class="text-muted small">
+                            Max Discount: <strong class="text-success"><t t-esc="maxAllowedDiscountPercent.toFixed(1)"/>%</strong>
+                        </div>
+                    </div>
+
+                    <!-- Price Details: Original | Min | Max | Suggested -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 small pt-2">
+                        <div>Original: <strong class="text-dark"><t t-esc="formatCurrency(originalUnitPrice)"/></strong></div>
+                        <div t-if="minPrice">• Min Allowed: <strong class="text-danger"><t t-esc="formatCurrency(minPrice)"/></strong></div>
+                        <div t-if="maxPrice">• Max / MRP: <strong class="text-info-emphasis"><t t-esc="formatCurrency(maxPrice)"/></strong></div>
+
+                        <!-- Clickable Suggested Price Pill -->
+                        <div t-if="suggestedPrice and suggestedPrice != originalUnitPrice"
+                             class="ms-auto badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1 d-flex align-items-center gap-1 shadow-sm"
+                             style="cursor: pointer;"
+                             title="Click to apply suggested price"
+                             t-on-click="() => this.applySuggestedPrice()">
+                            <i class="fa fa-star text-warning"/>
+                            <span><t t-esc="suggestedPriceLabel"/>: <strong><t t-esc="formatCurrency(suggestedPrice)"/></strong></span>
+                            <span class="text-decoration-underline ms-1">Apply</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 2. Simple Mode Switcher (Discount % vs New Price) -->
+                <!-- 3. Simple Mode Switcher (Discount % vs New Price) -->
                 <div class="btn-group w-100 mb-3" role="group">
                     <button type="button" class="btn btn-lg py-2"
                             t-att-class="state.tab === 'percent' ? 'btn-primary fw-bold' : 'btn-outline-primary'"
@@ -34,7 +75,7 @@
                     </button>
                 </div>
 
-                <!-- 3A. Discount % Mode -->
+                <!-- 4A. Discount % Mode -->
                 <div t-if="state.tab === 'percent'" class="d-flex flex-column gap-2 mb-3">
                     <div class="input-group input-group-lg shadow-sm">
                         <input type="number" step="1" min="0" max="100"
@@ -51,6 +92,12 @@
                         <button type="button" class="btn btn-sm btn-outline-secondary px-3" t-on-click="() => this.applyPresetPercent(10)">10%</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary px-3" t-on-click="() => this.applyPresetPercent(15)">15%</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary px-3" t-on-click="() => this.applyPresetPercent(20)">20%</button>
+                        <button t-if="suggestedDiscountPercent and suggestedDiscountPercent > 0" type="button"
+                                class="btn btn-sm fw-bold px-2"
+                                t-att-class="isSuggestedPriceApplied ? 'btn-warning text-dark' : 'btn-outline-warning text-dark border-warning'"
+                                t-on-click="() => this.applySuggestedPrice()">
+                            <i class="fa fa-star me-1 text-warning"/>Suggested (<t t-esc="suggestedDiscountPercent.toFixed(1)"/>%)
+                        </button>
                         <button t-if="minPrice" type="button" class="btn btn-sm btn-outline-success fw-bold px-2"
                                 t-on-click="() => this.applyMaxAllowed()">
                             Max (<t t-esc="maxAllowedDiscountPercent.toFixed(1)"/>%)
@@ -61,26 +108,36 @@
                     </div>
                 </div>
 
-                <!-- 3B. New Price Mode -->
+                <!-- 4B. New Price Mode -->
                 <div t-if="state.tab === 'price'" class="d-flex flex-column gap-2 mb-3">
                     <div class="input-group input-group-lg shadow-sm">
                         <span class="input-group-text fs-3 fw-bold bg-light"><t t-esc="pos.currency.symbol || ''"/></span>
                         <input type="number" step="1" min="0"
                                class="form-control text-center fs-2 fw-bolder"
-                               t-att-class="isBelowMinimum ? 'is-invalid text-danger' : 'text-primary'"
+                               t-att-class="isBelowMinimum ? 'is-invalid text-danger' : (isAboveMaximum ? 'is-invalid text-warning' : 'text-primary')"
                                t-att-value="state.priceInput"
                                t-on-input="(ev) => this.onPriceInput(ev)"
                                placeholder="0.00" autofocus="autofocus"/>
                     </div>
 
                     <div class="d-flex flex-wrap gap-2 justify-content-center mt-1">
+                        <button t-if="suggestedPrice and suggestedPrice != originalUnitPrice" type="button"
+                                class="btn btn-sm fw-bold px-3"
+                                t-att-class="isSuggestedPriceApplied ? 'btn-warning text-dark' : 'btn-outline-warning text-dark border-warning'"
+                                t-on-click="() => this.applySuggestedPrice()">
+                            <i class="fa fa-star me-1 text-warning"/><t t-esc="suggestedPriceLabel"/> (<t t-esc="formatCurrency(suggestedPrice)"/>)
+                        </button>
                         <button t-if="minPrice" type="button" class="btn btn-sm btn-outline-danger fw-bold px-3"
                                 t-on-click="() => this.applyPresetPrice(minPrice)">
                             Min Price (<t t-esc="formatCurrency(minPrice)"/>)
                         </button>
+                        <button t-if="maxPrice and maxPrice != originalUnitPrice" type="button" class="btn btn-sm btn-outline-secondary px-3"
+                                t-on-click="() => this.applyPresetPrice(maxPrice)">
+                            Max / MRP (<t t-esc="formatCurrency(maxPrice)"/>)
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-primary px-3"
-                                t-on-click="() => this.applyPresetPrice(defaultPrice)">
-                            Original Price (<t t-esc="formatCurrency(defaultPrice)"/>)
+                                t-on-click="() => this.applyPresetPrice(originalUnitPrice)">
+                            Original Price (<t t-esc="formatCurrency(originalUnitPrice)"/>)
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-danger px-2 ms-auto" t-on-click="() => this.clearAll()">
                             Clear
@@ -88,11 +145,22 @@
                     </div>
                 </div>
 
-                <!-- 4. Crystal-Clear Customer Price Summary -->
+                <!-- 5. Crystal-Clear Customer Price Summary -->
                 <div class="card p-3 mb-2 text-center border-2 shadow-sm"
-                     t-att-class="isBelowMinimum ? 'bg-danger-subtle border-danger' : 'bg-success-subtle border-success'">
-                    <div class="small fw-semibold text-uppercase text-muted">Customer Pays</div>
-                    <div class="fs-2 fw-bolder" t-att-class="isBelowMinimum ? 'text-danger' : 'text-success'">
+                     t-att-class="isBelowMinimum ? 'bg-danger-subtle border-danger' : (isAboveMaximum ? 'bg-warning-subtle border-warning' : 'bg-success-subtle border-success')">
+                    <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
+                        <span class="small fw-semibold text-uppercase text-muted">Customer Pays</span>
+                        <span t-if="isSuggestedPriceApplied" class="badge bg-warning text-dark fw-bold px-2 py-0">
+                            <i class="fa fa-star me-1"/>Suggested Price
+                        </span>
+                        <span t-if="currentFinalPrice === minPrice and minPrice > 0" class="badge bg-info text-dark fw-bold px-2 py-0">
+                            Min Allowed Price
+                        </span>
+                        <span t-if="currentFinalPrice === originalUnitPrice and currentDiscountAmount === 0" class="badge bg-secondary text-white fw-bold px-2 py-0">
+                            Original Price
+                        </span>
+                    </div>
+                    <div class="fs-2 fw-bolder" t-att-class="isBelowMinimum ? 'text-danger' : (isAboveMaximum ? 'text-warning' : 'text-success')">
                         <t t-esc="formatCurrency(currentFinalPrice)"/>
                     </div>
                     <div class="small fw-bold" t-att-class="isBelowMinimum ? 'text-danger' : 'text-success'">
@@ -103,7 +171,7 @@
                     </div>
                 </div>
 
-                <!-- 5. Clear Warning when Below Minimum -->
+                <!-- 6A. Warning when Below Minimum -->
                 <div t-if="isBelowMinimum" class="alert alert-danger py-2 px-3 small mb-2 d-flex align-items-center shadow-sm">
                     <i class="fa fa-exclamation-triangle me-2 fs-5 text-danger"/>
                     <div>
@@ -117,7 +185,16 @@
                     </div>
                 </div>
 
-                <!-- 6. Reason and Options -->
+                <!-- 6B. Warning when Above Maximum -->
+                <div t-if="isAboveMaximum" class="alert alert-warning py-2 px-3 small mb-2 d-flex align-items-center shadow-sm">
+                    <i class="fa fa-exclamation-circle me-2 fs-5 text-warning"/>
+                    <div>
+                        <strong>Price exceeds maximum retail price (<t t-esc="formatCurrency(maxPrice)"/>).</strong><br/>
+                        <span class="text-muted"><i class="fa fa-lock me-1"/>Manager PIN approval required to apply.</span>
+                    </div>
+                </div>
+
+                <!-- 7. Reason and Options -->
                 <div class="d-flex flex-column gap-2 mb-2">
                     <div>
                         <input type="text" class="form-control form-control-sm"
@@ -141,9 +218,12 @@
                     Cancel
                 </button>
                 <button class="btn btn-lg px-4"
-                        t-att-class="isBelowMinimum ? 'btn-warning text-dark fw-bold' : 'btn-success text-white fw-bold'"
+                        t-att-class="(isBelowMinimum or isAboveMaximum) ? 'btn-warning text-dark fw-bold' : 'btn-success text-white fw-bold'"
                         t-on-click="() => this.confirm()">
                     <t t-if="isBelowMinimum and canManagerOverride">
+                        <i class="fa fa-lock me-2"/>Manager Approve &amp; Apply
+                    </t>
+                    <t t-elif="isAboveMaximum">
                         <i class="fa fa-lock me-2"/>Manager Approve &amp; Apply
                     </t>
                     <t t-else="">

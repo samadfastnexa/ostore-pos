@@ -884,3 +884,11 @@ $o_retail_blue: #2563eb;
     top: 0 !important;
     bottom: auto !important;
 }
+
+// ---- Suggested price choice in price selection popup -----------------------
+.pos-retail-price-popup .pos-retail-price-choice--suggested {
+    border-color: color-mix(in srgb, #{$o_retail_orange} 70%, transparent);
+    background-color: color-mix(in srgb, #{$o_retail_orange} 8%, #fff);
+    .tag { color: $o_retail_orange_dark; opacity: 1; }
+    .amount { color: $o_retail_orange_dark; }
+}

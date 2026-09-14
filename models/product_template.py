@@ -337,7 +337,7 @@ class ProductTemplate(models.Model):
         # catalogue slows session start. The variants already carry it (see
         # product_product._load_pos_data_fields), so the card sums those.
         result = super()._load_pos_data_fields(config)
-        for field in ('minimum_selling_price', 'mrp'):
+        for field in ('minimum_selling_price', 'mrp', 'wholesale_price'):
             if field not in result:
                 result.append(field)
         return result

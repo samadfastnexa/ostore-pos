@@ -147,7 +147,7 @@ class ProductProduct(models.Model):
         result = super()._load_pos_data_fields(config)
         # Mirror of the template loader: the variant path needs the same selling
         # range so a price entered against a specific variant is validated too.
-        for field in ('brand_id', 'qty_available', 'minimum_selling_price', 'mrp'):
+        for field in ('brand_id', 'qty_available', 'minimum_selling_price', 'mrp', 'wholesale_price'):
             if field not in result:
                 result.append(field)
         return result

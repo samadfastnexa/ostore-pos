@@ -21,6 +21,12 @@
                         <span class="tag">Minimum</span>
                         <span class="amount"><t t-esc="formatPrice(minPrice)"/></span>
                     </button>
+                    <button t-if="suggestedPrice and suggestedPrice != defaultPrice"
+                            class="pos-retail-price-choice pos-retail-price-choice--suggested"
+                            t-on-click="() => this.setPrice(suggestedPrice)">
+                        <span class="tag">⭐ Suggested</span>
+                        <span class="amount"><t t-esc="formatPrice(suggestedPrice)"/></span>
+                    </button>
                     <button class="pos-retail-price-choice pos-retail-price-choice--default"
                             t-on-click="() => this.setPrice(defaultPrice)">
                         <span class="tag">Default</span>

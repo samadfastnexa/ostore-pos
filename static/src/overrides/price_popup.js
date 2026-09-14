@@ -42,6 +42,24 @@ export class PriceSelectionPopup extends Component {
     get maxPrice() {
         return this.props.product.mrp || 0;
     }
+    get suggestedPrice() {
+        const def = this.defaultPrice;
+        if (def <= 0) {
+            return 0;
+        }
+        const wholesale = this.props.product.wholesale_price || 0;
+        if (wholesale > 0 && wholesale < def && (!this.minPrice || wholesale >= this.minPrice)) {
+            return wholesale;
+        }
+        const tenPct = Math.round(def * 0.90 * 100) / 100;
+        if ((!this.minPrice || tenPct >= this.minPrice) && tenPct < def) {
+            return tenPct;
+        }
+        if (this.minPrice > 0 && this.minPrice < def) {
+            return Math.round(((def + this.minPrice) / 2) * 100) / 100;
+        }
+        return 0;
+    }
 
     get enteredPrice() {
         const value = parseFloat(this.state.price);
