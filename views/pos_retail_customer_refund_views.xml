@@ -117,7 +117,7 @@
                 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
                 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
                 <filter name="filter_processed" string="Processed" domain="[('state', '=', 'done')]"/>
-                <group expand="0" string="Group By">
+                <group string="Group By">
                     <filter name="group_partner" string="Customer" context="{'group_by': 'partner_id'}"/>
                     <filter name="group_method" string="Refund Method" context="{'group_by': 'refund_method'}"/>
                     <filter name="group_status" string="Status" context="{'group_by': 'state'}"/>
