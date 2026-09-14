@@ -257,7 +257,7 @@ class ResPartner(models.Model):
         self.ensure_one()
         partner = self.sudo()
         currency = partner.currency_id or partner.company_id.currency_id or self.env.company.currency_id
-        if not partner.id or isinstance(partner.id, models.NewId):
+        if not partner.id or not isinstance(partner.id, int):
             return {
                 'partner': partner,
                 'currency': currency,
@@ -1222,21 +1222,21 @@ class ResPartner(models.Model):
         companies in the current environment, so a branch prints its own book.
         """
         self.ensure_one()
+        raw_entries = []
         lines = self.env['account.move.line'].search([
             ('partner_id', '=', self.id),
             ('account_id.account_type', '=', 'asset_receivable'),
             ('parent_state', '=', 'posted'),
             ('company_id', 'in', self.env.companies.ids),
         ], order='date, id')
-        rows, balance = [], 0.0
         for line in lines:
-            balance += line.debit - line.credit
-            rows.append({
-                'date': line.date,
+            line_date = line.date or fields.Date.context_today(self)
+            raw_entries.append({
+                'date': line_date,
+                'id': line.id,
                 'name': line.move_id.name or line.name or '',
-                'debit': line.debit,
-                'credit': line.credit,
-                'balance': balance,
+                'debit': line.debit or 0.0,
+                'credit': line.credit or 0.0,
             })
 
         # Include un-invoiced POS orders that carry an outstanding balance
@@ -1252,15 +1252,30 @@ class ResPartner(models.Model):
             alloc = order_allocations.get(o.id, {})
             debt = alloc.get('residual', 0.0)
             if debt > 0.005:
-                balance += debt
-                order_date = o.date_order.date() if o.date_order else fields.Date.context_today(self)
-                rows.append({
+                order_date = o.date_order.date() if (o.date_order and hasattr(o.date_order, 'date')) else (o.date_order or fields.Date.context_today(self))
+                raw_entries.append({
                     'date': order_date,
+                    'id': o.id,
                     'name': o.pos_reference or o.name or 'POS Order',
                     'debit': debt,
                     'credit': 0.0,
-                    'balance': balance,
                 })
+
+        # Sort all entries chronologically
+        raw_entries.sort(key=lambda r: (r['date'], r['id']))
+
+        # Compute running balance
+        rows = []
+        balance = 0.0
+        for entry in raw_entries:
+            balance += entry['debit'] - entry['credit']
+            rows.append({
+                'date': entry['date'],
+                'name': entry['name'],
+                'debit': entry['debit'],
+                'credit': entry['credit'],
+                'balance': balance,
+            })
         return rows
 
     def action_print_customer_ledger(self):

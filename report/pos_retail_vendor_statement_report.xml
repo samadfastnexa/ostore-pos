@@ -34,7 +34,7 @@
                     </thead>
                     <tbody>
                         <tr t-foreach="rows" t-as="row">
-                            <td><span t-esc="row['date'].strftime('%d/%m/%Y')"/></td>
+                            <td><span t-esc="row['date'].strftime('%d/%m/%Y') if (row.get('date') and hasattr(row['date'], 'strftime')) else (row.get('date') or '')"/></td>
                             <td><span t-esc="row['name']"/></td>
                             <td class="text-end">
                                 <span t-if="row['credit']" t-esc="row['credit']"
@@ -61,7 +61,7 @@
                             <tr class="fw-bold fs-5">
                                 <td>Balance Payable</td>
                                 <td class="text-end">
-                                    <span t-esc="rows and rows[-1]['balance'] or 0.0"
+                                    <span t-esc="rows[-1]['balance'] if rows else 0.0"
                                           t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
                                 </td>
                             </tr>
