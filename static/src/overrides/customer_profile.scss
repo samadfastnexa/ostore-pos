@@ -2,7 +2,8 @@
 // Big, legible figures and high-contrast badges for quick cashier scanning.
 
 .pos-retail-profile {
-    min-width: min(880px, 94vw);
+    width: 880px;
+    max-width: 94vw;
 
     &__avatar {
         width: 52px;
