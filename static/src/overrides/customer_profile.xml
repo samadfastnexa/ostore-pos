@@ -522,9 +522,13 @@
                                     <td class="small" t-esc="row.cashier"/>
                                     <td class="text-end fw-bold" t-esc="row.amount_formatted"/>
                                     <td class="text-end text-success" t-esc="row.paid_amount_formatted"/>
-                                    <td class="text-end fw-bold text-danger" t-esc="row.balance_amount_formatted"/>
+                                    <td class="text-end fw-bold"
+                                        t-att-class="row.balance_amount > 0 ? 'text-danger' : 'text-muted'"
+                                        t-esc="row.balance_amount_formatted"/>
                                     <td class="text-center">
-                                        <span t-att-class="row.payment_status === 'paid' ? 'badge text-bg-success' : 'badge text-bg-warning text-dark'"
+                                        <span t-att-class="row.payment_status === 'paid' ? 'badge text-bg-success' :
+                                                           row.payment_status === 'partial' ? 'badge text-bg-warning text-dark' :
+                                                           'badge text-bg-danger'"
                                               t-esc="row.payment_status_label"/>
                                     </td>
                                 </tr>

@@ -274,35 +274,57 @@ class ResPartner(models.Model):
         sales = orders.filtered(lambda o: o.amount_total >= 0)
         refunds = orders - sales
 
+        def is_credit_pm(pm):
+            if not pm:
+                return False
+            if pm.type == 'pay_later':
+                return True
+            name = (pm.name or '').strip().lower()
+            return any(k in name for k in ('credit', 'khata', 'pay later', 'pay_later', 'udhar', 'customer account', 'on account'))
+
         def order_row(order):
             total = round(order.amount_total or 0.0, 2)
-            has_pay_later = any(p.payment_method_id.type == 'pay_later' for p in order.payment_ids)
+            credit_payments = [p for p in order.payment_ids if is_credit_pm(p.payment_method_id)]
+            credit_amt = round(sum(p.amount for p in credit_payments), 2)
+            has_credit = credit_amt > 0.005 or bool(credit_payments)
             move = order.account_move
-            if move:
+
+            if move and move.amount_residual > 0.005:
+                # Invoice exists and has an open residual balance
                 residual = round(max(move.amount_residual, 0.0), 2)
                 paid = round(max(total - residual, 0.0), 2)
-                if residual <= 0.005:
-                    status = 'paid'
-                    status_label = 'Fully Paid'
-                elif abs(residual - total) <= 0.005:
+                if abs(residual - total) <= 0.005 or paid <= 0.005:
                     status = 'unpaid'
                     status_label = 'Unpaid'
                 else:
                     status = 'partial'
                     status_label = 'Partially Paid'
-            elif has_pay_later:
-                pay_later_amt = round(sum(p.amount for p in order.payment_ids if p.payment_method_id.type == 'pay_later'), 2)
-                paid = round(max(total - pay_later_amt, 0.0), 2)
-                residual = round(max(pay_later_amt, 0.0), 2)
-                if residual <= 0.005:
+            elif move and not has_credit:
+                # Invoiced sale without credit, settled
+                paid = total
+                residual = 0.0
+                status = 'paid'
+                status_label = 'Fully Paid'
+            elif has_credit:
+                # Sale with customer credit / khata
+                if move and move.amount_residual <= 0.005 and move.payment_state in ('paid', 'in_payment'):
+                    # Invoice was subsequently settled via accounting payments
+                    paid = total
+                    residual = 0.0
                     status = 'paid'
                     status_label = 'Fully Paid'
-                elif paid <= 0.005:
-                    status = 'unpaid'
-                    status_label = 'Unpaid'
                 else:
-                    status = 'partial'
-                    status_label = 'Partially Paid'
+                    residual = round(max(credit_amt, 0.0), 2)
+                    paid = round(max(total - residual, 0.0), 2)
+                    if residual <= 0.005:
+                        status = 'paid'
+                        status_label = 'Fully Paid'
+                    elif paid <= 0.005:
+                        status = 'unpaid'
+                        status_label = 'Unpaid'
+                    else:
+                        status = 'partial'
+                        status_label = 'Partially Paid'
             elif order.state in ('paid', 'done'):
                 paid = total
                 residual = 0.0
@@ -560,8 +582,8 @@ class ResPartner(models.Model):
             'refunds_count': len(refunds),
             'credit_sales': [
                 order_row(o) for o in sales.filtered(
-                    lambda o: any(p.payment_method_id.type == 'pay_later'
-                                  for p in o.payment_ids))[:limit]
+                    lambda o: (hasattr(o, 'pos_retail_on_account') and o.pos_retail_on_account > 0.005) or
+                              any(is_credit_pm(p.payment_method_id) for p in o.payment_ids))[:limit]
             ],
             'payments': payments,
             'charges': charges,

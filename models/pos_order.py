@@ -98,7 +98,8 @@ class PosOrder(models.Model):
         for order in self:
             order.pos_retail_on_account = sum(
                 payment.amount for payment in order.payment_ids
-                if payment.payment_method_id.type == 'pay_later'
+                if payment.payment_method_id.type == 'pay_later' or
+                   any(k in (payment.payment_method_id.name or '').lower() for k in ('credit', 'khata', 'pay later', 'pay_later', 'udhar', 'customer account', 'on account'))
             )
 
     return_reason_id = fields.Many2one(
