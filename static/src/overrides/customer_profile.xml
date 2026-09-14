@@ -41,6 +41,15 @@
 
                 <!-- Right Header Actions: Switch/Change partner & Cart sync -->
                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    <button t-if="state.activeSide === 'customer'"
+                            type="button"
+                            class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
+                            style="font-size: 0.78rem;"
+                            t-on-click="onClickReceivePayment"
+                            title="Receive Khata payment from this customer">
+                        <i class="fa fa-money"/>
+                        <span>Receive Payment</span>
+                    </button>
                     <span t-if="isCurrentOrderPartner" class="badge text-bg-success py-1 px-2" style="font-size: 0.75rem;">
                         <i class="fa fa-check-circle me-1"/>In Current Cart
                     </span>
@@ -259,24 +268,34 @@
                     </div>
 
                     <!-- 3. Net Balance (Outstanding) -->
-                    <div class="pos-retail-profile__stat"
+                    <div class="pos-retail-profile__stat d-flex flex-column justify-content-between"
                          t-att-class="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0 ? 'is-danger' : 'is-success'">
-                        <div class="d-flex align-items-center justify-content-between gap-1">
-                            <span class="pos-retail-profile__label">Net Balance (Owed)</span>
-                            <span t-if="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0"
-                                  class="badge text-bg-danger" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
-                                Owed
-                            </span>
-                            <span t-elif="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) == 0"
-                                  class="badge text-bg-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
-                                Clear
-                            </span>
-                            <span t-else="" class="badge text-bg-info" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
-                                Advance
-                            </span>
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                <span class="pos-retail-profile__label">Net Balance (Owed)</span>
+                                <span t-if="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0"
+                                      class="badge text-bg-danger" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
+                                    Owed
+                                </span>
+                                <span t-elif="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) == 0"
+                                      class="badge text-bg-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
+                                    Clear
+                                </span>
+                                <span t-else="" class="badge text-bg-info" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
+                                    Advance
+                                </span>
+                            </div>
+                            <span class="pos-retail-profile__value"
+                                  t-esc="state.data ? state.data.customer_balance.formatted : formatCurrency(partner.pos_outstanding_balance)"/>
                         </div>
-                        <span class="pos-retail-profile__value"
-                              t-esc="state.data ? state.data.customer_balance.formatted : formatCurrency(partner.pos_outstanding_balance)"/>
+                        <button type="button"
+                                class="btn btn-sm btn-success fw-bold d-flex align-items-center justify-content-center gap-1 mt-2 py-1 px-2 shadow-sm"
+                                style="font-size: 0.78rem;"
+                                t-on-click="onClickReceivePayment"
+                                title="Receive Khata payment from this customer">
+                            <i class="fa fa-money"/>
+                            <span>Receive Payment</span>
+                        </button>
                     </div>
 
                     <!-- 4. Credit Limit & Available or Loyalty -->
@@ -812,9 +831,19 @@
                             <i class="fa fa-list me-1"/>Directory
                         </button>
                     </div>
-                    <button type="button" class="btn btn-secondary px-4" t-on-click="() => this.props.close()">
-                        Close
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button t-if="state.activeSide === 'customer'"
+                                type="button"
+                                class="btn btn-success fw-bold d-flex align-items-center gap-1 px-3"
+                                t-on-click="onClickReceivePayment"
+                                title="Receive Khata payment from this customer">
+                            <i class="fa fa-money me-1"/>
+                            <span>Receive Payment</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary px-4" t-on-click="() => this.props.close()">
+                            Close
+                        </button>
+                    </div>
                 </div>
             </t>
         </Dialog>

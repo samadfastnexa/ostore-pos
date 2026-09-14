@@ -245,6 +245,173 @@ class ResPartner(models.Model):
                 result.append(fname)
         return result
 
+    def _get_pos_khata_breakdown(self):
+        """Unified, FIFO-allocated customer credit and khata breakdown for a partner.
+
+        Computes:
+          1. Lifetime posted accounting receivable movements (invoices, debit notes, credit notes, payments)
+          2. All un-invoiced POS orders (both open and closed sessions) where payment was on credit/khata
+          3. Exact FIFO allocation of available customer payments against oldest credit debts
+          4. Total purchases (charges/debit), total paid (credit), and net balance owed.
+        """
+        self.ensure_one()
+        partner = self.sudo()
+        currency = partner.currency_id or partner.company_id.currency_id or self.env.company.currency_id
+        if not partner.id or isinstance(partner.id, models.NewId):
+            return {
+                'partner': partner,
+                'currency': currency,
+                'cust_debit_total': 0.0,
+                'cust_credit_total': 0.0,
+                'cust_balance': 0.0,
+                'total_owed': 0.0,
+                'acc_debit': 0.0,
+                'acc_credit': 0.0,
+                'acc_balance': 0.0,
+                'uninvoiced_sales_total': 0.0,
+                'uninvoiced_cash_paid_total': 0.0,
+                'uninvoiced_credit_debt_total': 0.0,
+                'order_allocations': {},
+                'advance_pool': 0.0,
+            }
+
+        def is_credit_pm(pm):
+            if not pm:
+                return False
+            pm_sudo = pm.sudo()
+            if pm_sudo.type == 'pay_later':
+                return True
+            name = (pm_sudo.name or '').strip().lower()
+            return any(k in name for k in ('credit', 'khata', 'pay later', 'pay_later', 'udhar', 'customer account', 'on account'))
+
+        # 1. Lifetime posted receivable entries in accounting
+        rec_grouped = self.env['account.move.line'].sudo()._read_group(
+            domain=[
+                ('partner_id', '=', partner.id),
+                ('account_id.account_type', '=', 'asset_receivable'),
+                ('parent_state', '=', 'posted'),
+            ],
+            aggregates=('debit:sum', 'credit:sum'),
+        )
+        acc_debit, acc_credit = rec_grouped[0] if rec_grouped else (0.0, 0.0)
+        acc_debit = round(acc_debit or 0.0, 2)
+        acc_credit = round(acc_credit or 0.0, 2)
+        acc_balance = round(acc_debit - acc_credit, 2)
+
+        # 2. All un-invoiced POS orders (NOT cancelled, no account_move posted)
+        # Note: We track all un-invoiced POS sales across all sessions (both open and closed).
+        pos_orders = self.env['pos.order'].sudo().search(
+            [('partner_id', '=', partner.id),
+             ('state', '!=', 'cancel'),
+             ('account_move', '=', False)],
+            order='date_order asc, id asc',
+        )
+
+        uninvoiced_sales_total = 0.0
+        uninvoiced_cash_paid_total = 0.0
+        uninvoiced_credit_debt_total = 0.0
+        uninvoiced_order_data = []
+
+        for o in pos_orders:
+            total = round(o.amount_total or 0.0, 2)
+            if total <= 0:
+                uninvoiced_sales_total += total
+                uninvoiced_cash_paid_total += total
+                continue
+
+            credit_pms = [p for p in o.payment_ids if is_credit_pm(p.payment_method_id)]
+            credit_amount = round(sum(p.amount for p in credit_pms), 2)
+            if not credit_amount and hasattr(o, 'pos_retail_on_account') and o.pos_retail_on_account:
+                credit_amount = round(o.pos_retail_on_account, 2)
+
+            has_credit = credit_amount > 0.005 or bool(credit_pms)
+            cash_paid = round(max(total - credit_amount, 0.0), 2) if has_credit else total
+            initial_debt = credit_amount if has_credit else 0.0
+
+            uninvoiced_sales_total += total
+            uninvoiced_cash_paid_total += cash_paid
+            uninvoiced_credit_debt_total += initial_debt
+
+            uninvoiced_order_data.append({
+                'order': o,
+                'total': total,
+                'cash_paid': cash_paid,
+                'initial_debt': initial_debt,
+                'has_credit': has_credit,
+            })
+
+        # 3. FIFO Payment Pool:
+        # If acc_balance < 0, customer has unallocated payments/credits in accounting
+        # that can settle un-invoiced POS orders oldest first.
+        available_pool = round(max(-acc_balance, 0.0), 2)
+
+        order_allocations = {}
+        for item in uninvoiced_order_data:
+            o_id = item['order'].id
+            debt = item['initial_debt']
+            if debt <= 0.005:
+                order_allocations[o_id] = {
+                    'residual': 0.0,
+                    'paid': item['total'],
+                    'status': 'paid',
+                    'status_label': 'Fully Paid',
+                }
+                continue
+
+            if available_pool >= debt:
+                available_pool = round(available_pool - debt, 2)
+                order_allocations[o_id] = {
+                    'residual': 0.0,
+                    'paid': item['total'],
+                    'status': 'paid',
+                    'status_label': 'Fully Paid',
+                }
+            elif available_pool > 0.005:
+                allocated = available_pool
+                available_pool = 0.0
+                residual = round(debt - allocated, 2)
+                paid = round(item['total'] - residual, 2)
+                order_allocations[o_id] = {
+                    'residual': residual,
+                    'paid': paid,
+                    'status': 'partial',
+                    'status_label': 'Partially Paid',
+                }
+            else:
+                residual = debt
+                paid = round(item['total'] - residual, 2)
+                status = 'unpaid' if paid <= 0.005 else 'partial'
+                status_label = 'Unpaid' if paid <= 0.005 else 'Partially Paid'
+                order_allocations[o_id] = {
+                    'residual': residual,
+                    'paid': paid,
+                    'status': status,
+                    'status_label': status_label,
+                }
+
+        # 4. Totals across EVERYTHING:
+        cust_debit_total = round(acc_debit + uninvoiced_sales_total, 2)
+        cust_credit_total = round(acc_credit + uninvoiced_cash_paid_total, 2)
+        cust_balance = round(cust_debit_total - cust_credit_total, 2)
+
+        return {
+            'partner': partner,
+            'currency': currency,
+            'cust_debit_total': cust_debit_total,
+            'cust_credit_total': cust_credit_total,
+            'cust_balance': cust_balance,
+            'total_owed': cust_balance,
+            'acc_debit': acc_debit,
+            'acc_credit': acc_credit,
+            'acc_balance': acc_balance,
+            'uninvoiced_sales_total': uninvoiced_sales_total,
+            'uninvoiced_cash_paid_total': uninvoiced_cash_paid_total,
+            'uninvoiced_credit_debt_total': uninvoiced_credit_debt_total,
+            'order_allocations': order_allocations,
+            'pos_orders': pos_orders,
+            'advance_pool': available_pool,
+        }
+
     def get_pos_customer_history(self, limit=15):
         """Everything the cashier might want to know about a customer & vendor, in one call.
 
@@ -266,6 +433,13 @@ class ResPartner(models.Model):
             amt = round(amount or 0.0, 2)
             return {'amount': amt, 'formatted': currency.format(amt)}
 
+        # Complete FIFO breakdown across all orders and invoices
+        breakdown = partner._get_pos_khata_breakdown()
+        order_allocations = breakdown['order_allocations']
+        cust_debit_total = breakdown['cust_debit_total']
+        cust_credit_total = breakdown['cust_credit_total']
+        cust_balance = breakdown['cust_balance']
+
         # --- POS sales, split into ordinary sales and refunds -------------
         orders = self.env['pos.order'].sudo().search(
             [('partner_id', '=', partner.id), ('state', '!=', 'cancel')],
@@ -285,9 +459,6 @@ class ResPartner(models.Model):
 
         def order_row(order):
             total = round(order.amount_total or 0.0, 2)
-            credit_payments = [p for p in order.payment_ids if is_credit_pm(p.payment_method_id)]
-            credit_amt = round(sum(p.amount for p in credit_payments), 2)
-            has_credit = credit_amt > 0.005 or bool(credit_payments)
             move = order.account_move
 
             if move and move.amount_residual > 0.005:
@@ -300,32 +471,18 @@ class ResPartner(models.Model):
                 else:
                     status = 'partial'
                     status_label = 'Partially Paid'
-            elif move and not has_credit:
-                # Invoiced sale without credit, settled
+            elif move:
                 paid = total
                 residual = 0.0
                 status = 'paid'
                 status_label = 'Fully Paid'
-            elif has_credit:
-                # Sale with customer credit / khata
-                if move and move.amount_residual <= 0.005 and move.payment_state in ('paid', 'in_payment'):
-                    # Invoice was subsequently settled via accounting payments
-                    paid = total
-                    residual = 0.0
-                    status = 'paid'
-                    status_label = 'Fully Paid'
-                else:
-                    residual = round(max(credit_amt, 0.0), 2)
-                    paid = round(max(total - residual, 0.0), 2)
-                    if residual <= 0.005:
-                        status = 'paid'
-                        status_label = 'Fully Paid'
-                    elif paid <= 0.005:
-                        status = 'unpaid'
-                        status_label = 'Unpaid'
-                    else:
-                        status = 'partial'
-                        status_label = 'Partially Paid'
+            elif order.id in order_allocations:
+                # Uninvoiced POS order with FIFO settlement
+                alloc = order_allocations[order.id]
+                residual = alloc['residual']
+                paid = alloc['paid']
+                status = alloc['status']
+                status_label = alloc['status_label']
             elif order.state in ('paid', 'done'):
                 paid = total
                 residual = 0.0
@@ -418,14 +575,15 @@ class ResPartner(models.Model):
                 status_label = 'Partially Paid'
 
             linked_pos = line.move_id.pos_order_ids
-            receipt_no = linked_pos and (linked_pos[0].pos_reference or linked_pos[0].name) or line.move_id.name or ''
+            receipt_no = linked_pos and (linked_pos[0].pos_reference or linked_pos[0].name) or line.payment_id.name or line.move_id.name or ''
+            memo_desc = line.payment_id.memo or line.name or ''
 
             row = {
                 'id': line.id,
                 'date': str(line.date),
-                'ref': line.move_id.name or '',
+                'ref': line.payment_id.name or line.move_id.name or '',
                 'receipt_number': receipt_no,
-                'label': line.name or '',
+                'label': memo_desc,
                 'debit': debit,
                 'credit': credit,
                 'amount': amt,
@@ -441,50 +599,37 @@ class ResPartner(models.Model):
             if debit > 0 and res > 0.005:
                 open_invoices.append(row)
 
-        # Lifetime customer receivable aggregates from posted accounting entries
-        rec_grouped = self.env['account.move.line'].sudo()._read_group(
-            domain=[
-                ('partner_id', '=', partner.id),
-                ('account_id.account_type', '=', 'asset_receivable'),
-                ('parent_state', '=', 'posted'),
-            ],
-            aggregates=('debit:sum', 'credit:sum'),
+        # Incorporate all un-invoiced POS orders that still have an outstanding residual
+        uninvoiced_pos_orders = breakdown.get('pos_orders') or self.env['pos.order'].sudo().search(
+            [('partner_id', '=', partner.id),
+             ('state', '!=', 'cancel'),
+             ('account_move', '=', False)],
+            order='date_order asc, id asc',
         )
-        cust_debit_total, cust_credit_total = rec_grouped[0] if rec_grouped else (0.0, 0.0)
-        cust_debit_total = cust_debit_total or 0.0
-        cust_credit_total = cust_credit_total or 0.0
-        cust_balance = cust_debit_total - cust_credit_total
-
-        # Also incorporate un-invoiced POS orders from open sessions (not yet posted to accounting moves)
-        open_pos_orders = orders.filtered(
-            lambda o: not o.account_move and o.session_id.state != 'closed'
+        uninvoiced_with_debt = uninvoiced_pos_orders.filtered(
+            lambda o: not o.account_move and order_allocations.get(o.id, {}).get('residual', 0.0) > 0.005
         )
-        for o in open_pos_orders:
+        for o in uninvoiced_with_debt:
             o_row = order_row(o)
-            credit_unposted = o_row['balance_amount']
-            paid_unposted = o_row['paid_amount']
-            total_unposted = o_row['amount']
-            cust_debit_total += total_unposted
-            cust_credit_total += paid_unposted
-            cust_balance += credit_unposted
-            if credit_unposted > 0.005:
-                open_invoices.append({
-                    'id': o.id,
-                    'date': o_row['date'],
-                    'ref': o_row['name'],
-                    'receipt_number': o_row['receipt_number'],
-                    'label': 'POS Order (Open Session)',
-                    'debit': total_unposted,
-                    'credit': 0.0,
-                    'amount': total_unposted,
-                    'amount_formatted': o_row['amount_formatted'],
-                    'paid_amount': paid_unposted,
-                    'paid_amount_formatted': o_row['paid_amount_formatted'],
-                    'residual': credit_unposted,
-                    'residual_formatted': o_row['balance_amount_formatted'],
-                    'payment_status': o_row['payment_status'],
-                    'payment_status_label': o_row['payment_status_label'],
-                })
+            session_state_desc = 'Open Session' if o.session_id.state != 'closed' else 'Closed Session'
+            open_invoices.append({
+                'id': o.id,
+                'date': o_row['date'],
+                'ref': o_row['name'],
+                'receipt_number': o_row['receipt_number'],
+                'label': f'POS Order ({session_state_desc})',
+                'debit': o_row['amount'],
+                'credit': 0.0,
+                'amount': o_row['amount'],
+                'amount_formatted': o_row['amount_formatted'],
+                'paid_amount': o_row['paid_amount'],
+                'paid_amount_formatted': o_row['paid_amount_formatted'],
+                'residual': o_row['balance_amount'],
+                'residual_formatted': o_row['balance_amount_formatted'],
+                'payment_status': o_row['payment_status'],
+                'payment_status_label': o_row['payment_status_label'],
+            })
+        open_invoices.sort(key=lambda x: str(x.get('date') or ''), reverse=True)
 
         # --- Quotations still open ---------------------------------------
         quotations = []
@@ -660,24 +805,12 @@ class ResPartner(models.Model):
     @api.depends('credit_limit', 'credit')
     def _compute_pos_credit_figures(self):
         for partner in self:
-            balance = partner.credit or 0.0
-            # Include open un-invoiced POS orders with Customer Credit from open sessions
-            open_pos = self.env['pos.order'].sudo().search([
-                ('partner_id', '=', partner.id),
-                ('state', '!=', 'cancel'),
-                ('account_move', '=', False),
-                ('session_id.state', '!=', 'closed'),
-            ])
-            for order in open_pos:
-                balance += sum(
-                    p.amount for p in order.payment_ids
-                    if p.payment_method_id.sudo().type == 'pay_later' or
-                       any(k in (p.payment_method_id.name or '').lower() for k in ('credit', 'khata', 'pay later', 'pay_later', 'udhar', 'customer account', 'on account'))
-                )
+            breakdown = partner._get_pos_khata_breakdown()
+            total_owed = breakdown['total_owed']
             limit = partner.credit_limit or 0.0
-            partner.pos_outstanding_balance = balance
+            partner.pos_outstanding_balance = total_owed
             partner.pos_credit_limit = limit
-            partner.pos_credit_available = limit - balance
+            partner.pos_credit_available = limit - total_owed
 
     @api.model
     def _load_pos_data_domain(self, data, config):

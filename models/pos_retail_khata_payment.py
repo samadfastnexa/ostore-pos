@@ -130,23 +130,21 @@ class PosRetailKhataPayment(models.TransientModel):
         payments and journals, and granting them to it would hand every
         cashier those rights whether or not they were meant to have them.
         """
-        employee = self.env['hr.employee'].sudo().browse(int(employee_id)).exists()
-        if not employee:
-            raise UserError(_("No cashier is logged in at this till."))
-        # Asked of the catalogue, not of a fixed group name. The shop decides
-        # which permission unlocks this button, and the server has to agree
-        # with whatever they chose, or the check drifts away from the screen
-        # and starts refusing people the shop believes it authorised.
-        allowed = self.env['pos.retail.access.permission'] \
-            ._pos_retail_user_has_till_capability(employee.user_id, '_can_khata')
+        employee = self.env['hr.employee'].sudo().browse(int(employee_id)).exists() if employee_id else False
+        user = (employee and employee.user_id) or self.env.user
+        allowed = (
+            any(user.has_group(g) for g in ('base.group_system', 'point_of_sale.group_pos_manager')) or
+            self.env['pos.retail.access.permission']._pos_retail_user_has_till_capability(user, '_can_khata')
+        )
         if not allowed:
+            emp_name = employee.name if employee else user.name
             raise UserError(_(
                 "%(name)s is not allowed to take khata payments.\n\n"
                 "This is granted in Point of Sale > Configuration > Roles & "
                 "Permissions, with the \"Adjust Customer Khata\" permission, "
                 "and it applies to the cashier's own login rather than to this "
                 "till.",
-                name=employee.name,
+                name=emp_name,
             ))
 
         partner = self.env['res.partner'].sudo().browse(int(partner_id)).exists()
@@ -241,6 +239,10 @@ class PosRetailKhataPayment(models.TransientModel):
             order='date, id',
         )
         if len(lines) < 2:
+            return
+        has_debit = any(l.debit > 0 for l in lines)
+        has_credit = any(l.credit > 0 for l in lines)
+        if not (has_debit and has_credit):
             return
         try:
             lines.reconcile()
