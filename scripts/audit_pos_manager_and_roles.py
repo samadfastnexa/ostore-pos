@@ -1,4 +1,4 @@
-﻿# Part of pos_retail.
+# Part of pos_retail.
 #
 # Run this script on the server using:
 #   su -s /bin/bash odoo -c '/opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin shell -c /etc/odoo/odoo.conf -d ostore_live --no-http < /opt/odoo/custom_addons/pos_retail/scripts/audit_pos_manager_and_roles.py'
