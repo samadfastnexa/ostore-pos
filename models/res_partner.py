@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.addons.pos_retail.models.pos_retail_expense import PAYMENT_METHODS
@@ -914,6 +916,12 @@ class ResPartner(models.Model):
             'vendor_payments': vendor_payments,
             'vendor_bills': vendor_bills,
             'unpaid_bills': unpaid_bills,
+            # Security token for public WhatsApp PDF statement access
+            'ledger_token': hmac.new(
+                (self.env['ir.config_parameter'].sudo().get_param('database.secret', 'pos_retail_khata')).encode('utf-8'),
+                f'ledger_partner_{partner.id}'.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()[:16],
         }
 
     def _compute_pos_loyalty_points(self):

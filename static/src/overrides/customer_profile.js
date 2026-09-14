@@ -421,6 +421,14 @@ export class PosRetailCustomerProfile extends Component {
         }
 
         lines.push(`--------------------------------`);
+        const token = this.state.data?.ledger_token;
+        const origin = window.location.origin;
+        const pdfUrl = token
+            ? `${origin}/pos_retail/portal/${isCustomer ? "ledger" : "vendor"}/pdf/${partner.id}?token=${token}`
+            : `${origin}/report/pdf/${isCustomer ? "pos_retail.report_customer_ledger" : "pos_retail.report_vendor_statement"}/${partner.id}`;
+        lines.push(`📄 *Official PDF Statement:*`);
+        lines.push(pdfUrl);
+        lines.push(`--------------------------------`);
         lines.push(`For questions or payment, please feel free to reach out to us.`);
         lines.push(`Thank you for your business!`);
         return lines.join("\n");
@@ -483,21 +491,29 @@ export class PosRetailCustomerProfile extends Component {
         const filename = `${isCustomer ? "Customer_Ledger" : "Vendor_Statement"}_${cleanName}.pdf`;
 
         try {
+            // 1. Fetch PDF blob
+            let pdfBlob = null;
+            try {
+                const response = await fetch(`/report/pdf/${reportName}/${partner.id}`, {
+                    credentials: "same-origin",
+                });
+                if (response.ok) {
+                    pdfBlob = await response.blob();
+                }
+            } catch (fetchErr) {
+                console.warn("Failed to fetch PDF blob:", fetchErr);
+            }
+
+            // 2. Try native file share (on mobile / Android / iOS)
             let sharedFile = false;
-            if (navigator.canShare) {
+            if (pdfBlob && typeof navigator !== "undefined" && navigator.canShare) {
                 try {
-                    const response = await fetch(`/report/pdf/${reportName}/${partner.id}`, {
-                        credentials: "same-origin",
-                    });
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        const file = new File([blob], filename, { type: "application/pdf" });
-                        if (navigator.canShare({ files: [file] })) {
-                            sharedFile = file;
-                        }
+                    const file = new File([pdfBlob], filename, { type: "application/pdf" });
+                    if (navigator.canShare({ files: [file] })) {
+                        sharedFile = file;
                     }
-                } catch {
-                    // Fallback to text if PDF fetch fails
+                } catch (e) {
+                    sharedFile = false;
                 }
             }
 
@@ -508,19 +524,39 @@ export class PosRetailCustomerProfile extends Component {
                         title: filename,
                         text: text,
                     });
-                    this.notification.add(_t("Ledger shared successfully."), { type: "success" });
+                    this.notification.add(_t("Ledger PDF shared successfully on WhatsApp."), { type: "success" });
                     return;
                 } catch (err) {
                     if (err?.name === "AbortError") return;
                 }
             }
 
-            // Fallback: Open wa.me with formatted statement text
+            // 3. Desktop fallback: Automatically download the PDF file to cashier's computer
+            if (pdfBlob) {
+                try {
+                    const url = URL.createObjectURL(pdfBlob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch (dlErr) {
+                    console.warn("Automatic PDF download failed:", dlErr);
+                }
+            }
+
+            // 4. Open WhatsApp Web with formatted statement text + direct PDF link
             const waUrl = phone
                 ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
                 : `https://wa.me/?text=${encodeURIComponent(text)}`;
             window.open(waUrl, "_blank");
-            this.notification.add(_t("WhatsApp opened with ledger statement."), { type: "success" });
+
+            this.notification.add(
+                _t("PDF statement downloaded! WhatsApp opened. You can also drag & drop the PDF file into the chat."),
+                { type: "success" }
+            );
         } catch (err) {
             console.error("WhatsApp share failed:", err);
             this.dialog.add(AlertDialog, {
