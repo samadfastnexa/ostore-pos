@@ -225,9 +225,15 @@ patch(PaymentScreen.prototype, {
             .reduce((sum, line) => sum + this.posRetailLineAmount(order, line), 0);
     },
 
+    posRetailDiscountProduct() {
+        return this.pos.posRetailDiscountProduct
+            ? this.pos.posRetailDiscountProduct()
+            : (this.pos.config?.discount_product_id || undefined);
+    },
+
     async posRetailApplyDiscountLines(kind, amount, order) {
         const taxKey = (taxIds) => taxIds.map((tax) => tax.id).sort((a, b) => a - b).join("_");
-        const product = this.pos.posRetailDiscountProduct();
+        const product = this.pos.posRetailDiscountProduct ? this.pos.posRetailDiscountProduct() : this.posRetailDiscountProduct();
         if (!product) {
             // Deliberately says what was looked for and what was found, rather
             // than naming a cause. Two earlier versions of this message each

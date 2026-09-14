@@ -27,11 +27,22 @@ patch(PaymentScreen.prototype, {
         );
         if (existing) {
             this.currentOrder.selectPaymentline(existing);
+            const remaining = this.currentOrder.remainingDue;
+            // If the line has 0 amount, or if there is an unpaid balance remaining on the order,
+            // clicking the payment method auto-fills the remaining amount due!
+            if (this.pos.currency.isZero(existing.amount) || remaining > 0) {
+                const due = this.currentOrder.getDefaultAmountDueToPayIn
+                    ? this.currentOrder.getDefaultAmountDueToPayIn(paymentMethod)
+                    : remaining;
+                const newAmount = this.pos.currency.isZero(existing.amount)
+                    ? due
+                    : existing.amount + due;
+                existing.setAmount(newAmount);
+                this.numberBuffer.set(newAmount.toString());
+                return true;
+            }
+            // Order is already fully covered: load amount into buffer for manual keypad adjustments
             this.numberBuffer.set((existing.amount || 0).toString());
-            this.pos.notification.add(
-                _t("%s is already on this order - edit that line instead.", paymentMethod.name),
-                { type: "warning" }
-            );
             return false;
         }
 
@@ -49,6 +60,32 @@ patch(PaymentScreen.prototype, {
             return false;
         }
 
-        return await super.addNewPaymentLine(...arguments);
+        const result = await super.addNewPaymentLine(...arguments);
+
+        // Ensure newly created line has the due amount auto-filled if it defaulted to 0
+        const newlyAdded = this.paymentLines.find(
+            (line) => line.payment_method_id?.id === paymentMethod.id
+        );
+        if (newlyAdded && this.pos.currency.isZero(newlyAdded.amount) && this.currentOrder.remainingDue > 0) {
+            const due = this.currentOrder.getDefaultAmountDueToPayIn
+                ? this.currentOrder.getDefaultAmountDueToPayIn(paymentMethod)
+                : this.currentOrder.remainingDue;
+            newlyAdded.setAmount(due);
+            this.numberBuffer.set(due.toString());
+        }
+
+        return result;
+    },
+
+    selectPaymentLine(uuid) {
+        super.selectPaymentLine(...arguments);
+        const line = this.paymentLines.find((l) => l.uuid === uuid);
+        if (line && this.pos.currency.isZero(line.amount) && this.currentOrder.remainingDue > 0) {
+            const due = this.currentOrder.getDefaultAmountDueToPayIn
+                ? this.currentOrder.getDefaultAmountDueToPayIn(line.payment_method_id)
+                : this.currentOrder.remainingDue;
+            line.setAmount(due);
+            this.numberBuffer.set(due.toString());
+        }
     },
 });

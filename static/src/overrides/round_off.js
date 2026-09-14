@@ -76,13 +76,18 @@ patch(PaymentScreen.prototype, {
         );
     },
 
+    posRetailDiscountProduct() {
+        return this.pos.posRetailDiscountProduct
+            ? this.pos.posRetailDiscountProduct()
+            : (this.pos.config?.discount_product_id || undefined);
+    },
+
     async posRetailRoundTo(target) {
         const order = this.currentOrder;
-        // Same lookup as the discount buttons: rounding rides on the same
-        // product, so it fails in the same way when the relation does not
-        // resolve. posRetailDiscountProduct lives on this same PaymentScreen
-        // patch chain (order_discount.js) and falls back to the raw id.
-        const product = this.posRetailDiscountProduct();
+        // Lookup discount product on PosStore with fallback to PaymentScreen helper
+        const product = this.pos.posRetailDiscountProduct
+            ? this.pos.posRetailDiscountProduct()
+            : this.posRetailDiscountProduct();
         if (!product) {
             this.notification.add(
                 _t("Could not round: this register's discount product is not available in the till, and rounding is carried on it. Reopen the register."),
@@ -111,9 +116,10 @@ patch(PaymentScreen.prototype, {
         // one reduction. Rounding UP is not a discount at all, so it keeps its
         // own line -- prepare_global_discount_lines only ever discounts, and a
         // negative discount is not a thing it can express.
-        const applied = this.posRetailAppliedDiscount(order);
+        const applied = this.posRetailAppliedDiscount ? this.posRetailAppliedDiscount(order) : 0;
         if (applied && difference < 0) {
             await this.posRetailApplyDiscountLines("fixed", applied - difference, order);
+            this.posRetailUpdatePaymentLinesAfterRounding(target);
             return;
         }
 
@@ -131,6 +137,18 @@ patch(PaymentScreen.prototype, {
             { force: true },
             false
         );
+
+        this.posRetailUpdatePaymentLinesAfterRounding(target);
+    },
+
+    posRetailUpdatePaymentLinesAfterRounding(target) {
+        if (this.paymentLines?.length === 1) {
+            const line = this.paymentLines[0];
+            if (line && !this.pos.currency.isZero(line.amount)) {
+                line.setAmount(target);
+                this.numberBuffer.set(target.toString());
+            }
+        }
     },
 
     async posRetailClearRounding() {
