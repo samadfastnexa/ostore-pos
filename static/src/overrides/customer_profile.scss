@@ -201,3 +201,33 @@
     &__sub    { grid-area: sub; font-size: .8rem; }
     &__amount { grid-area: amount; align-self: center; white-space: nowrap; }
 }
+
+// In-modal Customer & Vendor Switcher Drawer
+.pos-retail-partner-switcher {
+    border-color: rgba(124, 58, 237, 0.25) !important;
+    background: #f8fafc !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+    .input-group {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+}
+
+.pos-retail-switcher-results {
+    border-color: rgba(0, 0, 0, 0.08) !important;
+
+    .list-group-item {
+        cursor: pointer;
+        transition: background-color 0.12s ease;
+
+        &:hover {
+            background-color: rgba(124, 58, 237, 0.06) !important;
+        }
+
+        &.active {
+            background-color: rgba(124, 58, 237, 0.1) !important;
+            border-left: 3px solid #7c3aed;
+        }
+    }
+}
+
