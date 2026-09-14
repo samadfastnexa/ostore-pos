@@ -199,6 +199,129 @@ patch(PaymentScreen.prototype, {
         order.pos_retail_manualDiscount = Math.max(0, total - campaignAmount);
     },
 
+    // --- Customer Credit (Khata) & Split Payment Handlers --------------------
+
+    get posRetailCreditPaymentMethod() {
+        const methods = this.payment_methods_from_config || [];
+        return methods.find(
+            (pm) => pm.type === "pay_later" ||
+                    (pm.name && /credit|khata|udhar|customer account|on account/i.test(pm.name))
+        ) || this.pos.models["pos.payment.method"]?.find?.(
+            (pm) => pm.type === "pay_later" ||
+                    (pm.name && /credit|khata|udhar|customer account|on account/i.test(pm.name))
+        );
+    },
+
+    get posRetailCashPaymentMethod() {
+        const methods = this.payment_methods_from_config || [];
+        return methods.find(
+            (pm) => pm.is_cash_count || (pm.journal_id && pm.journal_id.type === "cash") || (pm.name && /cash/i.test(pm.name))
+        ) || methods[0];
+    },
+
+    get posRetailHasCreditPayment() {
+        const order = this.currentOrder;
+        if (!order || !order.payment_ids) return false;
+        return order.payment_ids.some(
+            (p) => p.payment_method_id.type === "pay_later" ||
+                   (p.payment_method_id.name && /credit|khata|udhar/i.test(p.payment_method_id.name))
+        );
+    },
+
+    get posRetailCreditOnlyShortfall() {
+        const order = this.currentOrder;
+        if (!order || !order.payment_ids || order.payment_ids.length !== 1) return false;
+        const p = order.payment_ids[0];
+        const isCredit = p.payment_method_id.type === "pay_later" ||
+                         /credit|khata|udhar/i.test(p.payment_method_id.name || "");
+        return Boolean(isCredit && this.posRetailShortfall > 0);
+    },
+
+    async posRetailCreditShortfall() {
+        const order = this.currentOrder;
+        const short = this.posRetailShortfall;
+        if (!short || short <= 0) return;
+
+        const creditMethod = this.posRetailCreditPaymentMethod;
+        if (!creditMethod) {
+            this.notification.add(_t("No Customer Credit payment method configured on this register."), { type: "danger" });
+            return;
+        }
+
+        if (!order.getPartner()) {
+            await this.posRetailSelectPartnerForCredit();
+            return;
+        }
+
+        const existingCreditLine = order.payment_ids.find(
+            (p) => p.payment_method_id.id === creditMethod.id
+        );
+        if (existingCreditLine) {
+            existingCreditLine.setAmount(existingCreditLine.amount + short);
+            this.numberBuffer?.set?.(existingCreditLine.amount.toString());
+        } else {
+            await this.addNewPaymentLine(creditMethod);
+        }
+    },
+
+    async posRetailFixCreditCashSplit() {
+        // Fix for cashier keying what customer paid in cash under Customer Credit,
+        // leaving the remaining balance as shortfall.
+        const order = this.currentOrder;
+        const short = this.posRetailShortfall;
+        if (!short || short <= 0) return;
+
+        const cashMethod = this.posRetailCashPaymentMethod;
+        const creditMethod = this.posRetailCreditPaymentMethod;
+        if (!creditMethod) {
+            this.notification.add(_t("No Customer Credit payment method configured."), { type: "danger" });
+            return;
+        }
+
+        const creditLine = order.payment_ids[0];
+        const tenderedCash = creditLine.amount;
+
+        if (cashMethod) {
+            creditLine.payment_method_id = cashMethod;
+        }
+
+        await this.addNewPaymentLine(creditMethod);
+
+        this.notification.add(
+            _t("Split applied: %s in Cash and %s on Customer Credit.",
+               this.env.utils.formatCurrency(tenderedCash),
+               this.env.utils.formatCurrency(short)),
+            { type: "success" }
+        );
+    },
+
+    async posRetailPayRestInCash() {
+        const order = this.currentOrder;
+        const short = this.posRetailShortfall;
+        if (!short || short <= 0) return;
+
+        const cashMethod = this.posRetailCashPaymentMethod;
+        if (!cashMethod) return;
+
+        const existingCashLine = order.payment_ids.find(
+            (p) => p.payment_method_id.id === cashMethod.id
+        );
+        if (existingCashLine) {
+            existingCashLine.setAmount(existingCashLine.amount + short);
+            this.numberBuffer?.set?.(existingCashLine.amount.toString());
+        } else {
+            await this.addNewPaymentLine(cashMethod);
+        }
+    },
+
+    async posRetailSelectPartnerForCredit() {
+        const partner = await this.pos.selectPartner(this.currentOrder);
+        if (partner) {
+            this.currentOrder.setPartner(partner);
+            await this.posRetailCreditShortfall();
+        }
+    },
+
     // --- the discount mechanism ----------------------------------------------
 
     // Cart subtotal excluding discount lines, used to convert a fixed discount

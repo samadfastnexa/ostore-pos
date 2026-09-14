@@ -440,7 +440,7 @@ class ResPartner(models.Model):
             if debit > 0 and res > 0.005:
                 open_invoices.append(row)
 
-        # Lifetime customer receivable aggregates
+        # Lifetime customer receivable aggregates from posted accounting entries
         rec_grouped = self.env['account.move.line'].sudo()._read_group(
             domain=[
                 ('partner_id', '=', partner.id),
@@ -453,6 +453,37 @@ class ResPartner(models.Model):
         cust_debit_total = cust_debit_total or 0.0
         cust_credit_total = cust_credit_total or 0.0
         cust_balance = cust_debit_total - cust_credit_total
+
+        # Also incorporate un-invoiced POS orders from open sessions (not yet posted to accounting moves)
+        open_pos_orders = orders.filtered(
+            lambda o: not o.account_move and o.session_id.state != 'closed'
+        )
+        for o in open_pos_orders:
+            o_row = order_row(o)
+            credit_unposted = o_row['balance_amount']
+            paid_unposted = o_row['paid_amount']
+            total_unposted = o_row['amount']
+            cust_debit_total += total_unposted
+            cust_credit_total += paid_unposted
+            cust_balance += credit_unposted
+            if credit_unposted > 0.005:
+                open_invoices.append({
+                    'id': o.id,
+                    'date': o_row['date'],
+                    'ref': o_row['name'],
+                    'receipt_number': o_row['receipt_number'],
+                    'label': 'POS Order (Open Session)',
+                    'debit': total_unposted,
+                    'credit': 0.0,
+                    'amount': total_unposted,
+                    'amount_formatted': o_row['amount_formatted'],
+                    'paid_amount': paid_unposted,
+                    'paid_amount_formatted': o_row['paid_amount_formatted'],
+                    'residual': credit_unposted,
+                    'residual_formatted': o_row['balance_amount_formatted'],
+                    'payment_status': o_row['payment_status'],
+                    'payment_status_label': o_row['payment_status_label'],
+                })
 
         # --- Quotations still open ---------------------------------------
         quotations = []
@@ -563,11 +594,11 @@ class ResPartner(models.Model):
             'customer_debit': money(cust_debit_total),
             'customer_credit': money(cust_credit_total),
             'customer_balance': money(cust_balance),
-            'outstanding': money(partner.credit or cust_balance),
+            'outstanding': money(cust_balance),
             'credit_limit': partner.pos_credit_limit or 0.0,
             'credit_limit_formatted': currency.format(partner.pos_credit_limit or 0.0),
-            'credit_available': partner.pos_credit_available or 0.0,
-            'credit_available_formatted': currency.format(partner.pos_credit_available or 0.0),
+            'credit_available': round((partner.pos_credit_limit or 0.0) - cust_balance, 2) if partner.pos_credit_limit else 0.0,
+            'credit_available_formatted': currency.format(round((partner.pos_credit_limit or 0.0) - cust_balance, 2)) if partner.pos_credit_limit else currency.format(0.0),
             'loyalty_points': round(partner.pos_loyalty_points or 0.0, 1),
             'total_spent': partner.pos_total_spent or 0.0,
             'total_spent_formatted': currency.format(partner.pos_total_spent or 0.0),
@@ -629,6 +660,19 @@ class ResPartner(models.Model):
     def _compute_pos_credit_figures(self):
         for partner in self:
             balance = partner.credit or 0.0
+            # Include open un-invoiced POS orders with Customer Credit from open sessions
+            open_pos = self.env['pos.order'].sudo().search([
+                ('partner_id', '=', partner.id),
+                ('state', '!=', 'cancel'),
+                ('account_move', '=', False),
+                ('session_id.state', '!=', 'closed'),
+            ])
+            for order in open_pos:
+                balance += sum(
+                    p.amount for p in order.payment_ids
+                    if p.payment_method_id.type == 'pay_later' or
+                       any(k in (p.payment_method_id.name or '').lower() for k in ('credit', 'khata', 'pay later', 'pay_later', 'udhar', 'customer account', 'on account'))
+                )
             limit = partner.credit_limit or 0.0
             partner.pos_outstanding_balance = balance
             partner.pos_credit_limit = limit
