@@ -209,4 +209,12 @@ patch(OrderReceipt.prototype, {
             return false;
         }
     },
+
+    get posRetailRefBarcodeUrl() {
+        const ref = this.order?.pos_reference;
+        if (!ref) {
+            return "";
+        }
+        return `/report/barcode/Code128/${encodeURIComponent(ref)}?width=300&height=60`;
+    },
 });

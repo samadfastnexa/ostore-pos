@@ -23,6 +23,7 @@ export class ReturnNoReceiptPopup extends Component {
     static props = { close: Function, getPayload: Function, order: { type: Object, optional: true } };
 
     setup() {
+        this.parseFloat = parseFloat;
         this.pos = usePos();
         this.orm = useService("orm");
         this.state = useState({
@@ -118,6 +119,11 @@ export class ReturnNoReceiptPopup extends Component {
             .filter((line) => line.originalOrderLineId === this.state.linkResult.order_line_id)
             .reduce((total, line) => total + line.qty, 0);
         return Math.max(0, this.state.linkResult.returnable_qty - reserved);
+    }
+
+    get isOverMaxQty() {
+        const qty = parseFloat(this.state.qty || 0);
+        return qty > this.maxQty;
     }
 
     clearLink() {

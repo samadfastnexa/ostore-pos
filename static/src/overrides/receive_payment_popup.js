@@ -23,6 +23,7 @@ export class ReceivePaymentPopup extends Component {
     };
 
     setup() {
+        this.parseFloat = parseFloat;
         this.pos = usePos();
         this.dialog = useService("dialog");
         this.notification = useService("notification");
@@ -59,6 +60,14 @@ export class ReceivePaymentPopup extends Component {
 
     get partner() {
         return this.props.partner;
+    }
+
+    get canConfirm() {
+        if (this.state.submitting) {
+            return false;
+        }
+        const val = parseFloat(this.state.amount);
+        return !isNaN(val) && val > 0;
     }
 
     formatCurrency(amount) {

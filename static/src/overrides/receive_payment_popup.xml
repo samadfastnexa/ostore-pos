@@ -177,7 +177,7 @@
                     </button>
                     <button type="button"
                             class="btn btn-success fw-bold d-flex align-items-center gap-2 px-4 shadow-sm"
-                            t-att-disabled="state.submitting || !state.amount || parseFloat(state.amount) &lt;= 0"
+                            t-att-disabled="!canConfirm"
                             t-on-click="onConfirm">
                         <i t-if="state.submitting" class="fa fa-circle-o-notch fa-spin"/>
                         <i t-else="" class="fa fa-check"/>

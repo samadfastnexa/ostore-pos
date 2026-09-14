@@ -213,7 +213,7 @@
                  server, so it needs connectivity at render time). -->
             <div t-if="order.config.pos_retail_receipt_show_ref_barcode and order.pos_reference"
                  class="pos-retail-ref-barcode text-center pt-2">
-                <img t-att-src="'/report/barcode/Code128/' + encodeURIComponent(order.pos_reference) + '?width=300&amp;height=60'"
+                <img t-att-src="posRetailRefBarcodeUrl"
                      style="width:80%; max-height:44px;" alt="Receipt reference barcode"/>
                 <div style="font-size:70%;" t-esc="order.pos_reference"/>
             </div>

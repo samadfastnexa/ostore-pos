@@ -45,7 +45,7 @@
                         <span>Already returned: <strong t-esc="state.linkResult.already_returned_qty"/></span>
                         <span>Returnable now: <strong t-esc="state.linkResult.returnable_qty"/></span>
                     </div>
-                    <div t-if="parseFloat(state.qty || 0) > maxQty" class="text-danger small">
+                    <div t-if="isOverMaxQty" class="text-danger small">
                         <i class="fa fa-exclamation-triangle me-1"/>
                         Only <t t-esc="maxQty"/> can still be returned against this sale.
                     </div>
