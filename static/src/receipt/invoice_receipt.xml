@@ -51,8 +51,8 @@
                             <tr t-foreach="order.getOrderlines()" t-as="line" t-key="line.uuid">
                                 <td class="col-item"><t t-esc="line.full_product_name"/></td>
                                 <td class="col-num"><t t-esc="line.getQuantityStr().qtyStr"/></td>
-                                <td class="col-num"><t t-esc="line.currencyDisplayPriceUnit"/></td>
-                                <td class="col-num"><t t-esc="line.currencyDisplayPrice"/></td>
+                                <td class="col-num"><t t-esc="formatReceiptPrice(line.displayPriceUnit, line)"/></td>
+                                <td class="col-num"><t t-esc="formatReceiptPrice(line.displayPrice, line)"/></td>
                             </tr>
                         </tbody>
                     </table>

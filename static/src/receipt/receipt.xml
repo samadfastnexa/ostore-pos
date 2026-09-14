@@ -43,10 +43,10 @@
                                 <t t-esc="line.getQuantityStr().qtyStr"/>
                             </td>
                             <td class="col-price text-end font-monospace">
-                                <t t-esc="line.currencyDisplayPriceUnit"/>
+                                <t t-esc="formatReceiptPrice(line.displayPriceUnit, line)"/>
                             </td>
                             <td class="col-total text-end font-monospace fw-bold">
-                                <t t-esc="line.currencyDisplayPrice"/>
+                                <t t-esc="formatReceiptPrice(line.displayPrice, line)"/>
                                 <span t-if="line.taxGroupLabels" class="small text-muted ms-1" style="font-size: 75%;" t-esc="line.taxGroupLabels"/>
                             </td>
                         </tr>
@@ -71,6 +71,11 @@
         <!-- Suppress the old core Discounts line that appeared after Cash/payments -->
         <xpath expr="//span[hasclass('label-discount')]/parent::div" position="replace">
             <!-- Suppressed: Total Discount is shown above payment lines next to Total -->
+        </xpath>
+
+        <!-- Gate the core "Need an invoice?" QR code by pos_retail_receipt_show_qr as well -->
+        <xpath expr="//div[hasclass('pos-receipt-qr')]" position="attributes">
+            <attribute name="t-if">order.company.point_of_sale_use_ticket_qr_code and order.finalized and order.config.pos_retail_receipt_show_qr</attribute>
         </xpath>
 
         <!-- The core template exposes an explicit `before-footer` anchor. -->

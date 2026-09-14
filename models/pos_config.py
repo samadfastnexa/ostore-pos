@@ -174,7 +174,7 @@ class PosConfig(models.Model):
         help="Print each product's internal reference under its line.",
     )
     pos_retail_receipt_show_qr = fields.Boolean(
-        string="Show Receipt QR Code", default=True,
+        string="Show Receipt QR Code", default=False,
         help="Print a QR code of the receipt reference for quick lookup.",
     )
     pos_retail_receipt_show_ref_barcode = fields.Boolean(

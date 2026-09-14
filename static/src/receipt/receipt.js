@@ -19,6 +19,32 @@ patch(OrderReceipt.prototype, {
         }, []);
     },
 
+    /**
+     * Formats product row prices for the receipt table:
+     * - Removes currency symbol (no "Rs.")
+     * - Removes .00 decimals for whole numbers (e.g. 266.00 -> 266, -1.00 -> -1)
+     * - Preserves decimals only when fractional (e.g. 266.50 -> 266.50)
+     */
+    formatReceiptPrice(amount, line = null) {
+        if (line && line.combo_parent_id) {
+            return "";
+        }
+        if (line && line.getDiscount && line.getDiscount() === 100) {
+            return _t("Free");
+        }
+        if (amount === undefined || amount === null || amount === false || amount === "") {
+            return "";
+        }
+        const num = Number(amount);
+        if (isNaN(num)) {
+            return String(amount);
+        }
+        if (Math.abs(num - Math.round(num)) < 0.005) {
+            return String(Math.round(num));
+        }
+        return num.toFixed(2).replace(/\.00$/, "");
+    },
+
     /** Total discount given on the order formatted as currency, or false if 0 */
     get posRetailTotalDiscount() {
         const disc = typeof this.order.getTotalDiscount === "function" ? this.order.getTotalDiscount() : 0;

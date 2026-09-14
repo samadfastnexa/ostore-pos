@@ -122,10 +122,10 @@
                 font-variant-numeric: tabular-nums;
             }
 
-            .col-item { width: 44%; text-align: left; overflow-wrap: anywhere; }
-            .col-num  { width: 14%; text-align: center; }
-            .col-price { width: 21%; text-align: right; }
-            .col-total { width: 21%; text-align: right; }
+            .col-item  { width: 44%; text-align: left; overflow-wrap: anywhere; }
+            .col-num   { width: 14%; text-align: center; }
+            .col-price { width: 21%; text-align: right; padding-right: 6px; white-space: nowrap; }
+            .col-total { width: 21%; text-align: right; white-space: nowrap; }
 
             tbody tr + tr td { border-top: 1px dotted rgba(0, 0, 0, .25); }
         }
@@ -183,10 +183,10 @@
             font-variant-numeric: tabular-nums;
         }
 
-        .col-item { width: 44%; text-align: left; overflow-wrap: anywhere; }
-        .col-qty  { width: 14%; text-align: center; }
-        .col-price { width: 21%; text-align: right; }
-        .col-total { width: 21%; text-align: right; }
+        .col-item  { width: 44%; text-align: left; overflow-wrap: anywhere; }
+        .col-qty   { width: 14%; text-align: center; }
+        .col-price { width: 21%; text-align: right; padding-right: 6px; white-space: nowrap; }
+        .col-total { width: 21%; text-align: right; white-space: nowrap; }
 
         tbody tr + tr td {
             border-top: 1px dotted rgba(0, 0, 0, 0.15);
