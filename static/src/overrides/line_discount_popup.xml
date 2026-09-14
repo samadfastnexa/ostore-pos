@@ -33,30 +33,49 @@
                                     Up to <t t-esc="formatCurrency(maxPrice)"/>
                                 </t>
                                 <t t-else="">
-                                    <t t-esc="formatCurrency(originalUnitPrice)"/> (No Min/Max limits)
+                                    <t t-esc="formatCurrency(basePrice)"/> (No Min/Max limits)
                                 </t>
                             </strong>
                         </div>
-                        <div t-if="minPrice" class="text-muted small">
+                        <div t-if="minPrice and maxAllowedDiscountPercent &gt; 0" class="text-muted small">
                             Max Discount: <strong class="text-success"><t t-esc="maxAllowedDiscountPercent.toFixed(1)"/>%</strong>
                         </div>
                     </div>
 
-                    <!-- Price Details: Original | Min | Max | Suggested -->
-                    <div class="d-flex flex-wrap align-items-center gap-2 small pt-2">
-                        <div>Original: <strong class="text-dark"><t t-esc="formatCurrency(originalUnitPrice)"/></strong></div>
-                        <div t-if="minPrice">• Min Allowed: <strong class="text-danger"><t t-esc="formatCurrency(minPrice)"/></strong></div>
-                        <div t-if="maxPrice">• Max / MRP: <strong class="text-info-emphasis"><t t-esc="formatCurrency(maxPrice)"/></strong></div>
+                    <!-- Price Details: Base Price & Quick Base Selectors -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 small pt-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span>Base: <strong class="text-dark fs-6"><t t-esc="formatCurrency(basePrice)"/></strong></span>
+                            <span t-if="minPrice" class="text-muted small">(Min: <t t-esc="formatCurrency(minPrice)"/>)</span>
+                            <span t-if="maxPrice" class="text-muted small">(Max: <t t-esc="formatCurrency(maxPrice)"/>)</span>
+                        </div>
 
-                        <!-- Clickable Suggested Price Pill -->
-                        <div t-if="suggestedPrice and suggestedPrice != originalUnitPrice"
-                             class="ms-auto badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1 d-flex align-items-center gap-1 shadow-sm"
-                             style="cursor: pointer;"
-                             title="Click to apply suggested price"
-                             t-on-click="() => this.applySuggestedPrice()">
-                            <i class="fa fa-star text-warning"/>
-                            <span><t t-esc="suggestedPriceLabel"/>: <strong><t t-esc="formatCurrency(suggestedPrice)"/></strong></span>
-                            <span class="text-decoration-underline ms-1">Apply</span>
+                        <!-- One-tap Base Price Selectors -->
+                        <div class="d-flex align-items-center gap-1 ms-auto flex-wrap">
+                            <button t-if="maxPrice and maxPrice != basePrice"
+                                    type="button"
+                                    class="btn btn-sm btn-outline-info py-0 px-2 fw-semibold"
+                                    style="font-size: 0.76rem;"
+                                    title="Set discount base price to Maximum / MRP"
+                                    t-on-click="() => this.setBasePrice(maxPrice)">
+                                Base: MRP (<t t-esc="formatCurrency(maxPrice)"/>)
+                            </button>
+                            <button t-if="originalUnitPrice and originalUnitPrice != basePrice"
+                                    type="button"
+                                    class="btn btn-sm btn-outline-secondary py-0 px-2 fw-semibold"
+                                    style="font-size: 0.76rem;"
+                                    title="Set discount base price to Original Cart Price"
+                                    t-on-click="() => this.setBasePrice(originalUnitPrice)">
+                                Base: Orig (<t t-esc="formatCurrency(originalUnitPrice)"/>)
+                            </button>
+                            <button t-if="suggestedPrice and suggestedPrice != basePrice"
+                                    type="button"
+                                    class="btn btn-sm btn-outline-warning text-dark py-0 px-2 fw-semibold"
+                                    style="font-size: 0.76rem;"
+                                    title="Set base price to Suggested"
+                                    t-on-click="() => this.setBasePrice(suggestedPrice)">
+                                ⭐ <t t-esc="suggestedPriceLabel"/> (<t t-esc="formatCurrency(suggestedPrice)"/>)
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -98,7 +117,7 @@
                                 t-on-click="() => this.applySuggestedPrice()">
                             <i class="fa fa-star me-1 text-warning"/>Suggested (<t t-esc="suggestedDiscountPercent.toFixed(1)"/>%)
                         </button>
-                        <button t-if="minPrice" type="button" class="btn btn-sm btn-outline-success fw-bold px-2"
+                        <button t-if="minPrice and maxAllowedDiscountPercent &gt; 0" type="button" class="btn btn-sm btn-outline-success fw-bold px-2"
                                 t-on-click="() => this.applyMaxAllowed()">
                             Max (<t t-esc="maxAllowedDiscountPercent.toFixed(1)"/>%)
                         </button>
@@ -156,15 +175,26 @@
                         <span t-if="currentFinalPrice === minPrice and minPrice > 0" class="badge bg-info text-dark fw-bold px-2 py-0">
                             Min Allowed Price
                         </span>
-                        <span t-if="currentFinalPrice === originalUnitPrice and currentDiscountAmount === 0" class="badge bg-secondary text-white fw-bold px-2 py-0">
+                        <span t-if="maxPrice and currentFinalPrice === maxPrice and currentDiscountAmount === 0" class="badge bg-info text-dark fw-bold px-2 py-0">
+                            Max / MRP
+                        </span>
+                        <span t-elif="currentFinalPrice === originalUnitPrice and currentDiscountAmount === 0" class="badge bg-secondary text-white fw-bold px-2 py-0">
                             Original Price
+                        </span>
+                        <span t-elif="currentFinalPrice === basePrice and currentDiscountAmount === 0" class="badge bg-secondary text-white fw-bold px-2 py-0">
+                            Base Price
                         </span>
                     </div>
                     <div class="fs-2 fw-bolder" t-att-class="isBelowMinimum ? 'text-danger' : (isAboveMaximum ? 'text-warning' : 'text-success')">
                         <t t-esc="formatCurrency(currentFinalPrice)"/>
                     </div>
                     <div class="small fw-bold" t-att-class="isBelowMinimum ? 'text-danger' : 'text-success'">
-                        Discount: <t t-esc="currentPercent.toFixed(1)"/>% (-<t t-esc="formatCurrency(currentDiscountAmount)"/>)
+                        <t t-if="currentPercent &gt; 0">
+                            Discount: <t t-esc="currentPercent.toFixed(1)"/>% (-<t t-esc="formatCurrency(currentDiscountAmount)"/>)
+                        </t>
+                        <t t-else="">
+                            No discount applied
+                        </t>
                         <t t-if="line.qty &gt; 1">
                             • Total for <t t-esc="line.qty"/> units: <t t-esc="formatCurrency(totalFinalPrice)"/>
                         </t>
