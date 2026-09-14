@@ -232,8 +232,14 @@
             <div name="button_box" position="inside">
                 <button name="action_view_customer_ledger" type="object" class="oe_stat_button"
                         icon="fa-book" groups="account.group_account_invoice,account.group_account_readonly"
-                        invisible="not credit">
-                    <field name="credit" widget="statinfo" string="Amount Owed"/>
+                        invisible="not pos_outstanding_balance">
+                    <field name="pos_outstanding_balance" widget="statinfo" string="Amount Owed"/>
+                </button>
+                <button name="action_view_outstanding_invoices" type="object" class="oe_stat_button"
+                        icon="fa-file-text-o" groups="account.group_account_invoice,account.group_account_readonly,pos_retail.perm_khata_adjust_res_groups"
+                        invisible="not pos_outstanding_balance">
+                    <span class="o_stat_text">Outstanding</span>
+                    <span class="o_stat_text">Invoices</span>
                 </button>
             </div>
             <!-- Khata actions: the ledger's history is never edited in place;
@@ -253,6 +259,10 @@
                     <button name="action_open_khata_payment" type="object"
                             string="Receive Payment" class="btn-primary"
                             groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups"/>
+                    <button name="action_view_outstanding_invoices" type="object"
+                            string="Outstanding Invoices"
+                            groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups"
+                            invisible="not pos_outstanding_balance"/>
                     <button name="action_open_ledger_adjustment" type="object"
                             string="Khata Adjustment"
                             groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups"/>
@@ -328,4 +338,31 @@
         </field>
     </record>
 
+    <!-- Outstanding Invoices List View for Requirement 10 -->
+    <record id="pos_retail_outstanding_invoices_list" model="ir.ui.view">
+        <field name="name">account.move.outstanding.invoices.list</field>
+        <field name="model">account.move</field>
+        <field name="arch" type="xml">
+            <list string="Outstanding Invoices" create="false" edit="false" delete="false"
+                  decoration-danger="payment_state == 'not_paid'"
+                  decoration-warning="payment_state == 'partial'">
+                <field name="currency_id" column_invisible="1"/>
+                <field name="name" string="Invoice / Reference"/>
+                <field name="invoice_date" string="Date"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="amount_total" string="Original Amount" sum="Total Original"/>
+                <field name="amount_paid" string="Paid Amount" sum="Total Paid"/>
+                <field name="amount_residual" string="Remaining Balance" sum="Total Outstanding"
+                       decoration-danger="amount_residual &gt; 0"/>
+                <field name="payment_state" widget="badge" string="Payment Status"
+                       decoration-danger="payment_state == 'not_paid'"
+                       decoration-warning="payment_state == 'partial'"
+                       decoration-success="payment_state in ('paid', 'in_payment')"/>
+                <field name="state" widget="badge" string="State"
+                       decoration-success="state == 'posted'"/>
+            </list>
+        </field>
+    </record>
+
 </odoo>
+

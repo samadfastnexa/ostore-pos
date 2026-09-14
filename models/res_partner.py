@@ -412,6 +412,129 @@ class ResPartner(models.Model):
             'advance_pool': available_pool,
         }
 
+    @api.model
+    def get_customer_payment_allocation(self, partner_id, amount):
+        """Simulate or compute FIFO allocation of a payment amount against a customer's open debts.
+
+        Used by both POS frontend (for live visible preview) and backend wizards.
+        Returns:
+          - lines: [ { name, date, previous_balance, applied_amount, remaining_balance, status, status_label } ]
+          - previous_total_outstanding
+          - payment_amount
+          - new_total_outstanding
+          - remaining_unallocated (advance)
+        """
+        partner = self.sudo().browse(int(partner_id)).exists()
+        if not partner:
+            return {
+                'lines': [],
+                'previous_total_outstanding': 0.0,
+                'previous_total_outstanding_formatted': '0.00',
+                'payment_amount': 0.0,
+                'payment_amount_formatted': '0.00',
+                'new_total_outstanding': 0.0,
+                'new_total_outstanding_formatted': '0.00',
+                'remaining_unallocated': 0.0,
+                'remaining_unallocated_formatted': '0.00',
+            }
+
+        currency = partner.currency_id or partner.company_id.currency_id or self.env.company.currency_id
+        breakdown = partner._get_pos_khata_breakdown()
+        prev_total = breakdown['total_owed']
+        amount = round(float(amount or 0.0), 2)
+
+        # Collect all open items with positive residual in chronological order (oldest first: date asc, id asc)
+        # 1. Posted receivable accounting invoice lines
+        receivable_lines = self.env['account.move.line'].sudo().search([
+            ('partner_id', '=', partner.id),
+            ('account_id.account_type', '=', 'asset_receivable'),
+            ('parent_state', '=', 'posted'),
+            ('debit', '>', 0),
+        ], order='date asc, id asc')
+
+        open_items = []
+        for l in receivable_lines:
+            res = round(abs(l.amount_residual), 2)
+            if res > 0.005:
+                ref = (l.move_id.pos_order_ids and (l.move_id.pos_order_ids[0].pos_reference or l.move_id.pos_order_ids[0].name)) or l.move_id.name or ''
+                open_items.append({
+                    'id': f"inv_{l.id}",
+                    'name': ref,
+                    'date': str(l.date),
+                    'balance': res,
+                    'total': round(l.debit, 2),
+                })
+
+        # 2. Un-invoiced POS orders
+        pos_orders = breakdown.get('pos_orders') or self.env['pos.order'].sudo().search([
+            ('partner_id', '=', partner.id),
+            ('state', '!=', 'cancel'),
+            ('account_move', '=', False),
+        ], order='date_order asc, id asc')
+        order_allocations = breakdown['order_allocations']
+        for o in pos_orders:
+            alloc = order_allocations.get(o.id, {})
+            res = alloc.get('residual', 0.0)
+            if res > 0.005:
+                ref = o.pos_reference or o.name or ''
+                date_str = str(o.date_order)[:10] if o.date_order else ''
+                open_items.append({
+                    'id': f"pos_{o.id}",
+                    'name': ref,
+                    'date': date_str,
+                    'balance': res,
+                    'total': round(o.amount_total or 0.0, 2),
+                })
+
+        # Sort all open items chronologically (oldest first)
+        open_items.sort(key=lambda x: (x.get('date') or '', x.get('id') or ''))
+
+        # FIFO allocation
+        rem_payment = amount
+        allocation_lines = []
+        for item in open_items:
+            prev_bal = item['balance']
+            applied = round(min(rem_payment, prev_bal), 2)
+            rem_bal = round(prev_bal - applied, 2)
+            rem_payment = round(max(rem_payment - applied, 0.0), 2)
+
+            if rem_bal <= 0.005:
+                st = 'paid'
+                st_label = 'Paid'
+            elif applied > 0.005:
+                st = 'partial'
+                st_label = 'Balance'
+            else:
+                st = 'unpaid'
+                st_label = 'Outstanding'
+
+            allocation_lines.append({
+                'name': item['name'],
+                'date': item['date'],
+                'previous_balance': prev_bal,
+                'previous_balance_formatted': currency.format(prev_bal),
+                'applied_amount': applied,
+                'applied_amount_formatted': currency.format(applied),
+                'remaining_balance': rem_bal,
+                'remaining_balance_formatted': currency.format(rem_bal),
+                'status': st,
+                'status_label': st_label,
+            })
+
+        new_total = round(prev_total - (amount - rem_payment), 2)
+
+        return {
+            'lines': allocation_lines,
+            'previous_total_outstanding': prev_total,
+            'previous_total_outstanding_formatted': currency.format(prev_total),
+            'payment_amount': amount,
+            'payment_amount_formatted': currency.format(amount),
+            'new_total_outstanding': new_total,
+            'new_total_outstanding_formatted': currency.format(new_total),
+            'remaining_unallocated': rem_payment,
+            'remaining_unallocated_formatted': currency.format(rem_payment),
+        }
+
     def get_pos_customer_history(self, limit=15):
         """Everything the cashier might want to know about a customer & vendor, in one call.
 
@@ -752,6 +875,16 @@ class ResPartner(models.Model):
             'avg_order_value_formatted': currency.format(partner.pos_avg_order_value or 0.0),
             'sales_order_count': partner.pos_sales_order_count or len(sales),
             'last_purchase_date': str(partner.pos_last_purchase_date or ''),
+            # Requirement 6: Customer Summary Card indicators
+            'total_sales_formatted': currency.format(partner.pos_total_spent or 0.0),
+            'total_paid_formatted': currency.format(max(0.0, (partner.pos_total_spent or 0.0) - cust_balance)),
+            'total_outstanding_formatted': currency.format(cust_balance),
+            'outstanding_invoices_count': len(open_invoices),
+            'oldest_outstanding_name': (sorted(open_invoices, key=lambda x: (x.get('date') or '', str(x.get('id') or '')))[0]['receipt_number'] or sorted(open_invoices, key=lambda x: (x.get('date') or '', str(x.get('id') or '')))[0]['ref']) if open_invoices else '',
+            'oldest_outstanding_date': sorted(open_invoices, key=lambda x: (x.get('date') or '', str(x.get('id') or '')))[0]['date'] if open_invoices else '',
+            'latest_transaction_name': (sales[0].pos_reference or sales[0].name) if sales else (receivable[0].move_id.name if receivable else ''),
+            'latest_transaction_date': str(sales[0].date_order)[:16] if sales else (str(receivable[0].date) if receivable else ''),
+            'latest_transaction_amount': currency.format(sales[0].amount_total) if sales else (currency.format(receivable[0].debit or receivable[0].credit) if receivable else ''),
             # Customer history lines
             'sales': [order_row(o) for o in sales[:limit]],
             'sales_count': len(sales),
@@ -1029,6 +1162,55 @@ class ResPartner(models.Model):
             ],
             'context': {'default_move_type': 'in_invoice', 'default_partner_id': self.id},
         }
+
+    def action_view_outstanding_invoices(self):
+        """View all open unpaid and partially-paid invoices and POS orders for this customer (Requirement 10)."""
+        self.ensure_one()
+        partner = self.sudo()
+        breakdown = partner._get_pos_khata_breakdown()
+        order_allocations = breakdown['order_allocations']
+
+        # 1. Invoiced moves with residual
+        moves = self.env['account.move'].search([
+            ('partner_id', '=', partner.id),
+            ('move_type', 'in', ('out_invoice', 'out_refund')),
+            ('state', '=', 'posted'),
+            ('payment_state', 'in', ('not_paid', 'partial')),
+        ])
+
+        # 2. Uninvoiced POS orders with credit residual
+        uninvoiced_pos = breakdown.get('pos_orders') or self.env['pos.order'].sudo().search([
+            ('partner_id', '=', partner.id),
+            ('state', '!=', 'cancel'),
+            ('account_move', '=', False),
+        ])
+        orders_with_debt = uninvoiced_pos.filtered(
+            lambda o: order_allocations.get(o.id, {}).get('residual', 0.0) > 0.005
+        )
+
+        if moves:
+            list_view = self.env.ref('pos_retail.pos_retail_outstanding_invoices_list', raise_if_not_found=False)
+            res = {
+                'type': 'ir.actions.act_window',
+                'name': _("Outstanding Invoices: %s", partner.name),
+                'res_model': 'account.move',
+                'view_mode': 'list,form',
+                'domain': [('id', 'in', moves.ids)],
+                'context': {'default_partner_id': self.id, 'create': False},
+            }
+            if list_view:
+                res['views'] = [(list_view.id, 'list'), (False, 'form')]
+            return res
+
+        else:
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _("Outstanding Orders: %s", partner.name),
+                'res_model': 'pos.order',
+                'view_mode': 'list,form',
+                'domain': [('id', 'in', orders_with_debt.ids)],
+                'context': {'default_partner_id': self.id, 'create': False},
+            }
 
     def pos_retail_khata_lines(self):
         """The customer's khata as a running statement, for the PDF report.

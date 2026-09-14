@@ -114,11 +114,33 @@
                         <field name="memo" placeholder="e.g. receipt no. 214"/>
                     </group>
                 </group>
-                <div class="alert alert-warning mb-0" role="alert"
+                <div class="alert alert-warning mb-2" role="alert"
                      invisible="amount &lt;= amount_owed">
                     That is more than this customer owes. The extra is kept as credit
                     against their next purchase.
                 </div>
+                <notebook invisible="not allocation_line_ids">
+                    <page string="Allocation Preview (FIFO Oldest-First)" name="allocations">
+                        <field name="allocation_line_ids" readonly="1">
+                            <list string="Allocations" decoration-success="status == 'paid'" decoration-warning="status == 'partial'" decoration-muted="status == 'unpaid'">
+                                <field name="name" string="Invoice / Order"/>
+                                <field name="date" string="Date"/>
+                                <field name="currency_id" column_invisible="1"/>
+                                <field name="previous_balance" string="Previous Balance"/>
+                                <field name="applied_amount" string="Applied Amount"/>
+                                <field name="remaining_balance" string="Remaining Balance"/>
+                                <field name="status" string="Status" widget="badge"
+                                       decoration-success="status == 'paid'"
+                                       decoration-warning="status == 'partial'"
+                                       decoration-secondary="status == 'unpaid'"/>
+                            </list>
+                        </field>
+                        <group class="oe_subtotal_footer">
+                            <field name="remaining_customer_balance" string="Remaining Customer Balance" readonly="1"/>
+                        </group>
+                    </page>
+                </notebook>
+
                 <footer>
                     <button name="action_confirm" type="object" string="Receive Payment"
                             class="btn-primary"/>

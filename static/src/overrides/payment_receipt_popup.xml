@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.PaymentReceiptPopup">
+        <Dialog size="'md'" title="'Payment Receipt'" bodyClass="'pos-retail-payment-receipt-modal'">
+            <div class="pos-retail-payment-receipt-wrapper">
+                <!-- PRINTABLE RECEIPT CONTAINER -->
+                <div class="pos-retail-payment-receipt p-4 bg-white border rounded shadow-sm text-dark font-monospace"
+                     style="max-width: 440px; margin: 0 auto; font-family: 'Courier New', Courier, monospace; font-size: 0.85rem;">
+                    
+                    <!-- Header -->
+                    <div class="text-center pb-3 border-bottom border-dashed mb-3">
+                        <div class="fw-bold fs-5 text-uppercase" t-esc="receipt.branch_name || 'RETAIL POS STORE'"/>
+                        <div class="fw-bold fs-6 mt-1 text-primary">CUSTOMER PAYMENT RECEIPT</div>
+                        <div class="text-muted small mt-1">
+                            <span t-if="receipt.payment_name">Ref: <strong t-esc="receipt.payment_name"/></span>
+                        </div>
+                    </div>
+
+                    <!-- Meta details: Date, Cashier, Customer -->
+                    <div class="mb-3 small pb-2 border-bottom border-dashed">
+                        <div class="d-flex justify-content-between py-1">
+                            <span class="text-muted">Date &amp; Time:</span>
+                            <span class="fw-bold text-end" t-esc="receipt.datetime || receipt.date"/>
+                        </div>
+                        <div class="d-flex justify-content-between py-1">
+                            <span class="text-muted">Cashier:</span>
+                            <span class="fw-bold" t-esc="receipt.cashier_name || 'Till Cashier'"/>
+                        </div>
+                        <div class="d-flex justify-content-between py-1">
+                            <span class="text-muted">Customer:</span>
+                            <span class="fw-bold text-end" t-esc="receipt.partner_name"/>
+                        </div>
+                        <div t-if="receipt.partner_phone" class="d-flex justify-content-between py-1">
+                            <span class="text-muted">Phone:</span>
+                            <span t-esc="receipt.partner_phone"/>
+                        </div>
+                        <div class="d-flex justify-content-between py-1">
+                            <span class="text-muted">Payment Method:</span>
+                            <span class="fw-bold text-uppercase" t-esc="receipt.journal_name || 'Cash'"/>
+                        </div>
+                        <div t-if="receipt.memo" class="d-flex justify-content-between py-1">
+                            <span class="text-muted">Memo / Ref:</span>
+                            <span class="fst-italic" t-esc="receipt.memo"/>
+                        </div>
+                    </div>
+
+                    <!-- ALLOCATION BREAKDOWN TABLE (Requirement 7) -->
+                    <div class="mb-3">
+                        <div class="fw-bold small text-uppercase mb-2 text-muted" style="letter-spacing: 0.05em;">
+                            Debt Allocation (FIFO)
+                        </div>
+                        <table class="table table-sm table-borderless mb-0" style="font-size: 0.8rem;">
+                            <thead>
+                                <tr class="border-bottom text-muted">
+                                    <th class="py-1 ps-0">Invoice/Order</th>
+                                    <th class="py-1 text-end">Prev</th>
+                                    <th class="py-1 text-end">Paid</th>
+                                    <th class="py-1 text-end pe-0">Rem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-if="receipt.allocations and receipt.allocations.length">
+                                    <tr t-foreach="receipt.allocations" t-as="item" t-key="item.name + item_index"
+                                        class="border-bottom border-light">
+                                        <td class="py-1 ps-0 text-truncate" style="max-width: 140px;">
+                                            <span class="fw-bold" t-esc="item.name"/><br/>
+                                            <span class="small text-muted" t-esc="item.date"/>
+                                        </td>
+                                        <td class="py-1 text-end text-muted" t-esc="item.previous_balance_formatted"/>
+                                        <td class="py-1 text-end fw-bold text-success" t-esc="item.applied_amount_formatted"/>
+                                        <td class="py-1 text-end pe-0 fw-bold"
+                                            t-att-class="item.remaining_balance > 0 ? 'text-danger' : 'text-muted'"
+                                            t-esc="item.remaining_balance_formatted"/>
+                                    </tr>
+                                </t>
+                                <t t-else="">
+                                    <tr>
+                                        <td colspan="4" class="text-center py-2 text-muted fst-italic">
+                                            Payment recorded directly against customer balance / advance credit.
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- TOTALS & RUNNING BALANCE AUDIT CARD -->
+                    <div class="p-3 bg-light rounded border border-dashed mb-3">
+                        <div class="d-flex justify-content-between py-1">
+                            <span class="text-muted">Previous Balance:</span>
+                            <span class="fw-semibold text-muted" t-esc="receipt.previous_balance_formatted"/>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 fs-6">
+                            <span class="fw-bold text-success">Amount Received:</span>
+                            <span class="fw-bold text-success" t-esc="receipt.paid_formatted"/>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 border-top pt-2 mt-1">
+                            <span class="fw-bold">New Balance Owed:</span>
+                            <span class="fw-bold fs-6"
+                                  t-att-class="receipt.new_balance > 0 ? 'text-danger' : 'text-success'"
+                                  t-esc="receipt.new_balance_formatted"/>
+                        </div>
+                    </div>
+
+                    <!-- Signatures / Footer -->
+                    <div class="row pt-3 text-center small text-muted">
+                        <div class="col-6">
+                            <div class="border-top pt-1 mt-3">Cashier Signature</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border-top pt-1 mt-3">Customer Signature</div>
+                        </div>
+                    </div>
+
+                    <div class="text-center text-muted small mt-4 pt-2 border-top border-dashed">
+                        Thank you for settling your khata account!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <t t-set-slot="footer">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    <button type="button" class="btn btn-outline-secondary" t-on-click="props.close">
+                        Close
+                    </button>
+                    <button type="button"
+                            class="btn btn-primary fw-bold d-flex align-items-center gap-2 px-4 shadow-sm"
+                            t-on-click="printReceipt">
+                        <i class="fa fa-print"/>
+                        <span>Print Receipt</span>
+                    </button>
+                </div>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

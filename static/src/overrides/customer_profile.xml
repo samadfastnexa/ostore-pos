@@ -251,45 +251,15 @@
             <!-- TAB 1: CUSTOMER VIEW                                      -->
             <!-- ======================================================== -->
             <div t-if="state.activeSide === 'customer'" class="pos-retail-tab-content">
-                <!-- KHATA / LEDGER KPI CARDS (Customer) -->
-                <div class="pos-retail-profile__grid mb-2">
-                    <!-- 1. Total Debit (Invoiced/Charges) -->
-                    <div class="pos-retail-profile__stat is-debit" title="All invoiced sales &amp; charges">
-                        <span class="pos-retail-profile__label text-primary">Total Debit (Purchases)</span>
-                        <span class="pos-retail-profile__value text-primary"
-                              t-esc="state.data ? state.data.customer_debit.formatted : formatCurrency(partner.pos_total_spent)"/>
-                    </div>
-
-                    <!-- 2. Total Credit (Payments Received) -->
-                    <div class="pos-retail-profile__stat is-credit" title="Payments &amp; refunds credited">
-                        <span class="pos-retail-profile__label text-success">Total Credit (Paid)</span>
-                        <span class="pos-retail-profile__value text-success"
-                              t-esc="state.data ? state.data.customer_credit.formatted : formatCurrency((partner.pos_total_spent || 0) - (partner.pos_outstanding_balance || 0))"/>
-                    </div>
-
-                    <!-- 3. Net Balance (Outstanding) -->
-                    <div class="pos-retail-profile__stat d-flex flex-column justify-content-between"
-                         t-att-class="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0 ? 'is-danger' : 'is-success'">
-                        <div>
-                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
-                                <span class="pos-retail-profile__label">Net Balance (Owed)</span>
-                                <span t-if="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0"
-                                      class="badge text-bg-danger" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
-                                    Owed
-                                </span>
-                                <span t-elif="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) == 0"
-                                      class="badge text-bg-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
-                                    Clear
-                                </span>
-                                <span t-else="" class="badge text-bg-info" style="font-size: 0.65rem; padding: 0.15rem 0.35rem;">
-                                    Advance
-                                </span>
-                            </div>
-                            <span class="pos-retail-profile__value"
-                                  t-esc="state.data ? state.data.customer_balance.formatted : formatCurrency(partner.pos_outstanding_balance)"/>
+                <!-- ================= CUSTOMER SUMMARY CARD (Requirement 6) ================= -->
+                <div class="pos-retail-customer-summary-card card border mb-3 shadow-sm">
+                    <div class="card-header bg-light py-2 px-3 d-flex align-items-center justify-content-between">
+                        <div class="fw-bold small text-dark d-flex align-items-center gap-2">
+                            <i class="fa fa-id-card-o text-primary"/>
+                            <span>Customer Financial Summary &amp; Credit Status</span>
                         </div>
                         <button type="button"
-                                class="btn btn-sm btn-success fw-bold d-flex align-items-center justify-content-center gap-1 mt-2 py-1 px-2 shadow-sm"
+                                class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 py-1 px-3 shadow-sm"
                                 style="font-size: 0.78rem;"
                                 t-on-click="onClickReceivePayment"
                                 title="Receive Khata payment from this customer">
@@ -297,30 +267,85 @@
                             <span>Receive Payment</span>
                         </button>
                     </div>
-
-                    <!-- 4. Credit Limit & Available or Loyalty -->
-                    <div t-if="hasCreditLimit" class="pos-retail-profile__stat"
-                         t-att-class="{ 'is-danger': overLimit }">
-                        <div class="d-flex align-items-center justify-content-between gap-1">
-                            <span class="pos-retail-profile__label">Credit Available</span>
-                            <span class="small text-muted" style="font-size: 0.68rem;">
-                                Limit: <strong t-esc="formatCurrency(state.data ? state.data.credit_limit : partner.pos_credit_limit)"/>
-                            </span>
+                    <div class="card-body p-2">
+                        <div class="row g-2">
+                            <!-- 1. Total Credit / Sales -->
+                            <div class="col-6 col-md-4">
+                                <div class="p-2 border rounded bg-light h-100">
+                                    <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">1. Total Credit / Sales</div>
+                                    <div class="fs-6 fw-bold text-primary"
+                                         t-esc="state.data ? (state.data.total_sales_formatted || state.data.customer_debit.formatted) : formatCurrency(partner.pos_total_spent)"/>
+                                    <div class="small text-muted" style="font-size: 0.72rem;">All orders &amp; debit charges</div>
+                                </div>
+                            </div>
+                            <!-- 2. Total Paid -->
+                            <div class="col-6 col-md-4">
+                                <div class="p-2 border rounded bg-light h-100">
+                                    <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">2. Total Paid</div>
+                                    <div class="fs-6 fw-bold text-success"
+                                         t-esc="state.data ? (state.data.total_paid_formatted || state.data.customer_credit.formatted) : formatCurrency((partner.pos_total_spent || 0) - (partner.pos_outstanding_balance || 0))"/>
+                                    <div class="small text-muted" style="font-size: 0.72rem;">Total receipts &amp; payments</div>
+                                </div>
+                            </div>
+                            <!-- 3. Total Outstanding -->
+                            <div class="col-6 col-md-4">
+                                <div class="p-2 border rounded h-100"
+                                     t-att-class="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0 ? 'bg-danger-subtle border-danger' : 'bg-success-subtle border-success'">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">3. Total Outstanding</span>
+                                        <span t-if="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0"
+                                              class="badge text-bg-danger" style="font-size: 0.65rem;">Owed</span>
+                                        <span t-else="" class="badge text-bg-success" style="font-size: 0.65rem;">Clear</span>
+                                    </div>
+                                    <div class="fs-6 fw-bold"
+                                         t-att-class="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0 ? 'text-danger' : 'text-success'"
+                                         t-esc="state.data ? (state.data.total_outstanding_formatted || state.data.customer_balance.formatted) : formatCurrency(partner.pos_outstanding_balance)"/>
+                                    <div class="small text-muted" style="font-size: 0.72rem;">Across all unpaid transactions</div>
+                                </div>
+                            </div>
+                            <!-- 4. Outstanding Invoices Count -->
+                            <div class="col-6 col-md-4">
+                                <div class="p-2 border rounded bg-light h-100">
+                                    <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">4. Outstanding Invoices</div>
+                                    <div class="fs-6 fw-bold text-dark">
+                                        <t t-esc="state.data ? (state.data.outstanding_invoices_count || 0) : 0"/>
+                                        <span class="fs-6 fw-normal text-muted ms-1" style="font-size: 0.75rem;">unpaid / partial</span>
+                                    </div>
+                                    <div class="small text-muted" style="font-size: 0.72rem;">Pending invoices &amp; orders</div>
+                                </div>
+                            </div>
+                            <!-- 5. Oldest Outstanding -->
+                            <div class="col-6 col-md-4">
+                                <div class="p-2 border rounded bg-light h-100">
+                                    <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">5. Oldest Outstanding</div>
+                                    <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem;"
+                                         t-esc="(state.data and state.data.oldest_outstanding_name) ? state.data.oldest_outstanding_name : '—'"/>
+                                    <div class="small text-muted" style="font-size: 0.72rem;">
+                                        <t t-if="state.data and state.data.oldest_outstanding_date">
+                                            <i class="fa fa-calendar me-1"/>Date: <t t-esc="state.data.oldest_outstanding_date"/>
+                                        </t>
+                                        <t t-else="">No open debt</t>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 6. Latest Transaction -->
+                            <div class="col-6 col-md-4">
+                                <div class="p-2 border rounded bg-light h-100">
+                                    <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">6. Latest Transaction</div>
+                                    <div class="fw-bold text-dark text-truncate" style="font-size: 0.85rem;"
+                                         t-esc="(state.data and state.data.latest_transaction_name) ? state.data.latest_transaction_name : '—'"/>
+                                    <div class="small text-muted" style="font-size: 0.72rem;">
+                                        <t t-if="state.data and state.data.latest_transaction_date">
+                                            <i class="fa fa-clock-o me-1"/><t t-esc="state.data.latest_transaction_date"/> (<t t-esc="state.data.latest_transaction_amount || ''"/>)
+                                        </t>
+                                        <t t-else="">No prior history</t>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <span class="pos-retail-profile__value"
-                              t-esc="formatCurrency(state.data ? state.data.credit_available : partner.pos_credit_available)"/>
-                    </div>
-                    <div t-else="" class="pos-retail-profile__stat">
-                        <div class="d-flex align-items-center justify-content-between gap-1">
-                            <span class="pos-retail-profile__label">Loyalty &amp; Orders</span>
-                            <span class="small text-muted" style="font-size: 0.68rem;">
-                                <strong t-esc="state.data ? state.data.sales_order_count : (partner.pos_sales_order_count || 0)"/> Orders
-                            </span>
-                        </div>
-                        <span class="pos-retail-profile__value"
-                              t-esc="(state.data ? state.data.loyalty_points : Math.round(partner.pos_loyalty_points || 0)) + ' Pts'"/>
                     </div>
                 </div>
+
 
                 <!-- Repeat Last Order Banner -->
                 <div t-if="state.data and state.data.last_basket and state.data.last_basket.length"

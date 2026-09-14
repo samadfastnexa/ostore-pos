@@ -45,6 +45,54 @@
                     </div>
                 </div>
 
+                <div t-if="doc.partner_type == 'customer'" class="mt-3 mb-4">
+                    <div class="fw-bold mb-2">Invoice Debt Allocation (FIFO)</div>
+                    <table class="table table-bordered table-sm" style="font-size: 0.9rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice / Reference</th>
+                                <th>Date</th>
+                                <th class="text-end">Original Amount</th>
+                                <th class="text-end">Remaining Balance</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="doc.reconciled_invoice_ids">
+                                <tr t-foreach="doc.reconciled_invoice_ids" t-as="inv">
+                                    <td t-esc="inv.name"/>
+                                    <td t-esc="inv.invoice_date"/>
+                                    <td class="text-end" t-esc="inv.amount_total" t-options="{'widget': 'monetary', 'display_currency': inv.currency_id}"/>
+                                    <td class="text-end" t-esc="inv.amount_residual" t-options="{'widget': 'monetary', 'display_currency': inv.currency_id}"/>
+                                    <td class="text-center">
+                                        <span t-esc="inv.payment_state == 'paid' and 'Paid' or 'Balance'"/>
+                                    </td>
+                                </tr>
+                            </t>
+                            <t t-else="">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">Payment applied against customer khata / advance store credit.</td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <div class="row justify-content-end">
+                        <div class="col-6">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="fw-bold">Current Outstanding Balance:</td>
+                                    <td class="text-end fw-bold text-danger">
+                                        <span t-esc="doc.partner_id.pos_outstanding_balance"
+                                              t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+
                 <div class="row mt-5">
                     <div class="col-6">
                         <div style="border-top: 1px solid #333; width: 200px; margin-top: 40px; padding-top: 4px;">

@@ -277,6 +277,8 @@
                 <field name="outstanding" string="Outstanding" sum="Total Outstanding"
                        decoration-danger="outstanding &gt; 0"
                        decoration-success="outstanding &lt;= 0"/>
+                <field name="outstanding_invoices_count" string="Unpaid Invoices" optional="show"/>
+                <field name="last_payment_date" string="Last Payment Date" optional="show"/>
                 <field name="last_transaction_date" string="Last Transaction"/>
                 <field name="due_date" optional="show"/>
                 <field name="status" widget="badge"
@@ -449,15 +451,8 @@
         sequence="9"
         groups="base.group_system,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
 
-    <!-- Sit right beside their own full ledger: same permission, same
-         reader, just the last line of the story instead of the whole
-         history. -->
-    <menuitem id="pos_retail_menu_outstanding_customer" name="Outstanding Customers"
-        parent="point_of_sale.menu_point_rep" action="action_pos_retail_outstanding_customer"
-        sequence="8"
-        groups="base.group_system,point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_customer_ledger_view_res_groups"/>
-
     <menuitem id="pos_retail_menu_outstanding_vendor" name="Outstanding Vendors"
+
         parent="point_of_sale.menu_point_rep" action="action_pos_retail_outstanding_vendor"
         sequence="9"
         groups="base.group_system,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>

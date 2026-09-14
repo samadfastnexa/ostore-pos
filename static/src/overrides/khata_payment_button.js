@@ -4,8 +4,9 @@ import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 import { ControlButtons } from "@point_of_sale/app/screens/product_screen/control_buttons/control_buttons";
 import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
-import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { ReceivePaymentPopup } from "./receive_payment_popup";
+import { PaymentReceiptPopup } from "./payment_receipt_popup";
 
 // Take a khata payment without leaving the till.
 //
@@ -49,51 +50,30 @@ patch(ControlButtons.prototype, {
             return;
         }
 
-        const owed = partner.pos_outstanding_balance || 0;
-        const amount = await makeAwaitable(this.dialog, NumberPopup, {
-            title: _t("Khata payment from %s", partner.name),
-            subtitle:
-                owed > 0
-                    ? _t("Currently owes %s", this.env.utils.formatCurrency(owed))
-                    : _t("Nothing outstanding — this will leave them in credit"),
-            startingValue: owed > 0 ? owed : 0,
+        const paymentResult = await makeAwaitable(this.dialog, ReceivePaymentPopup, {
+            partner,
         });
-        if (!amount || parseFloat(amount) <= 0) {
+
+        if (!paymentResult) {
             return;
         }
 
-        try {
-            const result = await this.pos.data.call(
-                "pos.retail.khata.payment",
-                "pos_retail_settle_from_pos",
-                [partner.id, parseFloat(amount), this.pos.getCashier().id]
-            );
-            // The balance is read back from the server rather than subtracted
-            // here. The payment settles the oldest debts first and can leave a
-            // customer in credit, so arithmetic done in the browser would
-            // disagree with the ledger on exactly the cases that matter.
-            partner.pos_outstanding_balance = result.balance;
-            this.notification.add(
-                _t(
-                    "%(paid)s received from %(name)s. They now owe %(balance)s.",
-                    {
-                        paid: this.env.utils.formatCurrency(result.paid),
-                        name: partner.name,
-                        balance: this.env.utils.formatCurrency(result.balance),
-                    }
-                ),
-                { type: "success" }
-            );
-        } catch (error) {
-            // Shown rather than swallowed: the cashier has money in their hand
-            // and has to know whether it was recorded.
-            this.dialog.add(AlertDialog, {
-                title: _t("Payment not recorded"),
-                body:
-                    error?.data?.message ||
-                    error?.message ||
-                    _t("The payment could not be saved. Nothing was recorded."),
-            });
-        }
+        this.notification.add(
+            _t(
+                "%(paid)s received from %(name)s. They now owe %(balance)s.",
+                {
+                    paid: paymentResult.paid_formatted || (this.env?.utils?.formatCurrency ? this.env.utils.formatCurrency(paymentResult.paid) : paymentResult.paid),
+                    name: partner.name,
+                    balance: paymentResult.new_balance_formatted || (this.env?.utils?.formatCurrency ? this.env.utils.formatCurrency(paymentResult.new_balance) : paymentResult.new_balance),
+                }
+            ),
+            { type: "success" }
+        );
+
+        // Open Printable Payment Receipt modal immediately
+        await makeAwaitable(this.dialog, PaymentReceiptPopup, {
+            receipt: paymentResult,
+        });
     },
 });
+

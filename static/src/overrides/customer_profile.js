@@ -6,9 +6,11 @@ import { Dialog } from "@web/core/dialog/dialog";
 import { usePos } from "@point_of_sale/app/hooks/pos_hook";
 import { useService } from "@web/core/utils/hooks";
 import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
-import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { PartnerList } from "@point_of_sale/app/screens/partner_list/partner_list";
+import { ReceivePaymentPopup } from "./receive_payment_popup";
+import { PaymentReceiptPopup } from "./payment_receipt_popup";
+
 
 // Unified Customer & Vendor Profile + Ledger + Transaction History for POS Cashiers.
 // Supports in-modal switching between any customer or vendor without leaving the dialog.
@@ -324,60 +326,34 @@ export class PosRetailCustomerProfile extends Component {
             return;
         }
 
-        const cashier = this.pos.getCashier();
-        const owed = this.state.data
-            ? (this.state.data.customer_balance?.amount || 0)
-            : (partner.pos_outstanding_balance || 0);
-
-        const amount = await makeAwaitable(this.dialog, NumberPopup, {
-            title: _t("Receive Khata Payment: %s", partner.name),
-            subtitle:
-                owed > 0
-                    ? _t("Total Owed: %s (FIFO: oldest credit debts clear first)", this.formatCurrency(owed))
-                    : _t("Nothing outstanding — this payment will be recorded as advance credit."),
-            startingValue: owed > 0 ? owed : 0,
-            confirmButtonLabel: _t("Confirm Payment"),
+        const paymentResult = await makeAwaitable(this.dialog, ReceivePaymentPopup, {
+            partner,
         });
 
-        if (!amount || parseFloat(amount) <= 0) {
+        if (!paymentResult) {
             return;
         }
 
-        const parsedAmount = parseFloat(amount);
-        try {
-            this.state.loading = true;
-            const result = await this.pos.data.call(
-                "pos.retail.khata.payment",
-                "pos_retail_settle_from_pos",
-                [partner.id, parsedAmount, cashier?.id || false]
-            );
+        // Show success notification
+        this.notification.add(
+            _t(
+                "%(paid)s received from %(name)s. Net balance owed: %(balance)s.",
+                {
+                    paid: paymentResult.paid_formatted || this.formatCurrency(paymentResult.paid),
+                    name: partner.name,
+                    balance: paymentResult.new_balance_formatted || this.formatCurrency(paymentResult.new_balance),
+                }
+            ),
+            { type: "success" }
+        );
 
-            partner.pos_outstanding_balance = result.balance;
+        // Open Printable Payment Receipt modal immediately
+        await makeAwaitable(this.dialog, PaymentReceiptPopup, {
+            receipt: paymentResult,
+        });
 
-            this.notification.add(
-                _t(
-                    "%(paid)s received from %(name)s. Net balance owed: %(balance)s.",
-                    {
-                        paid: this.formatCurrency(result.paid),
-                        name: partner.name,
-                        balance: this.formatCurrency(result.balance),
-                    }
-                ),
-                { type: "success" }
-            );
-
-            // Reactively reload partner ledger and history immediately!
-            await this.loadPartnerData(partner);
-        } catch (error) {
-            this.dialog.add(AlertDialog, {
-                title: _t("Payment Not Recorded"),
-                body:
-                    error?.data?.message ||
-                    error?.message ||
-                    _t("The payment could not be saved. Nothing was recorded."),
-            });
-        } finally {
-            this.state.loading = false;
-        }
+        // Reactively reload partner ledger and history immediately!
+        await this.loadPartnerData(partner);
     }
 }
+

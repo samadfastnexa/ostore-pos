@@ -177,8 +177,16 @@
          receivable-lines list is kept for the smart button on a customer's
          form, where it is scoped to one customer and reads correctly. -->
     <menuitem id="pos_retail_menu_customer_ledger" name="Customer Ledger"
-        parent="point_of_sale.menu_point_rep" action="action_pos_retail_customer_ledger_v2"
+        parent="point_of_sale.menu_point_rep"
         sequence="8" groups="base.group_system,point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,perm_reporting_res_groups,perm_customer_ledger_view_res_groups"/>
+
+    <menuitem id="pos_retail_menu_customer_ledger_all" name="Customer Ledger"
+        parent="pos_retail_menu_customer_ledger" action="action_pos_retail_customer_ledger_v2"
+        sequence="1" groups="base.group_system,point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,perm_reporting_res_groups,perm_customer_ledger_view_res_groups"/>
+
+    <menuitem id="pos_retail_menu_outstanding_customer" name="Outstanding Customers"
+        parent="pos_retail_menu_customer_ledger" action="action_pos_retail_outstanding_customer"
+        sequence="2" groups="base.group_system,point_of_sale.group_pos_manager,account.group_account_invoice,account.group_account_readonly,perm_customer_ledger_view_res_groups"/>
 
     <!-- Reporting > Credit Approvals -->
     <menuitem id="pos_retail_menu_credit_overrides" name="Credit Approvals"

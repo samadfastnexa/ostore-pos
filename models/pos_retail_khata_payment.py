@@ -69,6 +69,15 @@ class PosRetailKhataPayment(models.TransientModel):
         help="Optional. Shown on the ledger line, for instance a receipt number.",
     )
 
+    allocation_line_ids = fields.One2many(
+        'pos.retail.khata.payment.line', 'wizard_id',
+        string="Payment Allocation", compute='_compute_allocation_lines',
+    )
+    remaining_customer_balance = fields.Monetary(
+        string="Remaining Customer Balance", compute='_compute_allocation_lines',
+        currency_field='currency_id',
+    )
+
     @api.depends('partner_id')
     def _compute_company_id(self):
         for wizard in self:
@@ -82,8 +91,7 @@ class PosRetailKhataPayment(models.TransientModel):
             if not wizard.partner_id:
                 wizard.amount_owed = 0.0
                 continue
-            company = wizard.company_id or self.env.company
-            wizard.amount_owed = wizard.partner_id.with_company(company).credit
+            wizard.amount_owed = wizard.partner_id.pos_outstanding_balance
 
     @api.depends('amount_owed')
     def _compute_amount(self):
@@ -91,6 +99,27 @@ class PosRetailKhataPayment(models.TransientModel):
         # cashier typing over it.
         for wizard in self:
             wizard.amount = wizard.amount_owed
+
+    @api.depends('partner_id', 'amount')
+    def _compute_allocation_lines(self):
+        for wizard in self:
+            if not wizard.partner_id:
+                wizard.allocation_line_ids = False
+                wizard.remaining_customer_balance = 0.0
+                continue
+            alloc = self.env['res.partner'].get_customer_payment_allocation(wizard.partner_id.id, wizard.amount or 0.0)
+            lines = []
+            for item in alloc.get('lines', []):
+                lines.append((0, 0, {
+                    'name': item['name'],
+                    'date': item['date'],
+                    'previous_balance': item['previous_balance'],
+                    'applied_amount': item['applied_amount'],
+                    'remaining_balance': item['remaining_balance'],
+                    'status': item['status'],
+                }))
+            wizard.allocation_line_ids = lines
+            wizard.remaining_customer_balance = alloc.get('new_total_outstanding', 0.0)
 
     @api.depends('company_id')
     def _compute_journal_id(self):
@@ -104,31 +133,32 @@ class PosRetailKhataPayment(models.TransientModel):
             )
 
     @api.model
+    def get_pos_payment_journals(self, company_id=False):
+        """Return available cash and bank payment methods for settlement."""
+        company = self.env['res.company'].browse(int(company_id)) if company_id else self.env.company
+        journals = self.env['account.journal'].sudo().search([
+            ('company_id', '=', company.id),
+            ('type', 'in', ('cash', 'bank')),
+        ], order='type desc, name asc')
+        return [
+            {
+                'id': j.id,
+                'name': j.name,
+                'type': j.type,
+                'is_cash': j.type == 'cash',
+            }
+            for j in journals
+        ]
+
+    @api.model
     def pos_retail_settle_from_pos(self, partner_id, amount, employee_id,
-                                   journal_id=False, memo=False):
+                                   journal_id=False, memo=False, payment_date=False):
         """Take a khata payment at the till, in the middle of a queue.
 
         The shop's objection to doing this in the back office was practical
         and correct: a customer settling their udhaar is standing at the
         counter with people behind them, and the cashier is not going to open
         a second browser and sign in.
-
-        WHOSE PERMISSION IS CHECKED, and why it is not the obvious one. Every
-        call from a till arrives as the TILL ACCOUNT, because that is who the
-        browser is signed in as -- one shared login for the device. Checking
-        the caller would therefore give the same answer for every person who
-        ever stands at that counter. So the check is against the EMPLOYEE who
-        is logged in at the till, through the permission their own user
-        carries in the Roles & Permissions catalogue.
-
-        That also means hiding the button in the browser is not the control.
-        The button is a courtesy; this method is the control, and it refuses
-        an employee without the permission no matter how the call arrives.
-
-        The record itself is then created with sudo. The till account is a
-        till, not a bookkeeper: it has no business holding rights over
-        payments and journals, and granting them to it would hand every
-        cashier those rights whether or not they were meant to have them.
         """
         employee = self.env['hr.employee'].sudo().browse(int(employee_id)).exists() if employee_id else False
         user = (employee and employee.user_id) or self.env.user
@@ -151,15 +181,30 @@ class PosRetailKhataPayment(models.TransientModel):
         if not partner:
             raise UserError(_("Choose the customer who is paying."))
 
+        # Compute deterministic FIFO allocation preview before posting
+        alloc = self.env['res.partner'].get_customer_payment_allocation(partner.id, amount)
+
         wizard = self.sudo().new({'partner_id': partner.id})
         wizard._compute_company_id()
         wizard._compute_journal_id()
+
+        target_journal_id = False
+        if journal_id:
+            j = self.env['account.journal'].sudo().browse(int(journal_id)).exists()
+            if j:
+                target_journal_id = j.id
+            else:
+                pm = self.env['pos.payment.method'].sudo().browse(int(journal_id)).exists()
+                if pm and pm.journal_id:
+                    target_journal_id = pm.journal_id.id
+
         values = {
             'partner_id': partner.id,
             'company_id': wizard.company_id.id,
             'currency_id': wizard.currency_id.id,
             'amount': amount,
-            'journal_id': int(journal_id) if journal_id else wizard.journal_id.id,
+            'date': payment_date or fields.Date.context_today(self),
+            'journal_id': target_journal_id or wizard.journal_id.id,
             'memo': memo or _("Khata payment at the till"),
         }
         if not values['journal_id']:
@@ -168,28 +213,33 @@ class PosRetailKhataPayment(models.TransientModel):
                 "nowhere to record the money."))
 
         record = self.sudo().create(values)
-        # action_confirm returns an action meant for a back-office screen. The
-        # till has no use for it, and the figure it does need -- what the
-        # customer owes now -- is the whole point of the exercise.
-        record.action_confirm()
-        # Both fields, and a flush first.
-        #
-        # pos_outstanding_balance is computed from partner.credit, which is
-        # itself computed from the ledger. Invalidating only the outer field
-        # recomputed it from a `credit` that was still cached from before the
-        # payment, so the till was told the customer owed exactly what they
-        # owed a moment ago -- the one number the whole action exists to
-        # change. The flush makes sure the payment and its reconciliation are
-        # in the database before either is read back.
+        created_payment = record._action_confirm_payment()
         self.env.flush_all()
         partner.invalidate_recordset(['credit', 'pos_outstanding_balance'])
+        new_balance = partner.sudo().pos_outstanding_balance
+        currency = record.currency_id or partner.currency_id or self.env.company.currency_id
         return {
+            'payment_id': created_payment.id if created_payment else False,
+            'payment_name': created_payment.name if created_payment else '',
             'partner_id': partner.id,
+            'partner_name': partner.name,
+            'partner_phone': partner.phone or partner.mobile or '',
             'paid': record.amount,
-            'balance': partner.sudo().pos_outstanding_balance,
+            'paid_formatted': currency.format(record.amount),
+            'previous_balance': alloc['previous_total_outstanding'],
+            'previous_balance_formatted': alloc['previous_total_outstanding_formatted'],
+            'new_balance': new_balance,
+            'new_balance_formatted': currency.format(new_balance),
+            'allocations': alloc.get('lines', []),
+            'journal_name': record.journal_id.name or '',
+            'memo': record.memo or '',
+            'date': str(record.date),
+            'datetime': fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'cashier_name': employee.name if employee else user.name,
+            'branch_name': record.company_id.name or '',
         }
 
-    def action_confirm(self):
+    def _action_confirm_payment(self):
         self.ensure_one()
         if self.amount <= 0:
             raise UserError(_("Enter how much the customer handed over."))
@@ -200,9 +250,6 @@ class PosRetailKhataPayment(models.TransientModel):
                 customer=self.partner_id.display_name,
             ))
         company = self.company_id or self.env.company
-        # Paying more than is owed is allowed on purpose: an advance against
-        # future goods is ordinary in a khata shop, and it simply leaves the
-        # customer in credit.
         payment = self.env['account.payment'].with_company(company).create({
             'payment_type': 'inbound',
             'partner_type': 'customer',
@@ -216,6 +263,10 @@ class PosRetailKhataPayment(models.TransientModel):
         })
         payment.action_post()
         self._settle_oldest_first(payment)
+        return payment
+
+    def action_confirm(self):
+        self._action_confirm_payment()
         return self.partner_id.action_view_customer_ledger()
 
     def _settle_oldest_first(self, payment):
@@ -253,3 +304,22 @@ class PosRetailKhataPayment(models.TransientModel):
             # ledger. Failing loudly here would leave the cashier thinking the
             # money was never taken.
             pass
+
+
+class PosRetailKhataPaymentLine(models.TransientModel):
+    _name = 'pos.retail.khata.payment.line'
+    _description = "Khata Payment Allocation Line"
+    _order = 'id asc'
+
+    wizard_id = fields.Many2one('pos.retail.khata.payment', string="Wizard", ondelete='cascade')
+    name = fields.Char(string="Invoice / Order", readonly=True)
+    date = fields.Char(string="Date", readonly=True)
+    currency_id = fields.Many2one('res.currency', related='wizard_id.currency_id')
+    previous_balance = fields.Monetary(string="Previous Balance", readonly=True, currency_field='currency_id')
+    applied_amount = fields.Monetary(string="Applied", readonly=True, currency_field='currency_id')
+    remaining_balance = fields.Monetary(string="Remaining", readonly=True, currency_field='currency_id')
+    status = fields.Selection([
+        ('paid', "Paid"),
+        ('partial', "Balance"),
+        ('unpaid', "Outstanding"),
+    ], string="Status", readonly=True)

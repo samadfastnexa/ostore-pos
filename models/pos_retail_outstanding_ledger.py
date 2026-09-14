@@ -27,8 +27,10 @@ class PosRetailOutstandingCustomer(models.Model):
     outstanding = fields.Monetary(
         string="Outstanding", readonly=True, currency_field='currency_id',
         help="What this customer owes the shop as of their posted transactions at this branch.")
+    outstanding_invoices_count = fields.Integer(string="Unpaid Invoices", readonly=True)
     last_transaction_date = fields.Date(string="Last Transaction", readonly=True)
     last_transaction_datetime = fields.Datetime(string="Last Transaction (Time)", readonly=True)
+    last_payment_date = fields.Date(string="Last Payment Date", readonly=True)
     oldest_unpaid_date = fields.Date(string="Oldest Outstanding Date", readonly=True)
     due_date = fields.Date(string="Due Date", readonly=True)
     status = fields.Selection(
@@ -71,8 +73,10 @@ class PosRetailOutstandingCustomer(models.Model):
                     COALESCE(SUM(CASE WHEN ml.debit > 0 THEN ml.debit ELSE 0 END), 0) AS total_credit,
                     COALESCE(SUM(CASE WHEN ml.credit > 0 THEN ml.credit ELSE 0 END), 0) AS total_paid,
                     COALESCE(SUM(ml.debit - ml.credit), 0) AS outstanding,
+                    COUNT(DISTINCT CASE WHEN ml.amount_residual > 0.005 AND ml.debit > 0 THEN ml.move_id ELSE NULL END) AS outstanding_invoices_count,
                     MAX(ml.date)            AS last_transaction_date,
                     MAX(ml.create_date)     AS last_transaction_datetime,
+                    MAX(CASE WHEN ml.credit > 0 THEN ml.date ELSE NULL END) AS last_payment_date,
                     MIN(CASE WHEN ml.amount_residual > 0.005 AND ml.debit > 0 THEN ml.date ELSE NULL END) AS oldest_unpaid_date,
                     MIN(CASE WHEN ml.amount_residual > 0.005 AND ml.debit > 0 AND ml.date_maturity IS NOT NULL THEN ml.date_maturity ELSE NULL END) AS due_date,
                     CASE 
@@ -89,6 +93,7 @@ class PosRetailOutstandingCustomer(models.Model):
                 HAVING COALESCE(SUM(ml.debit - ml.credit), 0) > 0.005
             )
         """ % {'table': self._table})
+
 
 
 class PosRetailOutstandingVendor(models.Model):

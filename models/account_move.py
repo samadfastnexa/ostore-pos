@@ -34,3 +34,15 @@ class AccountMove(models.Model):
         ):
             values['invoice_date'] = fields.Date.context_today(self)
         return values
+
+    amount_paid = fields.Monetary(
+        string="Amount Paid",
+        compute='_compute_amount_paid',
+        currency_field='currency_id',
+    )
+
+    @api.depends('amount_total', 'amount_residual')
+    def _compute_amount_paid(self):
+        for move in self:
+            move.amount_paid = max(0.0, (move.amount_total or 0.0) - (move.amount_residual or 0.0))
+
