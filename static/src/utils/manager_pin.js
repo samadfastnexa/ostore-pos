@@ -30,12 +30,33 @@ export async function posRetailRequestManagerPin(pos, dialog, notification, opti
         );
         return false;
     }
-    const candidates = employeeModel.filter(
-        (employee) => employee.pos_discount_role_id?.can_approve
+    // Step 1: Identify all employees who qualify as a manager/approver:
+    //  a) Their POS Discount Role has can_approve = true, OR
+    //  b) They have POS manager / admin rights in core Odoo (_role === 'manager' or _user_role === 'admin').
+    const managerEmployees = employeeModel.filter(
+        (employee) =>
+            Boolean(employee.pos_discount_role_id?.can_approve) ||
+            employee._role === "manager" ||
+            employee._user_role === "admin"
     );
-    if (!candidates.length) {
+    if (!managerEmployees.length) {
         notification.add(
-            options.noManagerMessage || _t("No manager is configured to give approval."),
+            options.noManagerMessage ||
+                _t("No manager is configured. Please assign a Manager role to an employee in Employees > Settings."),
+            { type: "danger" }
+        );
+        return false;
+    }
+
+    // Step 2: Candidates must have a PIN code configured to authenticate.
+    const candidates = managerEmployees.filter((employee) => Boolean(employee._pin));
+    if (!candidates.length) {
+        const names = managerEmployees.map((e) => e.name).join(", ");
+        notification.add(
+            _t(
+                "Manager(s) (%s) have no PIN code configured. Please set a PIN code under Employees > Settings > Attendance/Point of Sale.",
+                names
+            ),
             { type: "danger" }
         );
         return false;

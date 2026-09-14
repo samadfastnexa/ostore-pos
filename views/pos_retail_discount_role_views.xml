@@ -64,4 +64,15 @@
         </field>
     </record>
 
+    <record id="hr_employee_view_form_inherit_pos_retail" model="ir.ui.view">
+        <field name="name">hr.employee.form.inherit.pos_retail</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='identification_group']" position="inside">
+                <field name="pos_discount_role_id"/>
+            </xpath>
+        </field>
+    </record>
+
 </odoo>
