@@ -183,10 +183,10 @@
     <menuitem id="menu_pos_retail_customer_refunds"
               name="Customer Refunds"
               parent="menu_pos_retail_customer_refunds_root"
-              action="action_pos_retail_customer_refunds"
+              action="action_pos_retail_customer_refund_orders"
               sequence="1"/>
     <menuitem id="menu_pos_retail_customer_refund_summary"
-              name="Customer Refund Summary"
+              name="Customer Refund Analytics"
               parent="menu_pos_retail_customer_refunds_root"
               action="action_pos_retail_customer_refund_summary"
               sequence="10"/>

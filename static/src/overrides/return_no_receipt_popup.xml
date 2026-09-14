@@ -2,13 +2,30 @@
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.ReturnNoReceiptPopup">
-        <Dialog title="'Return Without Receipt'" size="'lg'">
+        <Dialog title="'Process Customer Return &amp; Refund'" size="'lg'">
             <div class="pos-retail-return-popup d-flex flex-column gap-2">
+
+                <!-- Mode Selection: Quick No-Receipt vs Linked to Receipt -->
+                <div class="btn-group w-100 mb-1" role="group">
+                    <button type="button"
+                            t-attf-class="btn btn-sm {{ state.returnMode === 'no_receipt' ? 'btn-primary' : 'btn-outline-primary' }}"
+                            t-on-click="() => this.setReturnMode('no_receipt')">
+                        <i class="fa fa-bolt me-1"/>No Receipt / Quick Return
+                    </button>
+                    <button type="button"
+                            t-attf-class="btn btn-sm {{ state.returnMode === 'linked' ? 'btn-primary' : 'btn-outline-primary' }}"
+                            t-on-click="() => this.setReturnMode('linked')">
+                        <i class="fa fa-link me-1"/>Receipt / Linked Return
+                    </button>
+                </div>
+
+                <!-- Product Search when no product chosen -->
                 <input type="text" class="form-control"
-                       placeholder="Search product by name or barcode..."
+                       placeholder="Search product by name or scan barcode..."
                        t-model="state.search" t-if="!selectedProduct"/>
+
                 <div t-if="!selectedProduct" class="return-product-list d-flex flex-column gap-1"
-                     style="max-height:45vh; overflow-y:auto;">
+                     style="max-height:40vh; overflow-y:auto;">
                     <button t-foreach="products" t-as="product" t-key="product.id"
                             class="btn btn-outline-secondary w-100 text-start"
                             t-on-click="() => this.selectProduct(product)">
@@ -16,68 +33,72 @@
                     </button>
                     <div t-if="!products.length" class="text-muted text-center p-3">No products match.</div>
                 </div>
-                <div t-else="" class="d-flex flex-column gap-2">
+
+                <!-- Product Configuration Form -->
+                <div t-else="" class="d-flex flex-column gap-2 border rounded p-2 bg-light">
                     <div class="fw-bold d-flex align-items-center justify-content-between">
-                        <span><i class="fa fa-undo me-1"/><t t-esc="selectedProduct.display_name"/></span>
-                        <button class="btn btn-sm btn-link" t-on-click="() => this.clearProduct()">change product</button>
+                        <span><i class="fa fa-undo me-1 text-primary"/><t t-esc="selectedProduct.display_name"/></span>
+                        <button class="btn btn-sm btn-link text-danger" t-on-click="() => this.clearProduct()">Change Product</button>
                     </div>
+
+                    <!-- Policy Info Badge -->
+                    <div t-if="state.policyText" class="small text-muted">
+                        <span class="badge bg-secondary"><t t-esc="state.policyText"/></span>
+                    </div>
+
                     <div class="row g-2">
-                        <div class="col">
-                            <label class="form-label mb-0">Quantity</label>
+                        <div class="col-6">
+                            <label class="form-label mb-0 small fw-bold">Quantity</label>
                             <input type="number" min="1" t-att-max="maxQty === Infinity ? undefined : maxQty"
                                    class="form-control" t-model="state.qty"/>
                         </div>
-                        <div class="col">
-                            <label class="form-label mb-0">Refund price (each)</label>
+                        <div class="col-6">
+                            <label class="form-label mb-0 small fw-bold">Refund Unit Price</label>
                             <input type="number" min="0" step="0.01" class="form-control" t-model="state.price"/>
                         </div>
                     </div>
 
-                    <!-- Shown only once a link is found: what was originally
-                         sold, what has already come back against it (possibly
-                         from a different visit, weeks apart), and what is
-                         actually left to return. Stops a second return months
-                         later from silently exceeding what remains, which is
-                         exactly the case a receipt-free return makes easy. -->
-                    <div t-if="state.linkResult and state.linkResult.found"
-                         class="pos-retail-return-qty-info d-flex justify-content-between small text-muted border rounded p-2">
-                        <span>Original: <strong t-esc="state.linkResult.original_qty"/></span>
-                        <span>Already returned: <strong t-esc="state.linkResult.already_returned_qty"/></span>
-                        <span>Returnable now: <strong t-esc="state.linkResult.returnable_qty"/></span>
-                    </div>
-                    <div t-if="isOverMaxQty" class="text-danger small">
-                        <i class="fa fa-exclamation-triangle me-1"/>
-                        Only <t t-esc="maxQty"/> can still be returned against this sale.
-                    </div>
-
-                    <!-- Who this is for. Optional — a plain cash refund to a
-                         walk-in needs nobody named — but front and centre,
-                         because crediting a customer's account instead of
-                         handing back cash needs to know whose account. -->
-                    <div class="pos-retail-return-customer d-flex align-items-center justify-content-between border rounded p-2">
-                        <span>
-                            <i class="fa fa-user me-1" aria-hidden="true"/>
-                            <t t-if="partner"><t t-esc="partner.name"/></t>
-                            <t t-else="">Walk-in Customer</t>
-                        </span>
-                        <button class="btn btn-sm btn-secondary" t-on-click="() => this.pickCustomer()">
-                            <t t-if="partner">Change</t><t t-else="">Select Customer</t>
-                        </button>
+                    <!-- Condition Selector -->
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label mb-0 small fw-bold">Product Condition</label>
+                            <select class="form-select form-select-sm" t-model="state.condition">
+                                <option value="resalable">Resalable / Good (Return to Stock)</option>
+                                <option value="damaged">Damaged (Move to Scrap)</option>
+                                <option value="defective">Defective / Faulty (Move to Scrap)</option>
+                                <option value="used">Used / Opened</option>
+                                <option value="packaging_missing">Packaging Missing</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label mb-0 small fw-bold">Return Reason</label>
+                            <select class="form-select form-select-sm" t-model="state.reasonId">
+                                <option t-foreach="returnReasons" t-as="r" t-key="r.id" t-att-value="r.id">
+                                    <t t-esc="r.name"/>
+                                </option>
+                            </select>
+                        </div>
                     </div>
 
-                    <!-- The optional link. Collapsed to one line by default;
-                         typing here is something a cashier reaches for, never
-                         something the screen is waiting on. -->
-                    <div class="pos-retail-return-link border rounded p-2">
-                        <label class="form-label mb-1 small text-muted">
-                            Original order / invoice no. (optional)
+                    <!-- Reason Note (Mandatory if reason is other) -->
+                    <div>
+                        <input type="text" class="form-control form-control-sm"
+                               placeholder="Reason details / notes (mandatory for 'Other')..."
+                               t-model="state.reasonNote"/>
+                    </div>
+
+                    <!-- Receipt Link lookup (Mandatory or prominent in linked mode) -->
+                    <div class="pos-retail-return-link border rounded p-2 bg-white">
+                        <label class="form-label mb-1 small text-muted fw-bold">
+                            Original Sale Reference / Receipt # <span t-if="state.returnMode === 'no_receipt'">(optional)</span>
                         </label>
                         <div class="d-flex gap-2">
-                            <input type="text" class="form-control"
+                            <input type="text" class="form-control form-control-sm"
                                    placeholder="e.g. 261-2-000006"
                                    t-model="state.reference"
                                    t-on-keydown="(ev) => { if (ev.key === 'Enter') this.lookupOriginal(); }"/>
-                            <button class="btn btn-secondary" t-att-disabled="!state.reference.trim() or state.linking"
+                            <button class="btn btn-sm btn-secondary" t-att-disabled="!state.reference.trim() or state.linking"
                                     t-on-click="() => this.lookupOriginal()">
                                 <i t-attf-class="fa {{ state.linking ? 'fa-spin fa-circle-o-notch' : 'fa-search' }}"/>
                             </button>
@@ -86,35 +107,77 @@
                              class="text-success small mt-1">
                             <i class="fa fa-check-circle me-1"/>
                             Linked to <t t-esc="state.linkResult.order_name"/> — original price filled in.
-                            <a href="#" t-on-click.prevent="() => this.clearLink()">undo</a>
+                            <a href="#" class="ms-1" t-on-click.prevent="() => this.clearLink()">undo</a>
                         </div>
                         <div t-elif="state.linkResult" class="text-muted small mt-1">
                             <i class="fa fa-info-circle me-1"/><t t-esc="linkStatusMessage"/>
                         </div>
                     </div>
+
+                    <div t-if="state.linkResult and state.linkResult.found"
+                         class="pos-retail-return-qty-info d-flex justify-content-between small text-muted border rounded p-2 bg-white">
+                        <span>Original: <strong t-esc="state.linkResult.original_qty"/></span>
+                        <span>Already returned: <strong t-esc="state.linkResult.already_returned_qty"/></span>
+                        <span>Returnable now: <strong t-esc="state.linkResult.returnable_qty"/></span>
+                    </div>
+                    <div t-if="isOverMaxQty" class="text-danger small">
+                        <i class="fa fa-exclamation-triangle me-1"/>
+                        Only <t t-esc="maxQty"/> can still be returned against this sale.
+                    </div>
                 </div>
+
+                <!-- Customer Selection Card -->
+                <div class="pos-retail-return-customer d-flex align-items-center justify-content-between border rounded p-2">
+                    <span>
+                        <i class="fa fa-user me-1 text-secondary"/>
+                        <t t-if="partner"><strong t-esc="partner.name"/></t>
+                        <t t-else="">Walk-in Customer</t>
+                        <span t-if="partner and partner.pos_outstanding_balance" class="text-muted small ms-2">
+                            (Owes: <t t-esc="partner.pos_outstanding_balance"/>)
+                        </span>
+                    </span>
+                    <button class="btn btn-sm btn-outline-secondary" t-on-click="() => this.pickCustomer()">
+                        <t t-if="partner">Change Customer</t><t t-else="">Select Customer</t>
+                    </button>
+                </div>
+
+                <!-- Return Cart / Staged Items -->
                 <div t-if="state.lines.length" class="border rounded p-2">
-                    <div class="fw-bold mb-2">Return cart</div>
-                    <div t-foreach="state.lines" t-as="line" t-key="line.product.id + ':' + line.originalOrderLineId + ':' + line.price"
-                         class="d-flex align-items-center justify-content-between py-1 border-top">
-                        <span><t t-esc="line.product.display_name"/> × <t t-esc="line.qty"/></span>
+                    <div class="fw-bold mb-2 d-flex justify-content-between align-items-center">
+                        <span><i class="fa fa-shopping-basket me-1 text-primary"/>Return Items Cart</span>
+                        <span class="badge bg-primary fs-6">Total: <t t-esc="cartTotal.toFixed(2)"/></span>
+                    </div>
+                    <div t-foreach="state.lines" t-as="line" t-key="line.product.id + ':' + line.condition + ':' + line.originalOrderLineId + ':' + line.price"
+                         class="d-flex align-items-center justify-content-between py-1 border-top small">
+                        <div>
+                            <div class="fw-bold"><t t-esc="line.product.display_name"/> × <t t-esc="line.qty"/></div>
+                            <div class="text-muted">
+                                <span t-attf-class="badge {{ line.condition === 'resalable' ? 'bg-success' : 'bg-danger' }}">
+                                    <t t-esc="line.condition"/>
+                                </span>
+                                <span t-if="line.reasonName" class="ms-1"><t t-esc="line.reasonName"/></span>
+                                <span t-if="line.reasonNote" class="fst-italic ms-1">(<t t-esc="line.reasonNote"/>)</span>
+                            </div>
+                        </div>
                         <span class="d-flex align-items-center gap-2">
-                            <span t-esc="line.price"/>
-                            <button class="btn btn-sm btn-link text-danger" t-on-click="() => this.removeLine(state.lines.indexOf(line))">
+                            <span class="font-monospace fw-bold"><t t-esc="(line.qty * line.price).toFixed(2)"/></span>
+                            <button class="btn btn-sm btn-link text-danger p-0" t-on-click="() => this.removeLine(state.lines.indexOf(line))">
                                 <i class="fa fa-times"/>
                             </button>
                         </span>
                     </div>
                 </div>
+
             </div>
+
             <t t-set-slot="footer">
                 <button t-if="selectedProduct" class="btn btn-outline-primary" t-att-disabled="!canAddLine"
                         t-on-click="() => this.addLine()">
-                    <i class="fa fa-plus me-1"/>Add Product
+                    <i class="fa fa-plus me-1"/>Add Item
                 </button>
                 <button class="btn btn-primary" t-att-disabled="!canConfirm"
                         t-on-click="() => this.confirm()">
-                    <i class="fa fa-undo me-1"/>Continue to Refund
+                    <i class="fa fa-arrow-right me-1"/>Proceed to Settlement
                 </button>
                 <button class="btn btn-secondary" t-on-click="() => this.props.close()">Cancel</button>
             </t>

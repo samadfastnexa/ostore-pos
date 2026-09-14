@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Customer Refund List View -->
+    <record id="pos_retail_customer_refund_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.customer.refund.list</field>
+        <field name="model">pos.retail.customer.refund</field>
+        <field name="arch" type="xml">
+            <list string="Customer Refunds" decoration-info="state == 'draft'" decoration-warning="state == 'confirmed'" decoration-success="state == 'done'" decoration-muted="state == 'cancel'">
+                <field name="name" string="Refund No"/>
+                <field name="date"/>
+                <field name="partner_id"/>
+                <field name="return_type"/>
+                <field name="amount_total" sum="Total Refunded" widget="monetary"/>
+                <field name="refund_method"/>
+                <field name="manager_id" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'confirmed'" decoration-success="state == 'done'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Customer Refund Form View -->
+    <record id="pos_retail_customer_refund_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.customer.refund.form</field>
+        <field name="model">pos.retail.customer.refund</field>
+        <field name="arch" type="xml">
+            <form string="Customer Refund">
+                <header>
+                    <button name="action_confirm" string="Confirm Return" type="object" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_process" string="Process Refund &amp; Move Stock" type="object" class="btn-success" invisible="state != 'confirmed'"/>
+                    <button name="action_print_receipt" string="Print Refund Receipt" type="object" class="btn-secondary" invisible="state != 'done'" icon="fa-print"/>
+                    <button name="action_share_whatsapp" string="Share via WhatsApp" type="object" class="btn-secondary text-success" invisible="state != 'done'" icon="fa-whatsapp"/>
+                    <button name="action_cancel" string="Cancel" type="object" invisible="state in ('done', 'cancel')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="Refund Reference"/>
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Customer &amp; Branch">
+                            <field name="partner_id" placeholder="Select customer..."/>
+                            <field name="partner_balance" widget="monetary" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="user_id"/>
+                            <field name="date"/>
+                        </group>
+                        <group string="Return Settings &amp; Mode">
+                            <field name="return_type" widget="radio" options="{'horizontal': true}"/>
+                            <field name="original_pos_order_id" invisible="return_type != 'linked'"/>
+                            <field name="original_reference" placeholder="e.g. Receipt # or Order Reference"/>
+                            <field name="pricing_policy" invisible="return_type == 'linked'"/>
+                            <field name="requires_manager_approval" invisible="1"/>
+                            <field name="manager_id" invisible="not requires_manager_approval" required="requires_manager_approval"/>
+                            <field name="manager_notes" invisible="not requires_manager_approval"/>
+                        </group>
+                    </group>
+
+                    <group string="Settlement Option">
+                        <group>
+                            <field name="refund_method" widget="radio"/>
+                            <field name="journal_id" invisible="refund_method in ('credit_ledger', 'adjust_outstanding')" required="refund_method in ('cash', 'payment_method')"/>
+                        </group>
+                        <group string="Balance Adjustment (Khata / Ledger)">
+                            <field name="previous_outstanding" readonly="1" widget="monetary"/>
+                            <field name="amount_total" readonly="1" widget="monetary" class="fw-bold"/>
+                            <field name="new_outstanding" readonly="1" widget="monetary" class="fw-bold text-primary"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Returned Products" name="lines">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="product_condition"/>
+                                    <field name="return_reason_id"/>
+                                    <field name="reason_note" placeholder="Details (mandatory if Other)"/>
+                                    <field name="quantity"/>
+                                    <field name="uom_id" optional="show"/>
+                                    <field name="price_unit"/>
+                                    <field name="discount" optional="show"/>
+                                    <field name="subtotal" widget="monetary" sum="Total"/>
+                                    <field name="currency_id" column_invisible="True"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Transfers &amp; Financial Postings" name="transfers" invisible="state != 'done'">
+                            <group>
+                                <field name="picking_id" readonly="1"/>
+                                <field name="credit_note_id" readonly="1" invisible="not credit_note_id"/>
+                                <field name="payment_id" readonly="1" invisible="not payment_id"/>
+                            </group>
+                        </page>
+                        <page string="Internal Notes" name="notes">
+                            <field name="notes" placeholder="Cashier or manager notes..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="pos_retail_customer_refund_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.customer.refund.search</field>
+        <field name="model">pos.retail.customer.refund</field>
+        <field name="arch" type="xml">
+            <search string="Search Customer Refunds">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="original_reference"/>
+                <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+                <filter name="filter_processed" string="Processed" domain="[('state', '=', 'done')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_partner" string="Customer" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_method" string="Refund Method" context="{'group_by': 'refund_method'}"/>
+                    <filter name="group_status" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_date" string="Refund Date" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Window Action for Customer Refunds -->
+    <record id="action_pos_retail_customer_refund_orders" model="ir.actions.act_window">
+        <field name="name">Customer Refunds</field>
+        <field name="res_model">pos.retail.customer.refund</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="pos_retail_customer_refund_view_search"/>
+        <field name="context">{'search_default_filter_processed': 0}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a customer refund</p>
+            <p>Process a return with or without an original receipt, route items by condition (sellable or damaged to scrap), and settle in cash or customer ledger credit.</p>
+        </field>
+    </record>
+
+</odoo>

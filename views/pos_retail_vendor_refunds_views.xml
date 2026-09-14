@@ -286,12 +286,12 @@
               sequence="25"
               groups="base.group_system,purchase.group_purchase_manager,pos_retail.perm_vendor_refunds_view_res_groups"/>
     <menuitem id="menu_pos_retail_vendor_refunds"
-              name="Vendor Refunds"
+              name="Vendor Returns"
               parent="menu_pos_retail_vendor_refunds_root"
-              action="action_pos_retail_vendor_refunds"
+              action="action_pos_retail_vendor_return_orders"
               sequence="1"/>
     <menuitem id="menu_pos_retail_vendor_refund_summary"
-              name="Vendor Refund Summary"
+              name="Vendor Return Analytics"
               parent="menu_pos_retail_vendor_refunds_root"
               action="action_pos_retail_vendor_refund_summary"
               sequence="10"/>

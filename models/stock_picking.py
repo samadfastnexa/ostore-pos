@@ -29,6 +29,17 @@ class StockPicking(models.Model):
             picking.pos_retail_is_vendor_return = bool(
                 picking.return_id and picking.location_dest_id.usage == 'supplier')
 
+    def _prepare_stock_move_vals(self, first_line, order_lines):
+        vals = super()._prepare_stock_move_vals(first_line, order_lines)
+        if hasattr(first_line, 'pos_retail_product_condition') and first_line.pos_retail_product_condition in ('damaged', 'defective'):
+            scrap_loc = self.env['stock.location'].search([
+                ('scrap_location', '=', True),
+                ('company_id', 'in', (self.company_id.id, False)),
+            ], limit=1)
+            if scrap_loc:
+                vals['location_dest_id'] = scrap_loc.id
+        return vals
+
     def action_print_goods_receipt(self):
         """Goods Receipt Note for incoming stock.
 

@@ -2,12 +2,12 @@
 <odoo noupdate="1">
 
     <record id="return_reason_damaged" model="pos.retail.return.reason">
-        <field name="name">Damaged</field>
+        <field name="name">Defective / Damaged</field>
         <field name="sequence">10</field>
     </record>
 
     <record id="return_reason_wrong_item" model="pos.retail.return.reason">
-        <field name="name">Wrong Item</field>
+        <field name="name">Wrong Item Received</field>
         <field name="sequence">20</field>
     </record>
 
@@ -17,18 +17,43 @@
     </record>
 
     <record id="return_reason_expired" model="pos.retail.return.reason">
-        <field name="name">Expired</field>
+        <field name="name">Expired Product</field>
         <field name="sequence">40</field>
+    </record>
+
+    <record id="return_reason_quality" model="pos.retail.return.reason">
+        <field name="name">Quality Not Acceptable</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <record id="return_reason_size_fit" model="pos.retail.return.reason">
+        <field name="name">Size / Fit Issue</field>
+        <field name="sequence">60</field>
+    </record>
+
+    <record id="return_reason_not_as_described" model="pos.retail.return.reason">
+        <field name="name">Not as Described</field>
+        <field name="sequence">70</field>
+    </record>
+
+    <record id="return_reason_duplicate" model="pos.retail.return.reason">
+        <field name="name">Duplicate Purchase</field>
+        <field name="sequence">80</field>
+    </record>
+
+    <record id="return_reason_packaging_damaged" model="pos.retail.return.reason">
+        <field name="name">Packaging Damaged</field>
+        <field name="sequence">90</field>
     </record>
 
     <record id="return_reason_warranty" model="pos.retail.return.reason">
         <field name="name">Warranty Claim</field>
-        <field name="sequence">50</field>
+        <field name="sequence">100</field>
     </record>
 
     <record id="return_reason_other" model="pos.retail.return.reason">
         <field name="name">Other</field>
-        <field name="sequence">60</field>
+        <field name="sequence">110</field>
     </record>
 
 </odoo>

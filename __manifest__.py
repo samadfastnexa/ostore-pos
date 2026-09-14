@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.7.26.0',
+    'version': '19.0.7.27.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -84,6 +84,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'report/pos_retail_payment_receipt_report.xml',
         'report/pos_retail_goods_receipt_report.xml',
         'report/pos_retail_vendor_return_report.xml',
+        'report/pos_retail_customer_refund_report.xml',
+        'report/pos_retail_vendor_return_receipt_report.xml',
         'report/pos_retail_quotation_report.xml',
         # After the report: the template attaches the A4 report by xmlid.
         'data/pos_retail_mail_template_data.xml',
@@ -102,6 +104,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/purchase_report_views.xml',
         'views/pos_order_report_views.xml',
         'views/pos_retail_return_report_views.xml',
+        'views/pos_retail_customer_refund_views.xml',
+        'views/pos_retail_vendor_return_views.xml',
         'views/pos_retail_customer_refunds_views.xml',
         'views/pos_retail_vendor_refunds_views.xml',
         'views/pos_retail_price_report_views.xml',

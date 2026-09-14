@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_report_vendor_return_receipt" model="ir.actions.report">
+        <field name="name">Vendor Return Receipt / Debit Note</field>
+        <field name="model">pos.retail.vendor.return</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail.report_vendor_return_receipt_document</field>
+        <field name="report_file">pos_retail.report_vendor_return_receipt_document</field>
+        <field name="print_report_name">'Vendor_Return_' + (object.name or '').replace('/', '_')</field>
+        <field name="binding_model_id" ref="model_pos_retail_vendor_return"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_vendor_return_receipt_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page" style="font-family: inherit;">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                            <div>
+                                <h3 class="fw-bold mb-0 text-uppercase" style="color: #2c3e50;">Vendor Return Receipt / Debit Note</h3>
+                                <div class="text-muted small">Goods Outward &amp; Accounts Payable Adjustment Record</div>
+                            </div>
+                            <div class="text-end">
+                                <h4 class="fw-bold text-primary mb-0"><span t-esc="o.name"/></h4>
+                                <div class="small text-muted"><span t-esc="o.date" t-options='{"widget": "datetime"}'/></div>
+                            </div>
+                        </div>
+
+                        <!-- Metadata Grid -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <div class="p-2 border rounded bg-light">
+                                    <strong class="d-block text-secondary small text-uppercase mb-1">Vendor Details</strong>
+                                    <div class="fw-bold fs-6"><t t-esc="o.partner_id.name"/></div>
+                                    <div t-if="o.partner_id.phone" class="small"><i class="fa fa-phone me-1"/> <t t-esc="o.partner_id.phone"/></div>
+                                    <div t-if="o.partner_id.email" class="small"><i class="fa fa-envelope me-1"/> <t t-esc="o.partner_id.email"/></div>
+                                    <div t-if="o.partner_id.street" class="small text-muted"><t t-esc="o.partner_id.street"/></div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 border rounded bg-light">
+                                    <strong class="d-block text-secondary small text-uppercase mb-1">Return Information</strong>
+                                    <div class="small"><strong>Branch:</strong> <t t-esc="o.company_id.name"/></div>
+                                    <div class="small"><strong>Created By:</strong> <t t-esc="o.user_id.name"/></div>
+                                    <div class="small">
+                                        <strong>Mode:</strong> <t t-esc="dict(o._fields['return_type'].selection).get(o.return_type, o.return_type)"/>
+                                    </div>
+                                    <div t-if="o.purchase_order_id" class="small">
+                                        <strong>PO Ref:</strong> <t t-esc="o.purchase_order_id.name"/>
+                                    </div>
+                                    <div t-if="o.vendor_reference" class="small">
+                                        <strong>Vendor Bill Ref:</strong> <t t-esc="o.vendor_reference"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Table -->
+                        <table class="table table-sm table-bordered align-middle mb-3">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 35%;">Product</th>
+                                    <th class="text-center" style="width: 15%;">Condition</th>
+                                    <th style="width: 20%;">Return Reason</th>
+                                    <th class="text-center" style="width: 10%;">Qty</th>
+                                    <th class="text-end" style="width: 10%;">Unit Cost</th>
+                                    <th class="text-end" style="width: 10%;">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.line_ids" t-as="line">
+                                    <td>
+                                        <div class="fw-bold"><t t-esc="line.product_id.display_name"/></div>
+                                        <div t-if="line.product_id.default_code" class="text-muted small">SKU: <t t-esc="line.product_id.default_code"/></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span t-attf-class="badge {{ line.product_condition == 'resalable' ? 'bg-info' : 'bg-danger' }}">
+                                            <t t-esc="dict(line._fields['product_condition'].selection).get(line.product_condition, line.product_condition)"/>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div><t t-esc="line.return_reason_id.name"/></div>
+                                        <div t-if="line.reason_note" class="text-muted small fst-italic"><t t-esc="line.reason_note"/></div>
+                                    </td>
+                                    <td class="text-center font-monospace fw-bold">
+                                        <t t-esc="line.quantity"/> <span class="small text-muted" t-esc="line.uom_id.name or ''"/>
+                                    </td>
+                                    <td class="text-end font-monospace">
+                                        <t t-esc="line.price_unit" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                    </td>
+                                    <td class="text-end font-monospace fw-bold">
+                                        <t t-esc="line.subtotal" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Settlement & Payable Summary Grid -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-7">
+                                <div class="p-2 border rounded">
+                                    <strong class="d-block text-secondary small text-uppercase mb-1">Settlement Details</strong>
+                                    <div>
+                                        <strong>Settlement Method:</strong>
+                                        <span class="badge bg-primary ms-1">
+                                            <t t-esc="dict(o._fields['settlement_method'].selection).get(o.settlement_method, o.settlement_method)"/>
+                                        </span>
+                                    </div>
+                                    <div t-if="o.notes" class="small text-muted mt-1 fst-italic">
+                                        <strong>Notes:</strong> <t t-esc="o.notes"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-5">
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td class="fw-bold">Total Return Value:</td>
+                                        <td class="text-end fw-bold text-success font-monospace fs-6">
+                                            <t t-esc="o.amount_total" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                        </td>
+                                    </tr>
+                                    <t t-if="o.settlement_method in ('vendor_credit', 'adjust_payable')">
+                                        <tr>
+                                            <td class="text-muted">Previous Payable:</td>
+                                            <td class="text-end font-monospace text-muted">
+                                                <t t-esc="o.previous_payable" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                            </td>
+                                        </tr>
+                                        <tr class="border-top">
+                                            <td class="fw-bold text-primary">New Balance Payable:</td>
+                                            <td class="text-end font-monospace fw-bold text-primary fs-6">
+                                                <t t-esc="o.new_payable" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Signatures -->
+                        <div class="row mt-5 pt-3">
+                            <div class="col-6 text-center">
+                                <div style="border-top: 1px dashed #6c757d; width: 80%; margin: 0 auto; padding-top: 5px;">
+                                    <span class="small fw-bold">Supplier / Driver Representative Signature</span>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div style="border-top: 1px dashed #6c757d; width: 80%; margin: 0 auto; padding-top: 5px;">
+                                    <span class="small fw-bold">Company Authorized Signature</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

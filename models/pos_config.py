@@ -1,3 +1,4 @@
+import datetime
 from uuid import uuid4
 
 from odoo import _, api, fields, models
@@ -98,6 +99,96 @@ class PosConfig(models.Model):
     def _check_pos_retail_return_window_days(self):
         if any(config.pos_retail_return_window_days < 0 for config in self):
             raise ValidationError(_("Return Window (Days) cannot be negative."))
+
+    pos_retail_no_receipt_price_policy = fields.Selection(
+        [
+            ('current_price', "Current Selling Price"),
+            ('lowest_price', "Lowest Selling Price in Period"),
+            ('cost', "Product Cost"),
+            ('manager_price', "Manager Determines Price"),
+        ],
+        string="No-Receipt Refund Pricing Policy",
+        default='current_price',
+        help="Determines the unit price applied when a product is refunded without an original receipt.",
+    )
+    pos_retail_no_receipt_period_days = fields.Integer(
+        string="Lowest Price Lookback (Days)",
+        default=30,
+        help="Number of days to look back for the lowest sold price when using 'Lowest Selling Price in Period'.",
+    )
+    pos_retail_no_receipt_approval_mode = fields.Selection(
+        [
+            ('none', "No Approval Required"),
+            ('always', "Always Require Manager Approval"),
+            ('amount', "Require Approval Above Limit"),
+        ],
+        string="No-Receipt Approval Mode",
+        default='amount',
+        help="Approval policy for no-receipt returns.",
+    )
+    pos_retail_no_receipt_approval_limit = fields.Monetary(
+        string="Approval Threshold Amount",
+        currency_field='currency_id',
+        default=3000.0,
+        help="Refund amount above which a manager PIN is required if mode is set to 'Require Approval Above Limit'.",
+    )
+
+    @api.constrains('pos_retail_no_receipt_period_days', 'pos_retail_no_receipt_approval_limit')
+    def _check_pos_retail_no_receipt_settings(self):
+        for config in self:
+            if config.pos_retail_no_receipt_period_days < 0:
+                raise ValidationError(_("Lookback days cannot be negative."))
+            if config.pos_retail_no_receipt_approval_limit < 0:
+                raise ValidationError(_("Approval threshold amount cannot be negative."))
+
+    def get_no_receipt_product_price(self, product_id):
+        """Compute the default refund price for a product returned without a receipt,
+        according to this POS config's configured pricing policy.
+        """
+        self.ensure_one()
+        product = self.env['product.product'].browse(product_id)
+        if not product.exists():
+            return {
+                'price': 0.0,
+                'policy': self.pos_retail_no_receipt_price_policy or 'current_price',
+                'requires_manager': False,
+                'cost': 0.0,
+                'current_price': 0.0,
+            }
+
+        policy = self.pos_retail_no_receipt_price_policy or 'current_price'
+        suggested_price = product.lst_price
+        requires_manager = (self.pos_retail_no_receipt_approval_mode == 'always')
+
+        if policy == 'cost':
+            suggested_price = product.standard_price
+        elif policy == 'manager_price':
+            suggested_price = product.lst_price
+            requires_manager = True
+        elif policy == 'lowest_price':
+            days = self.pos_retail_no_receipt_period_days or 30
+            cutoff = fields.Datetime.now() - datetime.timedelta(days=days)
+            domain = [
+                ('product_id', '=', product.id),
+                ('qty', '>', 0),
+                ('order_id.state', 'in', ['paid', 'done', 'invoiced']),
+                ('order_id.date_order', '>=', cutoff),
+            ]
+            if self.company_id:
+                domain.append(('order_id.company_id', '=', self.company_id.id))
+            lines = self.env['pos.order.line'].search(domain)
+            if lines:
+                suggested_price = min(lines.mapped('price_unit'))
+            else:
+                suggested_price = product.lst_price
+
+        return {
+            'price': float(suggested_price),
+            'policy': policy,
+            'requires_manager': requires_manager,
+            'cost': float(product.standard_price),
+            'current_price': float(product.lst_price),
+        }
     # --- Flexible pricing ---
     pos_retail_price_range_enabled = fields.Boolean(
         string="Allow Price Within Range", default=True,
@@ -598,6 +689,26 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.pos_retail_return_window_days',
         readonly=False,
         string="Return Window (Days)",
+    )
+    pos_retail_no_receipt_price_policy = fields.Selection(
+        related='pos_config_id.pos_retail_no_receipt_price_policy',
+        readonly=False,
+        string="No-Receipt Refund Pricing Policy",
+    )
+    pos_retail_no_receipt_period_days = fields.Integer(
+        related='pos_config_id.pos_retail_no_receipt_period_days',
+        readonly=False,
+        string="Lowest Price Lookback (Days)",
+    )
+    pos_retail_no_receipt_approval_mode = fields.Selection(
+        related='pos_config_id.pos_retail_no_receipt_approval_mode',
+        readonly=False,
+        string="No-Receipt Approval Mode",
+    )
+    pos_retail_no_receipt_approval_limit = fields.Monetary(
+        related='pos_config_id.pos_retail_no_receipt_approval_limit',
+        readonly=False,
+        string="Approval Threshold Amount",
     )
     pos_retail_quote_show_images = fields.Boolean(
         related='company_id.pos_retail_quote_show_images',

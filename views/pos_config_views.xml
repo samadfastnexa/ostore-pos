@@ -235,8 +235,22 @@
                         <field name="pos_retail_allow_no_receipt_return"/>
                     </div>
                     <div class="row mt8" invisible="not pos_retail_allow_no_receipt_return">
-                        <label string="Return Needs Manager Approval" for="pos_retail_return_requires_manager" class="col-lg-4 o_light_label"/>
-                        <field name="pos_retail_return_requires_manager"/>
+                        <label string="No-Receipt Pricing Policy" for="pos_retail_no_receipt_price_policy" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_no_receipt_price_policy"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_allow_no_receipt_return or pos_retail_no_receipt_price_policy != 'lowest_price'">
+                        <label string="Lowest Price Lookback (Days)" for="pos_retail_no_receipt_period_days" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_no_receipt_period_days"/>
+                        <div class="text-muted small">Number of days to check for the lowest selling price (e.g. 30, 60, 90).</div>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_allow_no_receipt_return">
+                        <label string="No-Receipt Approval Mode" for="pos_retail_no_receipt_approval_mode" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_no_receipt_approval_mode"/>
+                    </div>
+                    <div class="row mt8" invisible="not pos_retail_allow_no_receipt_return or pos_retail_no_receipt_approval_mode != 'amount'">
+                        <label string="Approval Threshold Limit" for="pos_retail_no_receipt_approval_limit" class="col-lg-4 o_light_label"/>
+                        <field name="pos_retail_no_receipt_approval_limit"/>
+                        <div class="text-muted small">Refunds above this amount require manager PIN authentication.</div>
                     </div>
                     <div class="row mt8">
                         <label string="Return Window (Days)" for="pos_retail_return_window_days" class="col-lg-4 o_light_label"/>

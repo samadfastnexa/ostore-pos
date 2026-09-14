@@ -218,6 +218,20 @@
                 <div style="font-size:70%;" t-esc="order.pos_reference"/>
             </div>
 
+            <!-- Refund signatures -->
+            <div t-if="order.is_refund" class="pos-retail-refund-signatures pt-3 mt-2" style="border-top:1px dashed currentColor;">
+                <div class="d-flex justify-content-between text-center small mt-3">
+                    <div style="width:45%;">
+                        <div style="border-top:1px solid currentColor; margin-top:20px;"/>
+                        <div style="font-size:75%;">Customer Signature</div>
+                    </div>
+                    <div style="width:45%;">
+                        <div style="border-top:1px solid currentColor; margin-top:20px;"/>
+                        <div style="font-size:75%;">Cashier Signature</div>
+                    </div>
+                </div>
+            </div>
+
         </xpath>
 
         <!-- Remove "Powered by Odoo" and brand the receipt footer with the

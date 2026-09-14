@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vendor Return List View -->
+    <record id="pos_retail_vendor_return_view_list" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.return.list</field>
+        <field name="model">pos.retail.vendor.return</field>
+        <field name="arch" type="xml">
+            <list string="Vendor Returns" decoration-info="state == 'draft'" decoration-warning="state == 'confirmed'" decoration-success="state == 'done'" decoration-muted="state == 'cancel'">
+                <field name="name" string="Return Ref"/>
+                <field name="date"/>
+                <field name="partner_id"/>
+                <field name="return_type"/>
+                <field name="amount_total" sum="Total Returned" widget="monetary"/>
+                <field name="settlement_method"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'confirmed'" decoration-success="state == 'done'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vendor Return Form View -->
+    <record id="pos_retail_vendor_return_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.return.form</field>
+        <field name="model">pos.retail.vendor.return</field>
+        <field name="arch" type="xml">
+            <form string="Vendor Return">
+                <header>
+                    <button name="action_confirm" string="Confirm Return" type="object" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_process" string="Process Return &amp; Dispatch Goods" type="object" class="btn-success" invisible="state != 'confirmed'"/>
+                    <button name="action_print_receipt" string="Print Debit Note / Receipt" type="object" class="btn-secondary" invisible="state != 'done'" icon="fa-print"/>
+                    <button name="action_share_whatsapp" string="Share via WhatsApp" type="object" class="btn-secondary text-success" invisible="state != 'done'" icon="fa-whatsapp"/>
+                    <button name="action_cancel" string="Cancel" type="object" invisible="state in ('done', 'cancel')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="Return Reference"/>
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Vendor &amp; Branch">
+                            <field name="partner_id" placeholder="Select vendor..."/>
+                            <field name="partner_payable" widget="monetary" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="user_id"/>
+                            <field name="date"/>
+                        </group>
+                        <group string="Return Settings &amp; Mode">
+                            <field name="return_type" widget="radio" options="{'horizontal': true}"/>
+                            <field name="purchase_order_id" invisible="return_type != 'po_linked'"/>
+                            <field name="vendor_bill_id" invisible="return_type != 'po_linked'"/>
+                            <field name="vendor_reference" placeholder="e.g. Supplier Bill # or PO Reference"/>
+                        </group>
+                    </group>
+
+                    <group string="Settlement Option">
+                        <group>
+                            <field name="settlement_method" widget="radio"/>
+                            <field name="journal_id" invisible="settlement_method in ('vendor_credit', 'adjust_payable')" required="settlement_method in ('cash', 'bank')"/>
+                        </group>
+                        <group string="Payable Debt Adjustment (Vendor Ledger)">
+                            <field name="previous_payable" readonly="1" widget="monetary"/>
+                            <field name="amount_total" readonly="1" widget="monetary" class="fw-bold"/>
+                            <field name="new_payable" readonly="1" widget="monetary" class="fw-bold text-primary"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Returned Products" name="lines">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="product_condition"/>
+                                    <field name="return_reason_id"/>
+                                    <field name="reason_note" placeholder="Details (mandatory if Other)"/>
+                                    <field name="quantity"/>
+                                    <field name="uom_id" optional="show"/>
+                                    <field name="price_unit"/>
+                                    <field name="subtotal" widget="monetary" sum="Total"/>
+                                    <field name="currency_id" column_invisible="True"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Transfers &amp; Accounting Postings" name="transfers" invisible="state != 'done'">
+                            <group>
+                                <field name="picking_id" readonly="1"/>
+                                <field name="credit_note_id" readonly="1" invisible="not credit_note_id"/>
+                                <field name="payment_id" readonly="1" invisible="not payment_id"/>
+                            </group>
+                        </page>
+                        <page string="Internal Notes" name="notes">
+                            <field name="notes" placeholder="Warehouse or purchase notes..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="pos_retail_vendor_return_view_search" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.return.search</field>
+        <field name="model">pos.retail.vendor.return</field>
+        <field name="arch" type="xml">
+            <search string="Search Vendor Returns">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="vendor_reference"/>
+                <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+                <filter name="filter_processed" string="Processed" domain="[('state', '=', 'done')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_partner" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_settlement" string="Settlement Method" context="{'group_by': 'settlement_method'}"/>
+                    <filter name="group_status" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_date" string="Return Date" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Window Action for Vendor Returns -->
+    <record id="action_pos_retail_vendor_return_orders" model="ir.actions.act_window">
+        <field name="name">Vendor Returns</field>
+        <field name="res_model">pos.retail.vendor.return</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="pos_retail_vendor_return_view_search"/>
+        <field name="context">{'search_default_filter_processed': 0}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a vendor return</p>
+            <p>Send defective or excess stock back to suppliers, generate debit notes, and adjust payable balances.</p>
+        </field>
+    </record>
+
+</odoo>

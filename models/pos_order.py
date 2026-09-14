@@ -496,10 +496,12 @@ class PosOrderLine(models.Model):
                       'pos_retail_price_state', 'pos_retail_price_manager_id',
                       'pos_retail_price_reason_id', 'pos_retail_package_id',
                       'pos_retail_is_roundoff', 'pos_retail_returned_qty',
-                       'pos_retail_returnable_qty',
+                      'pos_retail_returnable_qty',
                       'pos_retail_line_discount_manager_id',
                       'pos_retail_line_discount_input_type',
-                      'pos_retail_line_discount_reason'):
+                      'pos_retail_line_discount_reason',
+                      'pos_retail_product_condition',
+                      'pos_retail_return_pricing_policy'):
             if field not in result:
                 result.append(field)
         return result
@@ -513,6 +515,30 @@ class PosOrderLine(models.Model):
         string="Returnable Qty",
         compute='_compute_pos_retail_return_quantities',
         help="Maximum quantity that can still be returned (Original Quantity - Previously Returned Quantity).",
+    )
+
+    pos_retail_product_condition = fields.Selection(
+        [
+            ('resalable', "Resalable / Good"),
+            ('damaged', "Damaged"),
+            ('defective', "Defective / Faulty"),
+            ('used', "Used / Opened"),
+            ('packaging_missing', "Packaging Missing"),
+            ('other', "Other"),
+        ],
+        string="Product Condition",
+        default='resalable',
+        help="Physical condition of the returned item.",
+    )
+    pos_retail_return_pricing_policy = fields.Selection(
+        [
+            ('current_price', "Current Selling Price"),
+            ('lowest_price', "Lowest Selling Price in Period"),
+            ('cost', "Product Cost"),
+            ('manager_price', "Manager Determines Price"),
+        ],
+        string="Return Pricing Policy",
+        help="Pricing policy used when this item was refunded.",
     )
 
     # ── Per-line discount fields ─────────────────────────────────────────────

@@ -6,6 +6,11 @@
          the phone and a Customer ID (partner ref), and prints "Walk-in
          Customer" when no customer is set. -->
     <t t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('pos-receipt-customer')]" position="before">
+            <div t-if="order.is_refund" class="pos-retail-refund-header text-center my-2 p-1 border border-dark rounded fw-bold text-uppercase" style="font-size: 105%; letter-spacing: 0.5px;">
+                CUSTOMER REFUND RECEIPT
+            </div>
+        </xpath>
         <xpath expr="//div[hasclass('pos-receipt-customer')]" position="inside">
             <div t-if="order.partner_id.phone">
                 <span>Tel: </span><span t-esc="order.partner_id.phone"/>

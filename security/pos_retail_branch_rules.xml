@@ -318,6 +318,20 @@
             <field name="global" eval="True"/>
         </record>
 
+        <record id="pos_retail_customer_refund_branch_rule" model="ir.rule">
+            <field name="name">Customer Refund: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_customer_refund"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
+        <record id="pos_retail_vendor_return_branch_rule" model="ir.rule">
+            <field name="name">Vendor Return: visible to its own branch</field>
+            <field name="model_id" ref="model_pos_retail_vendor_return"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+            <field name="global" eval="True"/>
+        </record>
+
     </data>
 
     <!-- Update the global multi-company rule on account.journal with noupdate="0"

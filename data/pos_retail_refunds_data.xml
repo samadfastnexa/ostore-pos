@@ -46,25 +46,44 @@
     <!-- A starting list for sending goods back to a supplier. Editable under
          Purchases > Configuration > Vendor Return Reasons; these are only the
          ones a hardware shop meets most often. -->
-    <record id="vendor_return_reason_damaged" model="pos.retail.vendor.return.reason">
-        <field name="name">Damaged in transit</field>
+    <record id="vendor_return_reason_defective" model="pos.retail.vendor.return.reason">
+        <field name="name">Defective / Quality Issue</field>
         <field name="sequence">10</field>
     </record>
-    <record id="vendor_return_reason_defective" model="pos.retail.vendor.return.reason">
-        <field name="name">Defective or faulty</field>
+    <record id="vendor_return_reason_damaged" model="pos.retail.vendor.return.reason">
+        <field name="name">Damaged in Transit</field>
         <field name="sequence">20</field>
     </record>
     <record id="vendor_return_reason_wrong_item" model="pos.retail.vendor.return.reason">
-        <field name="name">Wrong item supplied</field>
+        <field name="name">Wrong Item Shipped</field>
         <field name="sequence">30</field>
     </record>
-    <record id="vendor_return_reason_excess" model="pos.retail.vendor.return.reason">
-        <field name="name">Excess or unsold stock</field>
+    <record id="vendor_return_reason_expired" model="pos.retail.vendor.return.reason">
+        <field name="name">Expired / Near Expiry</field>
         <field name="sequence">40</field>
     </record>
-    <record id="vendor_return_reason_expired" model="pos.retail.vendor.return.reason">
-        <field name="name">Expired or near expiry</field>
+    <record id="vendor_return_reason_excess" model="pos.retail.vendor.return.reason">
+        <field name="name">Excess Stock / Over-ordered</field>
         <field name="sequence">50</field>
     </record>
-
+    <record id="vendor_return_reason_recall" model="pos.retail.vendor.return.reason">
+        <field name="name">Product Recall</field>
+        <field name="sequence">60</field>
+    </record>
+    <record id="vendor_return_reason_agreement" model="pos.retail.vendor.return.reason">
+        <field name="name">Supplier Agreement / Buyback</field>
+        <field name="sequence">70</field>
+    </record>
+    <record id="vendor_return_reason_packaging" model="pos.retail.vendor.return.reason">
+        <field name="name">Packaging Damaged</field>
+        <field name="sequence">80</field>
+    </record>
+    <record id="vendor_return_reason_spec" model="pos.retail.vendor.return.reason">
+        <field name="name">Specification Mismatch</field>
+        <field name="sequence">90</field>
+    </record>
+    <record id="vendor_return_reason_other" model="pos.retail.vendor.return.reason">
+        <field name="name">Other</field>
+        <field name="sequence">100</field>
+    </record>
 </odoo>
