@@ -39,7 +39,10 @@ export class PosRetailCustomerProfile extends Component {
             data: null,
             searchingServer: false,
             serverResults: [],
+            exportingPdf: false,
+            sharingWa: false,
         });
+
 
         onWillStart(async () => {
             await this.loadPartnerData(this.state.currentPartner);
@@ -355,5 +358,189 @@ export class PosRetailCustomerProfile extends Component {
         // Reactively reload partner ledger and history immediately!
         await this.loadPartnerData(partner);
     }
+
+    /** International phone digits for WhatsApp */
+    get whatsappNumber() {
+        const raw = this.partner?.phone || this.partner?.mobile || (this.state.data?.phone) || "";
+        let digits = String(raw).replace(/\D/g, "");
+        if (!digits) return "";
+        if (digits.startsWith("00")) return digits.slice(2);
+        const code = String(this.pos.company?.country_id?.phone_code || "").replace(/\D/g, "");
+        if (digits.startsWith("0")) {
+            return code ? code + digits.slice(1) : digits.slice(1);
+        }
+        if (code && digits.length <= 10 && !digits.startsWith(code)) {
+            return code + digits;
+        }
+        return digits;
+    }
+
+    /** Formats a structured WhatsApp message for the customer or vendor ledger */
+    get whatsappShareText() {
+        const isCustomer = this.state.activeSide === "customer";
+        const partner = this.partner;
+        const shopName = this.pos.company?.name || "Retail Store";
+        const today = new Date().toLocaleDateString();
+
+        const lines = [
+            `*${shopName}*`,
+            `*${isCustomer ? "CUSTOMER ACCOUNT & LEDGER STATEMENT" : "VENDOR ACCOUNT STATEMENT"}*`,
+            `Date: ${today}`,
+            `--------------------------------`,
+            `*Account:* ${partner.name}`,
+        ];
+        if (partner.phone || partner.mobile) {
+            lines.push(`*Contact:* ${partner.phone || partner.mobile}`);
+        }
+        lines.push(``);
+
+        if (isCustomer) {
+            const debit = this.state.data?.total_sales_formatted || this.state.data?.customer_debit?.formatted || this.formatCurrency(partner.pos_total_spent);
+            const credit = this.state.data?.total_paid_formatted || this.state.data?.customer_credit?.formatted || this.formatCurrency((partner.pos_total_spent || 0) - (partner.pos_outstanding_balance || 0));
+            const balance = this.state.data?.total_outstanding_formatted || this.state.data?.customer_balance?.formatted || this.formatCurrency(partner.pos_outstanding_balance);
+
+            lines.push(`*Total Purchases / Charges:* ${debit}`);
+            lines.push(`*Total Paid / Receipts:* ${credit}`);
+            lines.push(`*CURRENT NET BALANCE OWED:* *${balance}*`);
+            if (this.state.data?.outstanding_invoices_count) {
+                lines.push(`*Unpaid / Partial Invoices:* ${this.state.data.outstanding_invoices_count}`);
+            }
+            if (this.state.data?.oldest_outstanding_name) {
+                lines.push(`*Oldest Debt:* ${this.state.data.oldest_outstanding_name} (${this.state.data.oldest_outstanding_date})`);
+            }
+            if (this.state.data?.latest_transaction_name) {
+                lines.push(`*Latest Transaction:* ${this.state.data.latest_transaction_name} (${this.state.data.latest_transaction_date})`);
+            }
+        } else {
+            const bills = this.state.data?.vendor_bills_total?.formatted || "0.00";
+            const paid = this.state.data?.vendor_payments_total?.formatted || "0.00";
+            const balance = this.state.data?.vendor_balance?.formatted || "0.00";
+            lines.push(`*Total Vendor Bills:* ${bills}`);
+            lines.push(`*Total Payments Made:* ${paid}`);
+            lines.push(`*CURRENT NET PAYABLE:* *${balance}*`);
+        }
+
+        lines.push(`--------------------------------`);
+        lines.push(`For questions or payment, please feel free to reach out to us.`);
+        lines.push(`Thank you for your business!`);
+        return lines.join("\n");
+    }
+
+    /** Download Customer or Vendor Ledger as PDF directly */
+    async downloadLedgerPdf() {
+        const partner = this.partner;
+        if (!partner?.id || this.state.exportingPdf) return;
+
+        this.state.exportingPdf = true;
+        const isCustomer = this.state.activeSide === "customer";
+        const reportName = isCustomer
+            ? "pos_retail.report_customer_ledger"
+            : "pos_retail.report_vendor_statement";
+        const cleanName = (partner.name || "Partner").replace(/[^a-zA-Z0-9_-]/g, "_");
+        const filename = `${isCustomer ? "Customer_Ledger" : "Vendor_Statement"}_${cleanName}.pdf`;
+
+        try {
+            const response = await fetch(`/report/pdf/${reportName}/${partner.id}`, {
+                credentials: "same-origin",
+            });
+            if (!response.ok) {
+                throw new Error(_t("Failed to generate PDF (%s)", response.status));
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            this.notification.add(_t("Ledger PDF downloaded successfully."), { type: "success" });
+        } catch (err) {
+            console.error("Failed to download ledger PDF:", err);
+            this.dialog.add(AlertDialog, {
+                title: _t("PDF Download Failed"),
+                body: _t("The ledger PDF could not be generated. Please verify server connection."),
+            });
+        } finally {
+            this.state.exportingPdf = false;
+        }
+    }
+
+    /** Share Ledger on WhatsApp */
+    async shareWhatsApp() {
+        const partner = this.partner;
+        if (!partner?.id || this.state.sharingWa) return;
+
+        this.state.sharingWa = true;
+        const text = this.whatsappShareText;
+        const phone = this.whatsappNumber;
+        const isCustomer = this.state.activeSide === "customer";
+        const reportName = isCustomer
+            ? "pos_retail.report_customer_ledger"
+            : "pos_retail.report_vendor_statement";
+        const cleanName = (partner.name || "Partner").replace(/[^a-zA-Z0-9_-]/g, "_");
+        const filename = `${isCustomer ? "Customer_Ledger" : "Vendor_Statement"}_${cleanName}.pdf`;
+
+        try {
+            let sharedFile = false;
+            if (navigator.canShare) {
+                try {
+                    const response = await fetch(`/report/pdf/${reportName}/${partner.id}`, {
+                        credentials: "same-origin",
+                    });
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const file = new File([blob], filename, { type: "application/pdf" });
+                        if (navigator.canShare({ files: [file] })) {
+                            sharedFile = file;
+                        }
+                    }
+                } catch {
+                    // Fallback to text if PDF fetch fails
+                }
+            }
+
+            if (sharedFile) {
+                try {
+                    await navigator.share({
+                        files: [sharedFile],
+                        title: filename,
+                        text: text,
+                    });
+                    this.notification.add(_t("Ledger shared successfully."), { type: "success" });
+                    return;
+                } catch (err) {
+                    if (err?.name === "AbortError") return;
+                }
+            }
+
+            // Fallback: Open wa.me with formatted statement text
+            const waUrl = phone
+                ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+                : `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(waUrl, "_blank");
+            this.notification.add(_t("WhatsApp opened with ledger statement."), { type: "success" });
+        } catch (err) {
+            console.error("WhatsApp share failed:", err);
+            this.dialog.add(AlertDialog, {
+                title: _t("WhatsApp Share Failed"),
+                body: _t("Could not open WhatsApp. Please allow popups or check device settings."),
+            });
+        } finally {
+            this.state.sharingWa = false;
+        }
+    }
+
+    /** Print Ledger PDF directly in browser */
+    printLedger() {
+        const isCustomer = this.state.activeSide === "customer";
+        const reportName = isCustomer
+            ? "pos_retail.report_customer_ledger"
+            : "pos_retail.report_vendor_statement";
+        const url = `/report/pdf/${reportName}/${this.partner.id}`;
+        window.open(url, "_blank");
+    }
 }
+
 

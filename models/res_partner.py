@@ -1238,4 +1238,33 @@ class ResPartner(models.Model):
                 'credit': line.credit,
                 'balance': balance,
             })
+
+        # Include un-invoiced POS orders that carry an outstanding balance
+        breakdown = self.sudo()._get_pos_khata_breakdown()
+        order_allocations = breakdown.get('order_allocations', {})
+        pos_orders = self.env['pos.order'].sudo().search([
+            ('partner_id', '=', self.id),
+            ('state', '!=', 'cancel'),
+            ('account_move', '=', False),
+            ('company_id', 'in', self.env.companies.ids),
+        ], order='date_order asc, id asc')
+        for o in pos_orders:
+            alloc = order_allocations.get(o.id, {})
+            debt = alloc.get('residual', 0.0)
+            if debt > 0.005:
+                balance += debt
+                order_date = o.date_order.date() if o.date_order else fields.Date.context_today(self)
+                rows.append({
+                    'date': order_date,
+                    'name': o.pos_reference or o.name or 'POS Order',
+                    'debit': debt,
+                    'credit': 0.0,
+                    'balance': balance,
+                })
         return rows
+
+    def action_print_customer_ledger(self):
+        """Trigger Customer Ledger PDF download/print."""
+        self.ensure_one()
+        return self.env.ref('pos_retail.action_report_customer_ledger').report_action(self)
+
