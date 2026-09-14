@@ -135,11 +135,14 @@ class PosRetailKhataPayment(models.TransientModel):
     @api.model
     def get_pos_payment_journals(self, company_id=False):
         """Return available cash and bank payment methods for settlement."""
-        company = self.env['res.company'].browse(int(company_id)) if company_id else self.env.company
-        journals = self.env['account.journal'].sudo().search([
-            ('company_id', '=', company.id),
-            ('type', 'in', ('cash', 'bank')),
-        ], order='type desc, name asc')
+        company = self.env['res.company'].sudo().browse(int(company_id)) if company_id else self.env.company
+        domain = [('type', 'in', ('cash', 'bank'))]
+        if company:
+            c_ids = [company.id]
+            if company.parent_id:
+                c_ids.append(company.parent_id.id)
+            domain.append(('company_id', 'in', c_ids))
+        journals = self.env['account.journal'].sudo().search(domain, order='type desc, name asc')
         return [
             {
                 'id': j.id,
@@ -190,13 +193,13 @@ class PosRetailKhataPayment(models.TransientModel):
 
         target_journal_id = False
         if journal_id:
-            j = self.env['account.journal'].sudo().browse(int(journal_id)).exists()
-            if j:
-                target_journal_id = j.id
+            pm = self.env['pos.payment.method'].sudo().browse(int(journal_id)).exists()
+            if pm and pm.journal_id:
+                target_journal_id = pm.journal_id.id
             else:
-                pm = self.env['pos.payment.method'].sudo().browse(int(journal_id)).exists()
-                if pm and pm.journal_id:
-                    target_journal_id = pm.journal_id.id
+                j = self.env['account.journal'].sudo().browse(int(journal_id)).exists()
+                if j:
+                    target_journal_id = j.id
 
         values = {
             'partner_id': partner.id,
@@ -249,19 +252,20 @@ class PosRetailKhataPayment(models.TransientModel):
                 "to record the khata. Set one on the customer's Accounting tab.",
                 customer=self.partner_id.display_name,
             ))
-        company = self.company_id or self.env.company
-        payment = self.env['account.payment'].with_company(company).create({
+        journal = self.journal_id.sudo()
+        company = journal.company_id or self.company_id or self.env.company
+        payment = self.env['account.payment'].sudo().with_company(company).create({
             'payment_type': 'inbound',
             'partner_type': 'customer',
             'partner_id': self.partner_id.id,
             'amount': self.amount,
             'currency_id': self.currency_id.id,
-            'journal_id': self.journal_id.id,
+            'journal_id': journal.id,
             'date': self.date,
             'memo': self.memo or _("Khata payment"),
             'company_id': company.id,
         })
-        payment.action_post()
+        payment.sudo().action_post()
         self._settle_oldest_first(payment)
         return payment
 
@@ -277,9 +281,9 @@ class PosRetailKhataPayment(models.TransientModel):
         customer looks like they still owe. Oldest-first is what a shopkeeper
         means by "he paid off his khata": the earliest goods clear first.
         """
-        company = self.company_id or self.env.company
+        company = payment.company_id or self.company_id or self.env.company
         receivable = self.partner_id.property_account_receivable_id
-        lines = self.env['account.move.line'].search(
+        lines = self.env['account.move.line'].sudo().search(
             [
                 ('partner_id', '=', self.partner_id.id),
                 ('account_id', '=', receivable.id),
@@ -296,7 +300,7 @@ class PosRetailKhataPayment(models.TransientModel):
         if not (has_debit and has_credit):
             return
         try:
-            lines.reconcile()
+            lines.sudo().reconcile()
         except Exception:
             # A partial match, a currency edge case or an already-settled line
             # must never cost us the payment itself: it is posted and visible

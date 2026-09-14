@@ -50,8 +50,9 @@ export class ReceivePaymentPopup extends Component {
             errorMsg: "",
         });
 
+        this.loadJournals();
+
         onWillStart(async () => {
-            await this.loadJournals();
             if (parseFloat(this.state.amount) > 0) {
                 await this.refreshAllocation(parseFloat(this.state.amount));
             }
@@ -77,28 +78,12 @@ export class ReceivePaymentPopup extends Component {
         return (amount || 0).toFixed(2);
     }
 
-    async loadJournals() {
-        try {
-            const partnerCompanyId = this.partner.company_id?.id || false;
-            const journals = await this.pos.data.call(
-                "pos.retail.khata.payment",
-                "get_pos_payment_journals",
-                [partnerCompanyId]
-            );
-            if (journals && journals.length) {
-                this.state.journals = journals;
-                const defaultCash = journals.find((j) => j.is_cash) || journals[0];
-                this.state.journalId = defaultCash ? defaultCash.id : journals[0].id;
-                return;
-            }
-        } catch (err) {
-            console.warn("PosRetail: Failed to fetch payment journals via RPC, using POS config methods:", err);
-        }
-
-        // Fallback to POS config payment methods (excluding pay later / credit)
-        const pms = this.pos.payment_methods_from_config || [];
-        const validPms = pms.filter(
-            (p) => p.type !== "pay_later" && !/credit|khata|udhar/i.test(p.name || "")
+    loadJournals() {
+        // Use active POS till payment methods directly: instant, multi-company safe, and till-scoped
+        const pms = this.pos.payment_methods_from_config ||
+                    (this.pos.models["pos.payment.method"] ? this.pos.models["pos.payment.method"].getAll() : []);
+        const validPms = (pms || []).filter(
+            (p) => p.type !== "pay_later" && !/credit|khata|udhar|on account/i.test(p.name || "")
         );
         this.state.journals = validPms.map((p) => ({
             id: p.id,
@@ -107,7 +92,8 @@ export class ReceivePaymentPopup extends Component {
             is_cash: Boolean(p.is_cash_count),
         }));
         if (this.state.journals.length) {
-            this.state.journalId = this.state.journals[0].id;
+            const defaultCash = this.state.journals.find((j) => j.is_cash) || this.state.journals[0];
+            this.state.journalId = defaultCash ? defaultCash.id : this.state.journals[0].id;
         }
     }
 
