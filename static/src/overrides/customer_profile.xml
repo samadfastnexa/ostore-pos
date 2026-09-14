@@ -2,86 +2,644 @@
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.CustomerProfile">
-        <Dialog title="props.partner.name" bodyClass="'pos-retail-profile'">
-            <div class="pos-retail-profile__head d-flex align-items-center gap-3 mb-3">
+        <Dialog title="props.partner.name + ' — Ledger &amp; History'" bodyClass="'pos-retail-profile'">
+            <!-- Header: Partner Info & Quick Tags -->
+            <div class="pos-retail-profile__head d-flex align-items-center gap-3 mb-2">
                 <div class="pos-retail-profile__avatar" t-esc="props.partner.name.charAt(0).toUpperCase()"/>
-                <div class="flex-grow-1">
-                    <div class="fs-4 fw-bolder" t-esc="props.partner.name"/>
-                    <div class="text-muted small">
-                        <t t-if="props.partner.phone"><t t-esc="props.partner.phone"/></t>
-                        <t t-if="props.partner.membership_level_id">
-                            <span class="pos-retail-profile__tier ms-1"
-                                  t-esc="props.partner.membership_level_id.name"/>
-                        </t>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="fs-4 fw-bolder text-truncate" t-esc="props.partner.name"/>
+                        <span t-if="props.partner.membership_level_id"
+                              class="pos-retail-profile__tier"
+                              t-esc="props.partner.membership_level_id.name"/>
+                        <span t-if="state.data and state.data.is_vendor"
+                              class="badge text-bg-warning text-dark">
+                            <i class="fa fa-truck me-1"/>Vendor
+                        </span>
+                    </div>
+                    <div class="text-muted small d-flex flex-wrap gap-3 mt-1">
+                        <span t-if="props.partner.phone or (state.data and state.data.phone)">
+                            <i class="fa fa-phone me-1 text-primary"/>
+                            <t t-esc="state.data ? state.data.phone : props.partner.phone"/>
+                        </span>
+                        <span t-if="props.partner.email or (state.data and state.data.email)">
+                            <i class="fa fa-envelope-o me-1 text-primary"/>
+                            <t t-esc="state.data ? state.data.email : props.partner.email"/>
+                        </span>
+                        <span t-if="props.partner.pos_contact_address or (state.data and state.data.street)">
+                            <i class="fa fa-map-marker me-1 text-primary"/>
+                            <t t-esc="state.data ? (state.data.street + (state.data.city ? ', ' + state.data.city : '')) : props.partner.pos_contact_address"/>
+                        </span>
                     </div>
                 </div>
             </div>
 
-            <div class="pos-retail-profile__grid">
-                <div class="pos-retail-profile__stat"
-                     t-att-class="{ 'is-warning': props.partner.pos_outstanding_balance > 0 }">
-                    <span class="pos-retail-profile__label">Outstanding Balance</span>
-                    <span class="pos-retail-profile__value"
-                          t-esc="formatCurrency(props.partner.pos_outstanding_balance)"/>
-                </div>
-                <div class="pos-retail-profile__stat">
-                    <span class="pos-retail-profile__label">Lifetime Purchases</span>
-                    <span class="pos-retail-profile__value"
-                          t-esc="formatCurrency(props.partner.pos_total_spent)"/>
-                </div>
-                <div class="pos-retail-profile__stat">
-                    <span class="pos-retail-profile__label">Orders</span>
-                    <span class="pos-retail-profile__value" t-esc="props.partner.pos_sales_order_count or 0"/>
-                </div>
-                <div class="pos-retail-profile__stat">
-                    <span class="pos-retail-profile__label">Last Purchase</span>
-                    <span class="pos-retail-profile__value" t-esc="lastPurchase"/>
-                </div>
-                <div class="pos-retail-profile__stat">
-                    <span class="pos-retail-profile__label">Average Order</span>
-                    <span class="pos-retail-profile__value"
-                          t-esc="formatCurrency(props.partner.pos_avg_order_value)"/>
-                </div>
-                <div class="pos-retail-profile__stat">
-                    <span class="pos-retail-profile__label">Loyalty Points</span>
-                    <span class="pos-retail-profile__value"
-                          t-esc="Math.round(props.partner.pos_loyalty_points or 0)"/>
-                </div>
-                <div t-if="hasCreditLimit" class="pos-retail-profile__stat"
-                     t-att-class="{ 'is-danger': overLimit }">
-                    <span class="pos-retail-profile__label">Credit Limit</span>
-                    <span class="pos-retail-profile__value"
-                          t-esc="formatCurrency(props.partner.pos_credit_limit)"/>
-                </div>
-                <div t-if="hasCreditLimit" class="pos-retail-profile__stat"
-                     t-att-class="{ 'is-danger': overLimit }">
-                    <span class="pos-retail-profile__label">Credit Available</span>
-                    <span class="pos-retail-profile__value"
-                          t-esc="formatCurrency(props.partner.pos_credit_available)"/>
-                </div>
-            </div>
-
-            <div t-if="tags.length" class="pos-retail-profile__tags mt-3">
+            <!-- Tags & Notes -->
+            <div t-if="tags.length" class="pos-retail-profile__tags mb-2">
                 <span t-foreach="tags" t-as="tag" t-key="tag.id"
                       class="pos-retail-profile__tag" t-esc="tag.name"/>
             </div>
 
-            <div t-if="props.partner.pos_retail_note"
-                 class="pos-retail-profile__note mt-3" role="note">
+            <div t-if="props.partner.pos_retail_note or (state.data and state.data.note)"
+                 class="pos-retail-profile__note mb-2" role="note">
                 <i class="fa fa-sticky-note-o me-1"/>
-                <t t-esc="props.partner.pos_retail_note"/>
+                <t t-esc="state.data ? state.data.note : props.partner.pos_retail_note"/>
             </div>
 
-            <div t-if="overLimit" class="alert alert-danger mt-3 mb-0" role="alert">
-                This customer is over their credit limit. A manager's approval is
-                needed to sell to them on account.
+            <div t-if="overLimit" class="alert alert-danger py-2 px-3 mb-2" role="alert">
+                <i class="fa fa-exclamation-triangle me-1"/>
+                <strong>Over Credit Limit!</strong> This customer has exceeded their credit limit.
+                Manager approval is required for credit sales.
             </div>
 
-            <t t-set-slot="footer">
-                <button class="btn btn-primary btn-lg" t-on-click="() => this.showHistory()">
-                    <i class="fa fa-history me-1"/> Customer History
+            <!-- PRIMARY NAVIGATION: SIDE-BY-SIDE TABS FOR CUSTOMER AND VENDOR -->
+            <div class="pos-retail-main-tabs btn-group w-100 mb-3" role="group">
+                <button type="button"
+                        class="btn btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-2"
+                        t-att-class="state.activeSide === 'customer' ? 'btn-primary' : 'btn-outline-primary'"
+                        t-on-click="() => this.setActiveSide('customer')">
+                    <i class="fa fa-user-circle fs-5"/>
+                    <span>Customer Details &amp; Ledger</span>
+                    <span t-if="state.data and state.data.sales_count" class="badge text-bg-light ms-1">
+                        <t t-esc="state.data.sales_count"/> Orders
+                    </span>
                 </button>
-                <button class="btn btn-secondary btn-lg" t-on-click="() => this.props.close()">
+                <button type="button"
+                        class="btn btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-2"
+                        t-att-class="state.activeSide === 'vendor' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'"
+                        t-on-click="() => this.setActiveSide('vendor')">
+                    <i class="fa fa-truck fs-5"/>
+                    <span>Vendor Details &amp; Ledger</span>
+                    <span t-if="state.data and (state.data.purchase_orders_count or (state.data.vendor_bills and state.data.vendor_bills.length))" class="badge text-bg-dark ms-1">
+                        <t t-esc="state.data.purchase_orders_count || state.data.vendor_bills.length"/> Records
+                    </span>
+                </button>
+            </div>
+
+            <!-- Loading Spinner (Non-blocking) -->
+            <div t-if="state.loading" class="text-center p-3 text-muted">
+                <i class="fa fa-circle-o-notch fa-spin fa-2x"/>
+                <div class="mt-1 small">Fetching live ledger and transaction history…</div>
+            </div>
+
+            <!-- Offline Warning Banner -->
+            <div t-elif="state.failed" class="alert alert-warning py-2 px-3 mb-2" role="alert">
+                <i class="fa fa-wifi me-1"/>
+                <strong>Offline Mode:</strong> Showing cached profile figures. Live transaction history requires connection.
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- TAB 1: CUSTOMER VIEW                                      -->
+            <!-- ======================================================== -->
+            <div t-if="state.activeSide === 'customer'" class="pos-retail-tab-content">
+                <!-- KHATA / LEDGER KPI CARDS (Customer) -->
+                <div class="pos-retail-profile__grid mb-3">
+                    <!-- 1. Total Debit (Invoiced/Charges) -->
+                    <div class="pos-retail-profile__stat is-debit">
+                        <span class="pos-retail-profile__label text-primary">Total Debit (Purchases)</span>
+                        <span class="pos-retail-profile__value text-primary"
+                              t-esc="state.data ? state.data.customer_debit.formatted : formatCurrency(props.partner.pos_total_spent)"/>
+                        <span class="small text-muted">All invoiced sales &amp; charges</span>
+                    </div>
+
+                    <!-- 2. Total Credit (Payments Received) -->
+                    <div class="pos-retail-profile__stat is-credit">
+                        <span class="pos-retail-profile__label text-success">Total Credit (Paid)</span>
+                        <span class="pos-retail-profile__value text-success"
+                              t-esc="state.data ? state.data.customer_credit.formatted : formatCurrency((props.partner.pos_total_spent || 0) - (props.partner.pos_outstanding_balance || 0))"/>
+                        <span class="small text-muted">Payments &amp; refunds credited</span>
+                    </div>
+
+                    <!-- 3. Net Balance (Outstanding) -->
+                    <div class="pos-retail-profile__stat"
+                         t-att-class="(state.data ? state.data.customer_balance.amount : props.partner.pos_outstanding_balance) > 0 ? 'is-danger' : 'is-success'">
+                        <span class="pos-retail-profile__label">Net Balance (Owed)</span>
+                        <span class="pos-retail-profile__value"
+                              t-esc="state.data ? state.data.customer_balance.formatted : formatCurrency(props.partner.pos_outstanding_balance)"/>
+                        <span class="small text-muted">
+                            <t t-if="(state.data ? state.data.customer_balance.amount : props.partner.pos_outstanding_balance) > 0">
+                                <span class="badge text-bg-danger">Outstanding Owed</span>
+                            </t>
+                            <t t-elif="(state.data ? state.data.customer_balance.amount : props.partner.pos_outstanding_balance) == 0">
+                                <span class="badge text-bg-success">Settled / Clear</span>
+                            </t>
+                            <t t-else="">
+                                <span class="badge text-bg-info">Advance Credit</span>
+                            </t>
+                        </span>
+                    </div>
+
+                    <!-- 4. Credit Limit & Available or Loyalty -->
+                    <div t-if="hasCreditLimit" class="pos-retail-profile__stat"
+                         t-att-class="{ 'is-danger': overLimit }">
+                        <span class="pos-retail-profile__label">Credit Available / Limit</span>
+                        <span class="pos-retail-profile__value"
+                              t-esc="formatCurrency(state.data ? state.data.credit_available : props.partner.pos_credit_available)"/>
+                        <span class="small text-muted">
+                            Limit: <strong t-esc="formatCurrency(state.data ? state.data.credit_limit : props.partner.pos_credit_limit)"/>
+                        </span>
+                    </div>
+                    <div t-else="" class="pos-retail-profile__stat">
+                        <span class="pos-retail-profile__label">Loyalty Points &amp; Orders</span>
+                        <span class="pos-retail-profile__value"
+                              t-esc="(state.data ? state.data.loyalty_points : Math.round(props.partner.pos_loyalty_points || 0)) + ' Pts'"/>
+                        <span class="small text-muted">
+                            Orders: <strong t-esc="state.data ? state.data.sales_order_count : (props.partner.pos_sales_order_count || 0)"/>
+                            | Last: <span t-esc="lastPurchase"/>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Repeat Last Order Banner -->
+                <div t-if="state.data and state.data.last_basket and state.data.last_basket.length"
+                     class="pos-retail-history__last d-flex align-items-center justify-content-between gap-3 mb-3 p-2 border rounded">
+                    <div>
+                        <div class="fw-bold">
+                            <i class="fa fa-shopping-basket me-1 text-primary"/>
+                            Last Order: <span class="text-primary" t-esc="state.data.last_order_name"/>
+                            — <span class="text-success fw-bold" t-esc="state.data.last_order_total"/>
+                        </div>
+                        <div class="small text-muted text-truncate" style="max-width: 480px;">
+                            <t t-foreach="state.data.last_basket" t-as="item" t-key="item.product_id">
+                                <span t-esc="item.name"/> (x<t t-esc="item.qty"/>)<t t-if="!item_last">, </t>
+                            </t>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" t-on-click="() => this.repeatLastOrder()">
+                        <i class="fa fa-repeat me-1"/> Repeat Order
+                    </button>
+                </div>
+
+                <!-- Customer History Sub-Tabs -->
+                <div class="pos-retail-sub-tabs d-flex flex-wrap gap-1 mb-2">
+                    <button class="btn btn-sm"
+                            t-att-class="state.customerTab === 'sales' ? 'btn-primary' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setCustomerTab('sales')">
+                        <i class="fa fa-shopping-cart me-1"/> Sales &amp; Orders
+                        <span t-if="state.data" class="badge text-bg-light ms-1" t-esc="state.data.sales_count"/>
+                    </button>
+                    <button class="btn btn-sm"
+                            t-att-class="state.customerTab === 'payments' ? 'btn-primary' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setCustomerTab('payments')">
+                        <i class="fa fa-credit-card me-1"/> Payments Received
+                        <span t-if="state.data and state.data.payments" class="badge text-bg-light ms-1" t-esc="state.data.payments.length"/>
+                    </button>
+                    <button class="btn btn-sm"
+                            t-att-class="state.customerTab === 'open' ? 'btn-primary' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setCustomerTab('open')">
+                        <i class="fa fa-clock-o me-1"/> Unpaid Invoices
+                        <span t-if="state.data and state.data.open_invoices" class="badge text-bg-danger text-white ms-1" t-esc="state.data.open_invoices.length"/>
+                    </button>
+                    <button class="btn btn-sm"
+                            t-att-class="state.customerTab === 'purchases' ? 'btn-primary' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setCustomerTab('purchases')">
+                        <i class="fa fa-star me-1"/> Buys Often
+                        <span t-if="state.data and state.data.top_products" class="badge text-bg-light ms-1" t-esc="state.data.top_products.length"/>
+                    </button>
+                    <button class="btn btn-sm"
+                            t-att-class="state.customerTab === 'credit' ? 'btn-primary' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setCustomerTab('credit')">
+                        <i class="fa fa-book me-1"/> Credit Sales (Khata)
+                        <span t-if="state.data and state.data.credit_sales" class="badge text-bg-light ms-1" t-esc="state.data.credit_sales.length"/>
+                    </button>
+                    <button class="btn btn-sm"
+                            t-att-class="state.customerTab === 'refunds' ? 'btn-primary' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setCustomerTab('refunds')">
+                        <i class="fa fa-undo me-1"/> Returns
+                        <span t-if="state.data and state.data.refunds_count" class="badge text-bg-light ms-1" t-esc="state.data.refunds_count"/>
+                    </button>
+                    <button class="btn btn-sm"
+                            t-att-class="state.customerTab === 'quotations' ? 'btn-primary' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setCustomerTab('quotations')">
+                        <i class="fa fa-file-text-o me-1"/> Quotations
+                        <span t-if="state.data and state.data.quotations" class="badge text-bg-light ms-1" t-esc="state.data.quotations.length"/>
+                    </button>
+                </div>
+
+                <!-- Customer Sub-Tab Content -->
+                <div class="pos-retail-history__body border rounded p-2 bg-light">
+                    <!-- 1. Sales & Orders -->
+                    <t t-if="state.customerTab === 'sales'">
+                        <div t-if="!state.data or !state.data.sales.length" class="text-muted p-3 text-center">
+                            No sales orders recorded for this customer.
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Receipt No.</th>
+                                    <th>Invoice</th>
+                                    <th>Cashier</th>
+                                    <th class="text-end">Total</th>
+                                    <th class="text-end">Paid</th>
+                                    <th class="text-end">Balance</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.sales" t-as="row" t-key="row.id">
+                                    <td class="small" t-esc="row.date"/>
+                                    <td class="fw-bold" t-esc="row.receipt_number"/>
+                                    <td class="small">
+                                        <span t-if="row.invoice" class="badge text-bg-light" t-esc="row.invoice"/>
+                                        <span t-else="" class="text-muted">-</span>
+                                    </td>
+                                    <td class="small" t-esc="row.cashier"/>
+                                    <td class="text-end fw-bold" t-esc="row.amount_formatted"/>
+                                    <td class="text-end text-success" t-esc="row.paid_amount_formatted"/>
+                                    <td class="text-end fw-bold"
+                                        t-att-class="row.balance_amount > 0 ? 'text-danger' : 'text-muted'"
+                                        t-esc="row.balance_amount_formatted"/>
+                                    <td class="text-center">
+                                        <span t-att-class="row.payment_status === 'paid' ? 'badge text-bg-success' :
+                                                           row.payment_status === 'partial' ? 'badge text-bg-warning text-dark' :
+                                                           'badge text-bg-danger'"
+                                              t-esc="row.payment_status_label"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- 2. Payments Received -->
+                    <t t-if="state.customerTab === 'payments'">
+                        <div t-if="!state.data or !state.data.payments.length" class="text-muted p-3 text-center">
+                            No payments recorded yet.
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Receipt / Ref</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Amount Paid</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.payments" t-as="row" t-key="row.id">
+                                    <td class="small" t-esc="row.date"/>
+                                    <td class="fw-bold" t-esc="row.receipt_number || row.ref"/>
+                                    <td class="small text-muted" t-esc="row.label"/>
+                                    <td class="text-end fw-bold text-success" t-esc="row.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- 3. Unpaid Invoices -->
+                    <t t-if="state.customerTab === 'open'">
+                        <div t-if="!state.data or !state.data.open_invoices.length" class="text-muted p-3 text-center text-success">
+                            <i class="fa fa-check-circle me-1"/> Nothing outstanding. This customer is settled up!
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Receipt / Ref</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Total Billed</th>
+                                    <th class="text-end">Still Unpaid</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.open_invoices" t-as="row" t-key="row.id">
+                                    <td class="small" t-esc="row.date"/>
+                                    <td class="fw-bold" t-esc="row.receipt_number || row.ref"/>
+                                    <td class="small text-muted" t-esc="row.label"/>
+                                    <td class="text-end" t-esc="row.amount_formatted"/>
+                                    <td class="text-end fw-bold text-danger" t-esc="row.residual_formatted"/>
+                                    <td class="text-center">
+                                        <span class="badge text-bg-danger" t-esc="row.payment_status_label"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- 4. Buys Often -->
+                    <t t-if="state.customerTab === 'purchases'">
+                        <div t-if="!state.data or !state.data.top_products.length" class="text-muted p-3 text-center">
+                            No product history available.
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Visits / Times</th>
+                                    <th class="text-end">Quantity Bought</th>
+                                    <th class="text-end">Total Spent</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.top_products" t-as="p" t-key="p.name">
+                                    <td class="fw-bold" t-esc="p.name"/>
+                                    <td class="text-end" t-esc="p.times"/>
+                                    <td class="text-end" t-esc="p.qty"/>
+                                    <td class="text-end fw-bold text-primary" t-esc="p.spent_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- 5. Credit Sales -->
+                    <t t-if="state.customerTab === 'credit'">
+                        <div t-if="!state.data or !state.data.credit_sales.length" class="text-muted p-3 text-center">
+                            No credit sales recorded for this customer.
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Receipt No.</th>
+                                    <th>Cashier</th>
+                                    <th class="text-end">Total</th>
+                                    <th class="text-end">Paid</th>
+                                    <th class="text-end">Balance</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.credit_sales" t-as="row" t-key="row.id">
+                                    <td class="small" t-esc="row.date"/>
+                                    <td class="fw-bold" t-esc="row.receipt_number"/>
+                                    <td class="small" t-esc="row.cashier"/>
+                                    <td class="text-end fw-bold" t-esc="row.amount_formatted"/>
+                                    <td class="text-end text-success" t-esc="row.paid_amount_formatted"/>
+                                    <td class="text-end fw-bold text-danger" t-esc="row.balance_amount_formatted"/>
+                                    <td class="text-center">
+                                        <span t-att-class="row.payment_status === 'paid' ? 'badge text-bg-success' : 'badge text-bg-warning text-dark'"
+                                              t-esc="row.payment_status_label"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- 6. Returns / Refunds -->
+                    <t t-if="state.customerTab === 'refunds'">
+                        <div t-if="!state.data or !state.data.refunds.length" class="text-muted p-3 text-center">
+                            No return or refund orders on file.
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Receipt No.</th>
+                                    <th>Cashier</th>
+                                    <th class="text-end">Refunded Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.refunds" t-as="row" t-key="row.id">
+                                    <td class="small" t-esc="row.date"/>
+                                    <td class="fw-bold text-danger" t-esc="row.receipt_number"/>
+                                    <td class="small" t-esc="row.cashier"/>
+                                    <td class="text-end fw-bold text-danger" t-esc="row.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- 7. Quotations -->
+                    <t t-if="state.customerTab === 'quotations'">
+                        <div t-if="!state.data or !state.data.quotations.length" class="text-muted p-3 text-center">
+                            No open quotations found.
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Quotation Ref</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.quotations" t-as="q" t-key="q.name">
+                                    <td class="small" t-esc="q.date"/>
+                                    <td class="fw-bold" t-esc="q.receipt_number"/>
+                                    <td><span class="badge text-bg-info text-white" t-esc="q.state_label || q.state"/></td>
+                                    <td class="text-end fw-bold" t-esc="q.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- TAB 2: VENDOR VIEW                                        -->
+            <!-- ======================================================== -->
+            <div t-if="state.activeSide === 'vendor'" class="pos-retail-tab-content">
+                <!-- VENDOR KHATA / LEDGER KPI CARDS -->
+                <div class="pos-retail-profile__grid mb-3">
+                    <!-- 1. Total Bills (Vendor Credit) -->
+                    <div class="pos-retail-profile__stat is-debit">
+                        <span class="pos-retail-profile__label text-primary">Total Bills (Credit)</span>
+                        <span class="pos-retail-profile__value text-primary"
+                              t-esc="state.data ? state.data.vendor_bills_total.formatted : '$ 0.00'"/>
+                        <span class="small text-muted">Goods &amp; services billed by vendor</span>
+                    </div>
+
+                    <!-- 2. Total Paid (Vendor Debit) -->
+                    <div class="pos-retail-profile__stat is-credit">
+                        <span class="pos-retail-profile__label text-success">Total Paid (Debit)</span>
+                        <span class="pos-retail-profile__value text-success"
+                              t-esc="state.data ? state.data.vendor_paid_total.formatted : '$ 0.00'"/>
+                        <span class="small text-muted">Payments made to this vendor</span>
+                    </div>
+
+                    <!-- 3. Net Payable Balance -->
+                    <div class="pos-retail-profile__stat"
+                         t-att-class="(state.data and state.data.vendor_balance.amount > 0) ? 'is-danger' : 'is-success'">
+                        <span class="pos-retail-profile__label">Net Payable Balance</span>
+                        <span class="pos-retail-profile__value"
+                              t-esc="state.data ? state.data.vendor_balance.formatted : '$ 0.00'"/>
+                        <span class="small text-muted">
+                            <t t-if="state.data and state.data.vendor_balance.amount > 0">
+                                <span class="badge text-bg-warning text-dark">We Owe Vendor</span>
+                            </t>
+                            <t t-else="">
+                                <span class="badge text-bg-success">Settled / Clear</span>
+                            </t>
+                        </span>
+                    </div>
+
+                    <!-- 4. Purchase Orders Count -->
+                    <div class="pos-retail-profile__stat">
+                        <span class="pos-retail-profile__label">Purchase Orders</span>
+                        <span class="pos-retail-profile__value"
+                              t-esc="(state.data ? state.data.purchase_orders_count : 0) + ' Orders'"/>
+                        <span class="small text-muted">
+                            <t t-if="state.data and state.data.is_vendor">
+                                <span class="badge text-bg-success">Active Supplier</span>
+                            </t>
+                            <t t-else="">
+                                <span class="badge text-bg-secondary">Not Supplier</span>
+                            </t>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Vendor History Sub-Tabs -->
+                <div class="pos-retail-sub-tabs d-flex flex-wrap gap-1 mb-2">
+                    <button class="btn btn-sm"
+                            t-att-class="state.vendorTab === 'purchase_orders' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setVendorTab('purchase_orders')">
+                        <i class="fa fa-file-text-o me-1"/> Purchase Orders (POs)
+                        <span t-if="state.data and state.data.purchase_orders" class="badge text-bg-light ms-1" t-esc="state.data.purchase_orders.length"/>
+                    </button>
+                    <button class="btn btn-sm"
+                            t-att-class="state.vendorTab === 'vendor_bills' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setVendorTab('vendor_bills')">
+                        <i class="fa fa-file-invoice me-1"/> Vendor Bills
+                        <span t-if="state.data and state.data.vendor_bills" class="badge text-bg-light ms-1" t-esc="state.data.vendor_bills.length"/>
+                    </button>
+                    <button class="btn btn-sm"
+                            t-att-class="state.vendorTab === 'vendor_payments' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setVendorTab('vendor_payments')">
+                        <i class="fa fa-money me-1"/> Payments Made
+                        <span t-if="state.data and state.data.vendor_payments" class="badge text-bg-light ms-1" t-esc="state.data.vendor_payments.length"/>
+                    </button>
+                    <button class="btn btn-sm"
+                            t-att-class="state.vendorTab === 'unpaid_bills' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
+                            t-on-click="() => this.setVendorTab('unpaid_bills')">
+                        <i class="fa fa-exclamation-circle me-1"/> Unpaid Bills
+                        <span t-if="state.data and state.data.unpaid_bills" class="badge text-bg-danger text-white ms-1" t-esc="state.data.unpaid_bills.length"/>
+                    </button>
+                </div>
+
+                <!-- Vendor Sub-Tab Content -->
+                <div class="pos-retail-history__body border rounded p-2 bg-light">
+                    <!-- 1. Purchase Orders -->
+                    <t t-if="state.vendorTab === 'purchase_orders'">
+                        <div t-if="!state.data or !state.data.purchase_orders.length" class="text-muted p-3 text-center">
+                            No purchase orders found for this vendor.
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>PO Reference</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.purchase_orders" t-as="po" t-key="po.id">
+                                    <td class="small" t-esc="po.date"/>
+                                    <td class="fw-bold" t-esc="po.receipt_number"/>
+                                    <td>
+                                        <span t-att-class="po.state === 'purchase' ? 'badge text-bg-success' :
+                                                           po.state === 'done' ? 'badge text-bg-secondary' :
+                                                           po.state === 'cancel' ? 'badge text-bg-danger' :
+                                                           'badge text-bg-warning text-dark'"
+                                              t-esc="po.state_label || po.state"/>
+                                    </td>
+                                    <td class="text-end fw-bold" t-esc="po.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- 2. Vendor Bills -->
+                    <t t-if="state.vendorTab === 'vendor_bills'">
+                        <div t-if="!state.data or !state.data.vendor_bills.length" class="text-muted p-3 text-center">
+                            No vendor bills recorded.
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Bill Reference</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Total Billed</th>
+                                    <th class="text-end">Paid</th>
+                                    <th class="text-end">Still Owed</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.vendor_bills" t-as="row" t-key="row.id">
+                                    <td class="small" t-esc="row.date"/>
+                                    <td class="fw-bold" t-esc="row.receipt_number"/>
+                                    <td class="small text-muted" t-esc="row.label"/>
+                                    <td class="text-end fw-bold" t-esc="row.amount_formatted"/>
+                                    <td class="text-end text-success" t-esc="row.paid_amount_formatted"/>
+                                    <td class="text-end fw-bold text-danger" t-esc="row.residual_formatted"/>
+                                    <td class="text-center">
+                                        <span t-att-class="row.payment_status === 'paid' ? 'badge text-bg-success' :
+                                                           row.payment_status === 'partial' ? 'badge text-bg-warning text-dark' :
+                                                           'badge text-bg-danger'"
+                                              t-esc="row.payment_status_label"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- 3. Payments Made to Vendor -->
+                    <t t-if="state.vendorTab === 'vendor_payments'">
+                        <div t-if="!state.data or !state.data.vendor_payments.length" class="text-muted p-3 text-center">
+                            No payments made to this vendor yet.
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Payment Ref</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Amount Paid</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.vendor_payments" t-as="row" t-key="row.id">
+                                    <td class="small" t-esc="row.date"/>
+                                    <td class="fw-bold" t-esc="row.receipt_number"/>
+                                    <td class="small text-muted" t-esc="row.label"/>
+                                    <td class="text-end fw-bold text-success" t-esc="row.amount_formatted"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+
+                    <!-- 4. Unpaid Vendor Bills -->
+                    <t t-if="state.vendorTab === 'unpaid_bills'">
+                        <div t-if="!state.data or !state.data.unpaid_bills.length" class="text-muted p-3 text-center text-success">
+                            <i class="fa fa-check-circle me-1"/> All bills from this vendor are settled!
+                        </div>
+                        <table t-else="" class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Bill Reference</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Total Bill</th>
+                                    <th class="text-end">Still Owed</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.unpaid_bills" t-as="row" t-key="row.id">
+                                    <td class="small" t-esc="row.date"/>
+                                    <td class="fw-bold" t-esc="row.receipt_number"/>
+                                    <td class="small text-muted" t-esc="row.label"/>
+                                    <td class="text-end" t-esc="row.amount_formatted"/>
+                                    <td class="text-end fw-bold text-danger" t-esc="row.residual_formatted"/>
+                                    <td class="text-center">
+                                        <span class="badge text-bg-danger" t-esc="row.payment_status_label"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary btn-lg px-4" t-on-click="() => this.props.close()">
                     Close
                 </button>
             </t>
@@ -89,3 +647,4 @@
     </t>
 
 </templates>
+

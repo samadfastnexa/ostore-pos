@@ -245,29 +245,28 @@ class ResPartner(models.Model):
                 result.append(fname)
         return result
 
-    def get_pos_customer_history(self, limit=12):
-        """Everything the cashier might want to know about a customer, in one call.
+    def get_pos_customer_history(self, limit=15):
+        """Everything the cashier might want to know about a customer & vendor, in one call.
 
         Deliberately one round trip rather than several: it is triggered by a
-        cashier tapping a button mid-sale, so latency is felt directly. The
-        POS session only carries recent orders, and nothing at all about
+        cashier tapping a button mid-sale on the POS screen, so latency is felt directly.
+        The POS session only carries recent orders and nothing at all about
         payments, invoices or the ledger, so this has to come from the server;
         the caller is expected to handle being offline.
 
         Runs as sudo on purpose: a cashier legitimately needs to see what this
-        customer owes and has bought, but must not be given accounting rights
-        to get it (core restricts those fields to the accounting groups).
+        customer owes, has bought, or vendor balances, but must not be given accounting
+        rights to get it (core restricts those fields to the accounting groups).
         """
         self.ensure_one()
         partner = self.sudo()
         currency = self.env.company.currency_id
 
         def money(amount):
-            return {'amount': amount, 'formatted': currency.format(amount)}
+            amt = round(amount or 0.0, 2)
+            return {'amount': amt, 'formatted': currency.format(amt)}
 
         # --- POS sales, split into ordinary sales and refunds -------------
-        # id desc breaks ties: several orders can share a timestamp on a busy
-        # till, and "their last order" must be a single definite basket.
         orders = self.env['pos.order'].sudo().search(
             [('partner_id', '=', partner.id), ('state', '!=', 'cancel')],
             order='date_order desc, id desc', limit=200,
@@ -276,21 +275,69 @@ class ResPartner(models.Model):
         refunds = orders - sales
 
         def order_row(order):
+            total = round(order.amount_total or 0.0, 2)
+            has_pay_later = any(p.payment_method_id.type == 'pay_later' for p in order.payment_ids)
+            move = order.account_move
+            if move:
+                residual = round(max(move.amount_residual, 0.0), 2)
+                paid = round(max(total - residual, 0.0), 2)
+                if residual <= 0.005:
+                    status = 'paid'
+                    status_label = 'Fully Paid'
+                elif abs(residual - total) <= 0.005:
+                    status = 'unpaid'
+                    status_label = 'Unpaid'
+                else:
+                    status = 'partial'
+                    status_label = 'Partially Paid'
+            elif has_pay_later:
+                pay_later_amt = round(sum(p.amount for p in order.payment_ids if p.payment_method_id.type == 'pay_later'), 2)
+                paid = round(max(total - pay_later_amt, 0.0), 2)
+                residual = round(max(pay_later_amt, 0.0), 2)
+                if residual <= 0.005:
+                    status = 'paid'
+                    status_label = 'Fully Paid'
+                elif paid <= 0.005:
+                    status = 'unpaid'
+                    status_label = 'Unpaid'
+                else:
+                    status = 'partial'
+                    status_label = 'Partially Paid'
+            elif order.state in ('paid', 'done'):
+                paid = total
+                residual = 0.0
+                status = 'paid'
+                status_label = 'Fully Paid'
+            elif order.state == 'draft':
+                paid = 0.0
+                residual = total
+                status = 'unpaid'
+                status_label = 'Unpaid'
+            else:
+                paid = total
+                residual = 0.0
+                status = order.state
+                status_label = order.state.capitalize()
+
             return {
                 'id': order.id,
                 'name': order.pos_reference or order.name,
-                'date': order.date_order and str(order.date_order) or '',
-                'amount': order.amount_total,
-                'amount_formatted': currency.format(order.amount_total),
+                'receipt_number': order.pos_reference or order.name,
+                'date': order.date_order and str(order.date_order)[:16] or '',
+                'amount': total,
+                'amount_formatted': currency.format(total),
+                'paid_amount': paid,
+                'paid_amount_formatted': currency.format(paid),
+                'balance_amount': residual,
+                'balance_amount_formatted': currency.format(residual),
+                'payment_status': status,
+                'payment_status_label': status_label,
                 'state': order.state,
                 'invoice': order.account_move.name or '',
                 'cashier': order.employee_id.name or order.user_id.name or '',
             }
 
         # --- What they usually buy ---------------------------------------
-        # Counted by number of separate visits the product appeared in, not by
-        # quantity: "bought milk 120 times" is what a cashier means, whereas
-        # summing litres would rank one bulk purchase above a daily habit.
         lines = self.env['pos.order.line'].sudo().search(
             [('order_id', 'in', orders.ids), ('qty', '>', 0)],
         )
@@ -323,7 +370,7 @@ class ResPartner(models.Model):
                     'qty': line.qty,
                 })
 
-        # --- Money owed and paid -----------------------------------------
+        # --- Money owed and paid (Customer Receivable) -------------------
         receivable = self.env['account.move.line'].sudo().search(
             [('partner_id', '=', partner.id),
              ('account_id.account_type', '=', 'asset_receivable'),
@@ -332,19 +379,58 @@ class ResPartner(models.Model):
         )
         payments, charges, open_invoices = [], [], []
         for line in receivable:
+            debit = line.debit or 0.0
+            credit = line.credit or 0.0
+            amt = round(debit if debit > 0 else credit, 2)
+            res = round(abs(line.amount_residual), 2)
+            paid = round(max(amt - res, 0.0), 2)
+            if res <= 0.005:
+                status = 'paid'
+                status_label = 'Fully Paid'
+            elif abs(res - amt) <= 0.005:
+                status = 'unpaid'
+                status_label = 'Unpaid'
+            else:
+                status = 'partial'
+                status_label = 'Partially Paid'
+
+            linked_pos = line.move_id.pos_order_ids
+            receipt_no = linked_pos and (linked_pos[0].pos_reference or linked_pos[0].name) or line.move_id.name or ''
+
             row = {
+                'id': line.id,
                 'date': str(line.date),
                 'ref': line.move_id.name or '',
+                'receipt_number': receipt_no,
                 'label': line.name or '',
-                'debit': line.debit,
-                'credit': line.credit,
-                'amount_formatted': currency.format(line.credit or line.debit),
-                'residual': line.amount_residual,
+                'debit': debit,
+                'credit': credit,
+                'amount': amt,
+                'amount_formatted': currency.format(amt),
+                'paid_amount': paid,
+                'paid_amount_formatted': currency.format(paid),
+                'residual': res,
+                'residual_formatted': currency.format(res),
+                'payment_status': status,
+                'payment_status_label': status_label,
             }
-            (payments if line.credit else charges).append(row)
-            if line.debit and line.amount_residual:
-                open_invoices.append(dict(
-                    row, residual_formatted=currency.format(line.amount_residual)))
+            (payments if credit > 0 else charges).append(row)
+            if debit > 0 and res > 0.005:
+                open_invoices.append(row)
+
+        # Lifetime customer receivable aggregates
+        rec_grouped = self.env['account.move.line'].sudo()._read_group(
+            domain=[
+                ('partner_id', '=', partner.id),
+                ('account_id.account_type', '=', 'asset_receivable'),
+                ('parent_state', '=', 'posted'),
+            ],
+            aggregates=('debit:sum', 'credit:sum'),
+        )
+        cust_debit_total, cust_credit_total = rec_grouped[0] if rec_grouped else (0.0, 0.0)
+        cust_debit_total = cust_debit_total or 0.0
+        cust_credit_total = cust_credit_total or 0.0
+        cust_balance = cust_debit_total - cust_credit_total
 
         # --- Quotations still open ---------------------------------------
         quotations = []
@@ -355,9 +441,11 @@ class ResPartner(models.Model):
         ):
             quotations.append({
                 'name': so.name,
-                'date': so.date_order and str(so.date_order) or '',
+                'receipt_number': so.name,
+                'date': so.date_order and str(so.date_order)[:16] or '',
                 'amount_formatted': currency.format(so.amount_total),
                 'state': so.state,
+                'state_label': dict(so._fields['state'].selection).get(so.state, so.state) if hasattr(so, '_fields') else so.state,
             })
 
         # --- Vendor / Supplier history -----------------------------------
@@ -371,10 +459,12 @@ class ResPartner(models.Model):
             purchase_orders.append({
                 'id': po.id,
                 'name': po.name,
+                'receipt_number': po.name,
                 'date': po.date_order and str(po.date_order)[:16] or '',
                 'amount': po.amount_total,
                 'amount_formatted': currency.format(po.amount_total),
                 'state': po.state,
+                'state_label': dict(po._fields['state'].selection).get(po.state, po.state) if hasattr(po, '_fields') else po.state,
             })
 
         # Payable journal lines: bills we owe the vendor and payments we've made.
@@ -386,24 +476,84 @@ class ResPartner(models.Model):
         )
         vendor_payments, vendor_bills, unpaid_bills = [], [], []
         for line in payable:
+            debit = line.debit or 0.0    # payment made to vendor
+            credit = line.credit or 0.0  # bill received from vendor
+            amt = round(credit if credit > 0 else debit, 2)
+            res = round(abs(line.amount_residual), 2)
+            paid = round(max(amt - res, 0.0), 2)
+            if res <= 0.005:
+                status = 'paid'
+                status_label = 'Fully Paid'
+            elif abs(res - amt) <= 0.005:
+                status = 'unpaid'
+                status_label = 'Unpaid'
+            else:
+                status = 'partial'
+                status_label = 'Partially Paid'
+
             row = {
+                'id': line.id,
                 'date': str(line.date),
                 'ref': line.move_id.name or '',
+                'receipt_number': line.move_id.name or '',
                 'label': line.name or '',
-                'debit': line.debit,
-                'credit': line.credit,
-                'amount_formatted': currency.format(line.debit or line.credit),
-                'residual': line.amount_residual,
+                'debit': debit,
+                'credit': credit,
+                'amount': amt,
+                'amount_formatted': currency.format(amt),
+                'paid_amount': paid,
+                'paid_amount_formatted': currency.format(paid),
+                'residual': res,
+                'residual_formatted': currency.format(res),
+                'payment_status': status,
+                'payment_status_label': status_label,
             }
             # debit on payable = payment made to vendor; credit = bill/charge
-            (vendor_payments if line.debit else vendor_bills).append(row)
-            # Still-outstanding bills (credit side, residual != 0)
-            if line.credit and line.amount_residual:
-                unpaid_bills.append(dict(
-                    row, residual_formatted=currency.format(abs(line.amount_residual))))
+            (vendor_payments if debit > 0 else vendor_bills).append(row)
+            if credit > 0 and res > 0.005:
+                unpaid_bills.append(row)
+
+        # Lifetime vendor payable aggregates
+        pay_grouped = self.env['account.move.line'].sudo()._read_group(
+            domain=[
+                ('partner_id', '=', partner.id),
+                ('account_id.account_type', '=', 'liability_payable'),
+                ('parent_state', '=', 'posted'),
+            ],
+            aggregates=('debit:sum', 'credit:sum'),
+        )
+        vend_debit_total, vend_credit_total = pay_grouped[0] if pay_grouped else (0.0, 0.0)
+        vend_debit_total = vend_debit_total or 0.0    # Total paid to vendor
+        vend_credit_total = vend_credit_total or 0.0  # Total bills from vendor
+        vend_balance = vend_credit_total - vend_debit_total  # Net amount shop owes vendor
 
         return {
             'partner_id': partner.id,
+            'name': partner.name,
+            'phone': partner.phone or partner.mobile or '',
+            'email': partner.email or '',
+            'street': partner.street or '',
+            'city': partner.city or '',
+            'category_names': [cat.name for cat in partner.category_id],
+            'membership_name': partner.membership_level_id.name if hasattr(partner, 'membership_level_id') and partner.membership_level_id else '',
+            'note': partner.pos_retail_note or '',
+            # Customer Ledger / Khata
+            'customer_debit': money(cust_debit_total),
+            'customer_credit': money(cust_credit_total),
+            'customer_balance': money(cust_balance),
+            'outstanding': money(partner.credit or cust_balance),
+            'credit_limit': partner.pos_credit_limit or 0.0,
+            'credit_limit_formatted': currency.format(partner.pos_credit_limit or 0.0),
+            'credit_available': partner.pos_credit_available or 0.0,
+            'credit_available_formatted': currency.format(partner.pos_credit_available or 0.0),
+            'loyalty_points': round(partner.pos_loyalty_points or 0.0, 1),
+            'total_spent': partner.pos_total_spent or 0.0,
+            'total_spent_formatted': currency.format(partner.pos_total_spent or 0.0),
+            'avg_order_value': partner.pos_avg_order_value or 0.0,
+            'avg_order_value_formatted': currency.format(partner.pos_avg_order_value or 0.0),
+            'sales_order_count': partner.pos_sales_order_count or len(sales),
+            'last_purchase_date': str(partner.pos_last_purchase_date or ''),
+            # Customer history lines
             'sales': [order_row(o) for o in sales[:limit]],
             'sales_count': len(sales),
             'refunds': [order_row(o) for o in refunds[:limit]],
@@ -422,9 +572,11 @@ class ResPartner(models.Model):
             'last_order_name': last_order.pos_reference or last_order.name or '',
             'last_order_date': last_order.date_order and str(last_order.date_order) or '',
             'last_order_total': last_order and currency.format(last_order.amount_total) or '',
-            'outstanding': money(partner.credit or 0.0),
             # Vendor side
-            'is_vendor': bool(partner.supplier_rank),
+            'is_vendor': bool(partner.supplier_rank or purchase_orders or payable),
+            'vendor_bills_total': money(vend_credit_total),
+            'vendor_paid_total': money(vend_debit_total),
+            'vendor_balance': money(vend_balance),
             'purchase_orders': purchase_orders,
             'purchase_orders_count': len(purchase_orders),
             'vendor_payments': vendor_payments,

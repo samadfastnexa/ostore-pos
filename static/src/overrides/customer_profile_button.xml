@@ -1,18 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- A separate info button beside the customer button. Kept separate on
-         purpose: tapping the customer's name must still open the customer
-         list to change them, which is the far more frequent action. -->
+    <!-- A separate info button beside the customer button on the cart screen. -->
     <t t-inherit="point_of_sale.SelectPartnerButton" t-inherit-mode="extension">
         <xpath expr="//button[hasclass('set-partner')]" position="after">
             <button t-if="props.partner"
-                    class="pos-retail-profile-btn btn btn-secondary btn-lg lh-lg"
-                    title="Customer details"
+                    class="pos-retail-profile-btn btn btn-secondary btn-lg lh-lg ms-1"
+                    title="Customer &amp; Vendor Ledger &amp; History"
                     t-on-click="() => this.posRetailShowProfile()">
-                <i class="fa fa-id-card-o" role="img" aria-label="Customer details"/>
+                <i class="fa fa-id-card-o me-1" role="img" aria-label="Customer &amp; Vendor Ledger"/>
+                <span class="d-none d-md-inline small fw-bold">Ledger</span>
             </button>
         </xpath>
     </t>
 
+    <!-- Allow cashier to view Ledger & History directly from the customer selection list -->
+    <t t-inherit="point_of_sale.PartnerLine" t-inherit-mode="extension">
+        <!-- Desktop: add direct ledger button before dropdown -->
+        <xpath expr="//tr[hasclass('partner-line')]//td[hasclass('edit-partner-button-cell')]//Dropdown" position="before">
+            <button class="btn btn-light btn-lg lh-lg border float-end me-1 pos-retail-partner-profile-btn"
+                    title="View Customer &amp; Vendor Ledger &amp; History"
+                    t-on-click.stop="() => this.posRetailShowProfile(props.partner)">
+                <i class="fa fa-id-card-o text-primary"/>
+            </button>
+        </xpath>
+        <!-- Desktop: add item to dropdown menu -->
+        <xpath expr="//tr[hasclass('partner-line')]//DropdownItem[@onSelected='() => props.onClickOrders(props.partner)']" position="after">
+            <DropdownItem onSelected="() => this.posRetailShowProfile(props.partner)">
+                <i class="fa fa-id-card-o me-1"/> Ledger &amp; History
+            </DropdownItem>
+        </xpath>
+        <!-- Mobile: add item to dropdown menu -->
+        <xpath expr="//div[hasclass('partner-info')]//DropdownItem[@onSelected='() => props.onClickOrders(props.partner)']" position="after">
+            <DropdownItem onSelected="() => this.posRetailShowProfile(props.partner)">
+                <i class="fa fa-id-card-o me-1"/> Ledger &amp; History
+            </DropdownItem>
+        </xpath>
+    </t>
+
 </templates>
+
