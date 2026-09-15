@@ -237,7 +237,9 @@
                         t-on-click="() => this.setActiveSide('customer')">
                     <i class="fa fa-user-circle fs-6"/>
                     <span>Customer Details &amp; Ledger</span>
-                    <span t-if="state.data and state.data.sales_count" class="badge text-bg-light ms-1">
+                    <span t-if="state.data and state.data.sales_count"
+                          class="badge bg-white text-dark ms-1 shadow-sm fw-bold"
+                          style="color: #212529 !important; background-color: #ffffff !important;">
                         <t t-esc="state.data.sales_count"/> Orders
                     </span>
                 </button>
@@ -247,7 +249,9 @@
                         t-on-click="() => this.setActiveSide('vendor')">
                     <i class="fa fa-truck fs-6"/>
                     <span>Vendor Details &amp; Ledger</span>
-                    <span t-if="state.data and (state.data.purchase_orders_count or (state.data.vendor_bills and state.data.vendor_bills.length))" class="badge text-bg-dark ms-1">
+                    <span t-if="state.data and (state.data.purchase_orders_count or (state.data.vendor_bills and state.data.vendor_bills.length))"
+                          class="badge bg-dark text-white ms-1 shadow-sm fw-bold"
+                          style="color: #ffffff !important; background-color: #212529 !important;">
                         <t t-esc="state.data.purchase_orders_count || state.data.vendor_bills.length"/> Records
                     </span>
                 </button>
@@ -422,13 +426,13 @@
                             t-att-class="state.customerTab === 'sales' ? 'btn-primary' : 'btn-outline-secondary'"
                             t-on-click="() => this.setCustomerTab('sales')">
                         <i class="fa fa-shopping-cart me-1"/> Sales &amp; Orders
-                        <span t-if="state.data" class="badge text-bg-light ms-1" t-esc="state.data.sales_count"/>
+                        <span t-if="state.data" class="badge bg-white text-dark ms-1 shadow-sm fw-bold" style="color: #212529 !important; background-color: #ffffff !important;" t-esc="state.data.sales_count"/>
                     </button>
                     <button class="btn btn-sm"
                             t-att-class="state.customerTab === 'payments' ? 'btn-primary' : 'btn-outline-secondary'"
                             t-on-click="() => this.setCustomerTab('payments')">
                         <i class="fa fa-credit-card me-1"/> Payments Received
-                        <span t-if="state.data and state.data.payments" class="badge text-bg-light ms-1" t-esc="state.data.payments.length"/>
+                        <span t-if="state.data and state.data.payments" class="badge bg-white text-dark ms-1 shadow-sm fw-bold" style="color: #212529 !important; background-color: #ffffff !important;" t-esc="state.data.payments.length"/>
                     </button>
                     <button class="btn btn-sm"
                             t-att-class="state.customerTab === 'open' ? 'btn-primary' : 'btn-outline-secondary'"
@@ -440,25 +444,25 @@
                             t-att-class="state.customerTab === 'purchases' ? 'btn-primary' : 'btn-outline-secondary'"
                             t-on-click="() => this.setCustomerTab('purchases')">
                         <i class="fa fa-star me-1"/> Buys Often
-                        <span t-if="state.data and state.data.top_products" class="badge text-bg-light ms-1" t-esc="state.data.top_products.length"/>
+                        <span t-if="state.data and state.data.top_products" class="badge bg-white text-dark ms-1 shadow-sm fw-bold" style="color: #212529 !important; background-color: #ffffff !important;" t-esc="state.data.top_products.length"/>
                     </button>
                     <button class="btn btn-sm"
                             t-att-class="state.customerTab === 'credit' ? 'btn-primary' : 'btn-outline-secondary'"
                             t-on-click="() => this.setCustomerTab('credit')">
                         <i class="fa fa-book me-1"/> Credit Sales (Khata)
-                        <span t-if="state.data and state.data.credit_sales" class="badge text-bg-light ms-1" t-esc="state.data.credit_sales.length"/>
+                        <span t-if="state.data and state.data.credit_sales" class="badge bg-white text-dark ms-1 shadow-sm fw-bold" style="color: #212529 !important; background-color: #ffffff !important;" t-esc="state.data.credit_sales.length"/>
                     </button>
                     <button class="btn btn-sm"
                             t-att-class="state.customerTab === 'refunds' ? 'btn-primary' : 'btn-outline-secondary'"
                             t-on-click="() => this.setCustomerTab('refunds')">
                         <i class="fa fa-undo me-1"/> Returns
-                        <span t-if="state.data and state.data.refunds_count" class="badge text-bg-light ms-1" t-esc="state.data.refunds_count"/>
+                        <span t-if="state.data and state.data.refunds_count" class="badge bg-white text-dark ms-1 shadow-sm fw-bold" style="color: #212529 !important; background-color: #ffffff !important;" t-esc="state.data.refunds_count"/>
                     </button>
                     <button class="btn btn-sm"
                             t-att-class="state.customerTab === 'quotations' ? 'btn-primary' : 'btn-outline-secondary'"
                             t-on-click="() => this.setCustomerTab('quotations')">
                         <i class="fa fa-file-text-o me-1"/> Quotations
-                        <span t-if="state.data and state.data.quotations" class="badge text-bg-light ms-1" t-esc="state.data.quotations.length"/>
+                        <span t-if="state.data and state.data.quotations" class="badge bg-white text-dark ms-1 shadow-sm fw-bold" style="color: #212529 !important; background-color: #ffffff !important;" t-esc="state.data.quotations.length"/>
                     </button>
                 </div>
 
@@ -771,19 +775,19 @@
                             t-att-class="state.vendorTab === 'purchase_orders' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
                             t-on-click="() => this.setVendorTab('purchase_orders')">
                         <i class="fa fa-file-text-o me-1"/> Purchase Orders (POs)
-                        <span t-if="state.data and state.data.purchase_orders" class="badge text-bg-light ms-1" t-esc="state.data.purchase_orders.length"/>
+                        <span t-if="state.data and state.data.purchase_orders" class="badge bg-white text-dark ms-1 shadow-sm fw-bold" style="color: #212529 !important; background-color: #ffffff !important;" t-esc="state.data.purchase_orders.length"/>
                     </button>
                     <button class="btn btn-sm"
                             t-att-class="state.vendorTab === 'vendor_bills' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
                             t-on-click="() => this.setVendorTab('vendor_bills')">
                         <i class="fa fa-file-invoice me-1"/> Vendor Bills
-                        <span t-if="state.data and state.data.vendor_bills" class="badge text-bg-light ms-1" t-esc="state.data.vendor_bills.length"/>
+                        <span t-if="state.data and state.data.vendor_bills" class="badge bg-white text-dark ms-1 shadow-sm fw-bold" style="color: #212529 !important; background-color: #ffffff !important;" t-esc="state.data.vendor_bills.length"/>
                     </button>
                     <button class="btn btn-sm"
                             t-att-class="state.vendorTab === 'vendor_payments' ? 'btn-warning text-dark' : 'btn-outline-secondary'"
                             t-on-click="() => this.setVendorTab('vendor_payments')">
                         <i class="fa fa-money me-1"/> Payments Made
-                        <span t-if="state.data and state.data.vendor_payments" class="badge text-bg-light ms-1" t-esc="state.data.vendor_payments.length"/>
+                        <span t-if="state.data and state.data.vendor_payments" class="badge bg-white text-dark ms-1 shadow-sm fw-bold" style="color: #212529 !important; background-color: #ffffff !important;" t-esc="state.data.vendor_payments.length"/>
                     </button>
                     <button class="btn btn-sm"
                             t-att-class="state.vendorTab === 'unpaid_bills' ? 'btn-warning text-dark' : 'btn-outline-secondary'"

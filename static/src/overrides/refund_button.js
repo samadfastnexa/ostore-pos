@@ -74,18 +74,16 @@ patch(Navbar.prototype, {
         }
 
         for (const returnLine of payload.lines) {
-            const line = await this.pos.addLineToOrder(
-                {
-                    product_id: returnLine.product.id,
-                    product_tmpl_id: returnLine.product.product_tmpl_id,
-                    qty: -Math.abs(returnLine.qty),
-                    price_unit: returnLine.price,
-                    price_type: "manual",
-                },
-                order,
-                { force: true },
-                false
-            );
+            const product = returnLine.product;
+            const taxes = product.taxes_id || [];
+            const line = this.pos.models["pos.order.line"].create({
+                product_id: product,
+                order_id: order,
+                qty: -Math.abs(returnLine.qty),
+                price_unit: returnLine.price,
+                price_type: "manual",
+                tax_ids: taxes.map((tax) => ["link", tax]),
+            });
 
             if (line) {
                 line.pos_retail_product_condition = returnLine.condition;
