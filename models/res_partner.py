@@ -1,5 +1,7 @@
+import datetime
 import hashlib
 import hmac
+import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.addons.pos_retail.models.pos_retail_expense import PAYMENT_METHODS
@@ -7,6 +9,40 @@ from odoo.addons.pos_retail.models.pos_retail_expense import PAYMENT_METHODS
 
 class ResPartner(models.Model):
     _inherit = 'res.partner'
+
+    def _format_datetime_pak(self, dt, include_time=True):
+        """Format a UTC datetime/date into Pakistan Standard Time (PKT, UTC+5)."""
+        if not dt:
+            return ''
+        user_tz = self.env.user.tz
+        if not user_tz or user_tz in ('UTC', 'Etc/UTC', 'GMT'):
+            tz_name = 'Asia/Karachi'
+        else:
+            tz_name = user_tz
+        try:
+            target_tz = pytz.timezone(tz_name)
+        except Exception:
+            target_tz = pytz.timezone('Asia/Karachi')
+
+        if isinstance(dt, datetime.datetime):
+            if not dt.tzinfo:
+                utc_dt = pytz.utc.localize(dt)
+            else:
+                utc_dt = dt.astimezone(pytz.utc)
+            local_dt = utc_dt.astimezone(target_tz)
+            fmt = '%Y-%m-%d %H:%M' if include_time else '%Y-%m-%d'
+            return local_dt.strftime(fmt)
+        elif isinstance(dt, datetime.date):
+            return dt.strftime('%Y-%m-%d')
+        elif isinstance(dt, str):
+            try:
+                dt_obj = fields.Datetime.to_datetime(dt)
+                if dt_obj:
+                    return self._format_datetime_pak(dt_obj, include_time=include_time)
+            except Exception:
+                pass
+            return dt[:16] if include_time else dt[:10]
+        return str(dt)[:16] if include_time else str(dt)[:10]
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -479,7 +515,7 @@ class ResPartner(models.Model):
             res = alloc.get('residual', 0.0)
             if res > 0.005:
                 ref = o.pos_reference or o.name or ''
-                date_str = str(o.date_order)[:10] if o.date_order else ''
+                date_str = self._format_datetime_pak(o.date_order, include_time=False)
                 open_items.append({
                     'id': f"pos_{o.id}",
                     'name': ref,
@@ -628,7 +664,7 @@ class ResPartner(models.Model):
                 'id': order.id,
                 'name': order.pos_reference or order.name,
                 'receipt_number': order.pos_reference or order.name,
-                'date': order.date_order and str(order.date_order)[:16] or '',
+                'date': self._format_datetime_pak(order.date_order),
                 'amount': total,
                 'amount_formatted': currency.format(total),
                 'paid_amount': paid,
@@ -766,7 +802,7 @@ class ResPartner(models.Model):
             quotations.append({
                 'name': so.name,
                 'receipt_number': so.name,
-                'date': so.date_order and str(so.date_order)[:16] or '',
+                'date': self._format_datetime_pak(so.date_order),
                 'amount_formatted': currency.format(so.amount_total),
                 'state': so.state,
                 'state_label': dict(so._fields['state'].selection).get(so.state, so.state) if hasattr(so, '_fields') else so.state,
@@ -784,7 +820,7 @@ class ResPartner(models.Model):
                 'id': po.id,
                 'name': po.name,
                 'receipt_number': po.name,
-                'date': po.date_order and str(po.date_order)[:16] or '',
+                'date': self._format_datetime_pak(po.date_order),
                 'amount': po.amount_total,
                 'amount_formatted': currency.format(po.amount_total),
                 'state': po.state,
@@ -876,7 +912,7 @@ class ResPartner(models.Model):
             'avg_order_value': partner.pos_avg_order_value or 0.0,
             'avg_order_value_formatted': currency.format(partner.pos_avg_order_value or 0.0),
             'sales_order_count': partner.pos_sales_order_count or len(sales),
-            'last_purchase_date': str(partner.pos_last_purchase_date or ''),
+            'last_purchase_date': self._format_datetime_pak(partner.pos_last_purchase_date, include_time=False) if partner.pos_last_purchase_date else '',
             # Requirement 6: Customer Summary Card indicators
             'total_sales_formatted': currency.format(partner.pos_total_spent or 0.0),
             'total_paid_formatted': currency.format(max(0.0, (partner.pos_total_spent or 0.0) - cust_balance)),
@@ -885,7 +921,7 @@ class ResPartner(models.Model):
             'oldest_outstanding_name': (sorted(open_invoices, key=lambda x: (x.get('date') or '', str(x.get('id') or '')))[0]['receipt_number'] or sorted(open_invoices, key=lambda x: (x.get('date') or '', str(x.get('id') or '')))[0]['ref']) if open_invoices else '',
             'oldest_outstanding_date': sorted(open_invoices, key=lambda x: (x.get('date') or '', str(x.get('id') or '')))[0]['date'] if open_invoices else '',
             'latest_transaction_name': (sales[0].pos_reference or sales[0].name) if sales else (receivable[0].move_id.name if receivable else ''),
-            'latest_transaction_date': str(sales[0].date_order)[:16] if sales else (str(receivable[0].date) if receivable else ''),
+            'latest_transaction_date': self._format_datetime_pak(sales[0].date_order) if sales else (str(receivable[0].date) if receivable else ''),
             'latest_transaction_amount': currency.format(sales[0].amount_total) if sales else (currency.format(receivable[0].debit or receivable[0].credit) if receivable else ''),
             # Customer history lines
             'sales': [order_row(o) for o in sales[:limit]],
@@ -904,7 +940,7 @@ class ResPartner(models.Model):
             'top_products': top_products,
             'last_basket': last_basket,
             'last_order_name': last_order.pos_reference or last_order.name or '',
-            'last_order_date': last_order.date_order and str(last_order.date_order) or '',
+            'last_order_date': self._format_datetime_pak(last_order.date_order) if last_order else '',
             'last_order_total': last_order and currency.format(last_order.amount_total) or '',
             # Vendor side
             'is_vendor': bool(partner.supplier_rank or purchase_orders or payable),

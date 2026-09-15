@@ -82,7 +82,7 @@ class SaleOrder(models.Model):
             'state': order.state,
             'partner_name': order.partner_id.name or '',
             'amount_total': order.amount_total,
-            'date': order.date_order and str(order.date_order) or '',
+            'date': self.env['res.partner']._format_datetime_pak(order.date_order) if order.date_order else '',
             'validity_date': order.validity_date and str(order.validity_date) or '',
             'approved': order.pos_customer_approved,
             'line_count': len(order.order_line),

@@ -1,3 +1,5 @@
+import datetime
+import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -237,7 +239,7 @@ class PosRetailKhataPayment(models.TransientModel):
             'journal_name': record.journal_id.name or '',
             'memo': record.memo or '',
             'date': str(record.date),
-            'datetime': fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'datetime': pytz.utc.localize(datetime.datetime.utcnow()).astimezone(pytz.timezone('Asia/Karachi')).strftime('%Y-%m-%d %H:%M:%S'),
             'cashier_name': employee.name if employee else user.name,
             'branch_name': record.company_id.name or '',
         }

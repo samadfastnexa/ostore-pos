@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import hashlib
 import hmac
+import pytz
 from urllib.parse import quote_plus
 
 from odoo import _, api, fields, models
@@ -352,11 +353,19 @@ class PosRetailVendorReturn(models.Model):
         branch_name = self.company_id.name or "Store"
         currency = self.currency_id.symbol or "Rs."
 
+        dt = self.date
+        if dt:
+            tz = pytz.timezone('Asia/Karachi')
+            dt_utc = pytz.utc.localize(dt) if not dt.tzinfo else dt
+            date_str = dt_utc.astimezone(tz).strftime('%d/%m/%Y %H:%M')
+        else:
+            date_str = ''
+
         message = (
             f"*{branch_name}*\n"
             f"*VENDOR RETURN RECEIPT / DEBIT NOTE*\n"
             f"Return Ref: {self.name}\n"
-            f"Date: {self.date.strftime('%d/%m/%Y %H:%M')}\n"
+            f"Date: {date_str}\n"
             f"Vendor: {self.partner_id.name}\n"
             f"Total Return Value: {currency} {self.amount_total:,.2f}\n"
             f"Settlement: {dict(self._fields['settlement_method'].selection).get(self.settlement_method, self.settlement_method)}\n"
