@@ -72,10 +72,11 @@ export class ReceivePaymentPopup extends Component {
     }
 
     formatCurrency(amount) {
+        const val = typeof amount === "number" ? amount : parseFloat(amount) || 0;
         if (this.env?.utils?.formatCurrency) {
-            return this.env.utils.formatCurrency(amount || 0);
+            return this.env.utils.formatCurrency(val);
         }
-        return (amount || 0).toFixed(2);
+        return val.toFixed(2);
     }
 
     loadJournals() {
