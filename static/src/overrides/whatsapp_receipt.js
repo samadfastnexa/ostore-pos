@@ -62,9 +62,28 @@ patch(ReceiptScreen.prototype, {
         return digits;
     },
 
+    /** The public URL to view/download the PDF receipt. */
+    get posRetailReceiptPdfUrl() {
+        const order = this.currentOrder;
+        if (!order) {
+            return "";
+        }
+        const origin = window.location.origin;
+        if (order.access_token) {
+            return `${origin}/pos_retail/portal/receipt/pdf/${order.access_token}`;
+        }
+        if (order.id) {
+            return `${origin}/pos_retail/portal/receipt/pdf/${order.id}`;
+        }
+        return "";
+    },
+
     /** The receipt as a WhatsApp message. *asterisks* render as bold there. */
     get posRetailWhatsappText() {
         const order = this.currentOrder;
+        if (!order) {
+            return "";
+        }
         const fmt = (v) => this.env.utils.formatCurrency(v || 0);
         const lines = [];
 
@@ -72,22 +91,57 @@ patch(ReceiptScreen.prototype, {
         if (shopName) {
             lines.push("*" + shopName + "*");
         }
+
+        const isRefund = order.isRefund || (order.priceIncl < 0) || (order.totalDue < 0);
+        if (isRefund) {
+            lines.push("*CREDIT RETURN RECEIPT*");
+        }
+
         const ref = order.pos_reference || order.name || "";
         if (ref) {
-            lines.push("Receipt " + ref);
+            lines.push((isRefund ? "Return Receipt: " : "Receipt: ") + ref);
         }
-        if (order.formattedValidationDate) {
-            lines.push(order.formattedValidationDate);
+
+        const dateStr = order.date_order
+            ? (typeof order.date_order.toFormat === "function"
+                ? order.date_order.toFormat("dd/MM/yyyy HH:mm")
+                : String(order.date_order).slice(0, 16))
+            : "";
+        if (dateStr) {
+            lines.push("Date: " + dateStr);
         }
+
+        const cashierName = order.getCashierName?.() || this.pos.user?.name || "";
+        if (cashierName) {
+            lines.push("Cashier: " + cashierName);
+        }
+
+        const partner = order.getPartner();
+        if (partner) {
+            lines.push("Customer: " + partner.name);
+            if (partner.pos_outstanding_balance !== undefined) {
+                lines.push("Khata Balance: " + fmt(partner.pos_outstanding_balance));
+            }
+        }
+
         lines.push("");
 
         for (const line of order.getOrderlines() || []) {
             const qty = line.getQuantityStr?.()?.unitPart ?? line.qty;
-            lines.push(`${qty} x ${line.full_product_name}   ${line.currencyDisplayPrice}`);
+            const name = line.full_product_name || line.product_id?.display_name || "";
+            const price = line.currencyDisplayPrice || fmt(line.price_subtotal_incl || line.price_unit * line.qty);
+            lines.push(`${qty} x ${name}   ${price}`);
         }
 
         lines.push("");
         lines.push("*TOTAL  " + fmt(order.priceIncl ?? order.totalDue) + "*");
+
+        const pdfUrl = this.posRetailReceiptPdfUrl;
+        if (pdfUrl) {
+            lines.push("");
+            lines.push("📄 *Download Official PDF Receipt:*");
+            lines.push(pdfUrl);
+        }
 
         const thanks = this.pos.config.pos_retail_receipt_thankyou;
         if (thanks) {
@@ -95,79 +149,6 @@ patch(ReceiptScreen.prototype, {
             lines.push(thanks);
         }
         return lines.join("\n");
-    },
-
-    /**
-     * Share the receipt PDF itself through the operating system's share sheet,
-     * which is the only way a file can reach WhatsApp from a web page: the
-     * wa.me URL scheme carries text and nothing else, so no amount of URL
-     * building will ever attach a document.
-     *
-     * Returns false when it cannot be done, so the caller can fall back:
-     *   - navigator.share with files needs a SECURE CONTEXT. On localhost that
-     *     is satisfied; on the production server, which is a bare IP over
-     *     plain http, navigator.share is simply undefined. Same rule that
-     *     hides the POS camera scanner there.
-     *   - Firefox on the desktop has no file sharing at all.
-     *   - The order must have been synced, or there is no id to render from.
-     */
-    async posRetailSharePdf() {
-        const order = this.currentOrder;
-        if (!order?.id || typeof navigator === "undefined") {
-            return false;
-        }
-        if (!navigator.share || !navigator.canShare) {
-            return false;
-        }
-        try {
-            const res = await fetch(
-                `/report/pdf/pos_retail.report_pos_receipt_a4/${order.id}`,
-                { credentials: "same-origin" }
-            );
-            if (!res.ok) {
-                return false;
-            }
-            const blob = await res.blob();
-            const ref = String(order.pos_reference || order.name || "receipt").replace(/[\\/]/g, "-");
-            const file = new File([blob], `Receipt ${ref}.pdf`, { type: "application/pdf" });
-            if (!navigator.canShare({ files: [file] })) {
-                return false;
-            }
-            await navigator.share({
-                files: [file],
-                title: `Receipt ${ref}`,
-                text: this.posRetailWhatsappText,
-            });
-            return true;
-        } catch (err) {
-            // ONLY a dismissed share sheet counts as handled. An earlier
-            // version returned true for every error, so a failed PDF fetch or
-            // an unsupported browser looked like a successful share, the
-            // fallback was skipped, and the button did nothing at all with no
-            // hint as to why.
-            if (err && err.name === "AbortError") {
-                return true;
-            }
-            console.warn("pos_retail: WhatsApp PDF share failed, falling back", err);
-            return false;
-        }
-    },
-
-    /** wa.me carries text only. Opened via window.open so the POS stays put. */
-    posRetailOpenWhatsappText() {
-        const number = this.posRetailWhatsappNumber;
-        const text = encodeURIComponent(this.posRetailWhatsappText);
-        const url = number
-            ? `https://wa.me/${number}?text=${text}`
-            : `https://wa.me/?text=${text}`;
-        const win = window.open(url, "_blank", "noopener,noreferrer");
-        if (!win) {
-            // Blocked. Say so rather than leaving a button that looks dead.
-            this.notification.add(
-                _t("WhatsApp could not be opened. Allow pop-ups for this site and try again."),
-                { type: "warning" }
-            );
-        }
     },
 
     async posRetailShareOnWhatsapp() {
@@ -178,30 +159,95 @@ patch(ReceiptScreen.prototype, {
         try {
             await this._posRetailShareOnWhatsapp();
         } finally {
-            // navigator.share resolves when the sheet closes, so busy covers
-            // the whole interaction, not just the fetch.
             this.posRetailWa.busy = false;
         }
     },
 
     async _posRetailShareOnWhatsapp() {
-        // Decided BEFORE any await. window.open called after an await has left
-        // the user-gesture window and is blocked as a pop-up, so when this
-        // browser cannot share files at all the text route has to be taken
-        // straight away, while the click is still live.
-        const canShareFiles =
-            typeof navigator !== "undefined" && !!navigator.share && !!navigator.canShare;
+        const order = this.currentOrder;
+        if (!order) {
+            return;
+        }
+        const number = this.posRetailWhatsappNumber;
+        const text = this.posRetailWhatsappText;
+        const isRefund = order.isRefund || (order.priceIncl < 0) || (order.totalDue < 0);
+        const ref = String(order.pos_reference || order.name || "receipt").replace(/[\\/]/g, "-");
+        const filename = `${isRefund ? "Return_Receipt" : "Receipt"}_${ref}.pdf`;
+
+        // Claim popup window synchronously to prevent desktop browser blocking
+        const canShareFiles = typeof navigator !== "undefined" && !!navigator.share && !!navigator.canShare;
+        let win = null;
         if (!canShareFiles) {
-            this.notification.add(
-                _t("This device cannot attach files to WhatsApp, so the receipt is being sent as a message. Attaching the PDF needs the shop to be on https."),
-                { type: "info" }
-            );
-            this.posRetailOpenWhatsappText();
-            return;
+            win = window.open("about:blank", "_blank");
         }
-        if (await this.posRetailSharePdf()) {
-            return;
+
+        let pdfBlob = null;
+        try {
+            const pdfEndpoint = order.id
+                ? `/report/pdf/pos_retail.report_pos_receipt_a4/${order.id}`
+                : (order.access_token ? `/pos_retail/portal/receipt/pdf/${order.access_token}` : null);
+            if (pdfEndpoint) {
+                const res = await fetch(pdfEndpoint, { credentials: "same-origin" });
+                if (res.ok) {
+                    pdfBlob = await res.blob();
+                }
+            }
+        } catch (fetchErr) {
+            console.warn("pos_retail: receipt PDF fetch error", fetchErr);
         }
-        this.posRetailOpenWhatsappText();
+
+        // 1. Native mobile share sheet (attaches PDF file AND passes text)
+        if (canShareFiles && pdfBlob) {
+            try {
+                const file = new File([pdfBlob], filename, { type: "application/pdf" });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: filename,
+                        text: text,
+                    });
+                    this.notification.add(_t("Receipt PDF and text shared successfully."), { type: "success" });
+                    return;
+                }
+            } catch (err) {
+                if (err && err.name === "AbortError") {
+                    return;
+                }
+                console.warn("pos_retail: native file share failed, falling back", err);
+            }
+        }
+
+        // 2. Desktop fallback: automatically download the PDF receipt to cashier's computer
+        if (pdfBlob) {
+            try {
+                const blobUrl = URL.createObjectURL(pdfBlob);
+                const a = document.createElement("a");
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            } catch (dlErr) {
+                console.warn("pos_retail: automatic PDF download failed", dlErr);
+            }
+        }
+
+        // 3. Open WhatsApp Web with complete formatted receipt text + direct PDF link
+        const encoded = encodeURIComponent(text);
+        const url = number
+            ? `https://wa.me/${number}?text=${encoded}`
+            : `https://wa.me/?text=${encoded}`;
+
+        if (win && !win.closed) {
+            win.location = url;
+        } else {
+            window.open(url, "_blank", "noopener,noreferrer");
+        }
+
+        this.notification.add(
+            _t("PDF receipt downloaded! WhatsApp opened with full receipt text and link. You can also drag & drop the PDF into the chat."),
+            { type: "success" }
+        );
     },
 });

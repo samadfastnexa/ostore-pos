@@ -102,18 +102,10 @@ export class PosRetailWhatsappWidget extends Component {
         return `${this.props.title || _t("Document")} ${rec.data.display_name || rec.data.name || ""}`.trim();
     }
 
-    get shareText() {
+    buildShareText(pdfUrl = "") {
         const rec = this.props.record;
         const lines = ["*" + this.shareTitle + "*"];
 
-        // Only amount_total was ever looked for, which a customer record does
-        // not have -- so a khata statement sent to a customer said nothing but
-        // "Khata Statement Ahmed Khan", with no figure at all. The one number
-        // that message exists to carry was the one missing from it.
-        //
-        // Ordered most specific first: on a customer the money owed is the
-        // point; on an order or invoice it is the total. Whichever the record
-        // actually carries is the one sent.
         const candidates = [
             ["pos_outstanding_balance", _t("Amount owed")],
             ["amount_residual", _t("Still due")],
@@ -126,7 +118,18 @@ export class PosRetailWhatsappWidget extends Component {
                 break;
             }
         }
+        if (pdfUrl) {
+            lines.push("");
+            lines.push("📄 *Download Official PDF:*");
+            lines.push(pdfUrl);
+        }
+        lines.push("");
+        lines.push("Thank you!");
         return lines.join("\n");
+    }
+
+    get shareText() {
+        return this.buildShareText();
     }
 
     /** The figure as the shop writes it, falling back to the bare number if
@@ -137,20 +140,6 @@ export class PosRetailWhatsappWidget extends Component {
             return formatMonetary(value, { currencyId });
         } catch {
             return String(value);
-        }
-    }
-
-    openTextFallback(number) {
-        const text = encodeURIComponent(this.shareText);
-        const url = number
-            ? `https://wa.me/${number}?text=${text}`
-            : `https://wa.me/?text=${text}`;
-        const win = window.open(url, "_blank", "noopener,noreferrer");
-        if (!win) {
-            this.notification.add(
-                _t("WhatsApp could not be opened. Allow pop-ups for this site and try again."),
-                { type: "warning" }
-            );
         }
     }
 
@@ -168,7 +157,6 @@ export class PosRetailWhatsappWidget extends Component {
 
     async _onClick() {
         const rec = this.props.record;
-        // An unsaved document has no id to render a PDF from.
         if (!rec.resId) {
             await rec.save();
             if (!rec.resId) {
@@ -176,73 +164,106 @@ export class PosRetailWhatsappWidget extends Component {
             }
         }
 
-        // Decide the route BEFORE any await: window.open after an await is
-        // outside the user-gesture window and gets blocked as a pop-up. The
-        // same mistake made the POS button do nothing at first.
+        // Claim popup window synchronously to prevent desktop browser blocking
         const canShareFiles =
             typeof navigator !== "undefined" && !!navigator.share && !!navigator.canShare;
+        let win = null;
         if (!canShareFiles) {
-            this.notification.add(
-                _t("This device cannot attach files to WhatsApp, so a text summary is being sent instead. Attaching the PDF needs https."),
-                { type: "info" }
-            );
-            // The phone lookup is an RPC, and window.open after an await is
-            // blocked as a pop-up. An earlier version solved that by opening
-            // WITHOUT the number -- which meant the one path production (plain
-            // http) will ever take never used the customer's phone at all, and
-            // every send started at WhatsApp's contact picker. Instead: claim
-            // the window synchronously, inside the click, then steer it once
-            // the number is known.
-            const win = window.open("about:blank", "_blank");
-            const { phone, phoneCode } = await this.fetchShareData();
-            const number = this.normalize(phone, phoneCode);
-            const text = encodeURIComponent(this.shareText);
-            const url = number
-                ? `https://wa.me/${number}?text=${text}`
-                : `https://wa.me/?text=${text}`;
-            if (win) {
-                win.location = url;
-            } else {
-                this.notification.add(
-                    _t("WhatsApp could not be opened. Allow pop-ups for this site and try again."),
-                    { type: "warning" }
-                );
-            }
-            return;
+            win = window.open("about:blank", "_blank");
         }
 
         try {
             const { phone, phoneCode } = await this.fetchShareData();
             const number = this.normalize(phone, phoneCode);
-            const res = await fetch(`/report/pdf/${this.props.report}/${rec.resId}`, {
-                credentials: "same-origin",
-            });
-            if (!res.ok) {
-                this.openTextFallback(number);
-                return;
+
+            // Fetch public PDF URL
+            let pdfUrl = "";
+            try {
+                const info = await this.orm.call("pos.retail.report.service", "get_doc_share_info", [
+                    rec.resModel,
+                    rec.resId,
+                ]);
+                pdfUrl = info?.pdf_url || "";
+            } catch (infoErr) {
+                console.warn("pos_retail: could not get doc share info", infoErr);
             }
-            const blob = await res.blob();
-            const file = new File(
-                [blob],
-                `${this.shareTitle.replace(/[\\/]/g, "-")}.pdf`,
-                { type: "application/pdf" }
-            );
-            if (!navigator.canShare({ files: [file] })) {
-                this.openTextFallback(number);
-                return;
+
+            const text = this.buildShareText(pdfUrl);
+            const filename = `${this.shareTitle.replace(/[\\/]/g, "-")}.pdf`;
+
+            // Fetch PDF blob
+            let blob = null;
+            try {
+                const res = await fetch(`/report/pdf/${this.props.report}/${rec.resId}`, {
+                    credentials: "same-origin",
+                });
+                if (res.ok) {
+                    blob = await res.blob();
+                }
+            } catch (blobErr) {
+                console.warn("pos_retail: could not fetch PDF blob", blobErr);
             }
-            await navigator.share({
-                files: [file],
-                title: this.shareTitle,
-                text: this.shareText,
-            });
-        } catch (err) {
-            if (err && err.name === "AbortError") {
-                return; // the user closed the share sheet on purpose
+
+            // 1. Native mobile share sheet (attaches file AND sets text)
+            if (canShareFiles && blob) {
+                try {
+                    const file = new File([blob], filename, { type: "application/pdf" });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: this.shareTitle,
+                            text: text,
+                        });
+                        this.notification.add(_t("Document PDF and text shared successfully."), { type: "success" });
+                        return;
+                    }
+                } catch (err) {
+                    if (err && err.name === "AbortError") {
+                        return;
+                    }
+                    console.warn("pos_retail: native share failed, falling back", err);
+                }
             }
-            console.warn("pos_retail: WhatsApp share failed", err);
+
+            // 2. Desktop fallback: automatically download the PDF file to user's computer
+            if (blob) {
+                try {
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = blobUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(blobUrl);
+                } catch (dlErr) {
+                    console.warn("pos_retail: automatic PDF download failed", dlErr);
+                }
+            }
+
+            // 3. Open WhatsApp Web with complete formatted message + direct PDF link
+            const encoded = encodeURIComponent(text);
+            const url = number
+                ? `https://wa.me/${number}?text=${encoded}`
+                : `https://wa.me/?text=${encoded}`;
+
+            if (win && !win.closed) {
+                win.location = url;
+            } else {
+                window.open(url, "_blank", "noopener,noreferrer");
+            }
+
             this.notification.add(
-                _t("Could not share the PDF. Check the report prints normally from the Print menu."),
+                _t("PDF downloaded! WhatsApp opened with message and direct PDF link. You can also drag & drop the PDF into the chat."),
+                { type: "success" }
+            );
+        } catch (err) {
+            console.warn("pos_retail: WhatsApp share error", err);
+            if (win && !win.closed) {
+                win.close();
+            }
+            this.notification.add(
+                _t("Could not share on WhatsApp. Please check network connection."),
                 { type: "warning" }
             );
         }

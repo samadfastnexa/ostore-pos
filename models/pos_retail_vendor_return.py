@@ -375,7 +375,12 @@ class PosRetailVendorReturn(models.Model):
                 f"Previous Payable: {currency} {self.previous_payable:,.2f}\n"
                 f"*New Balance Payable: {currency} {self.new_payable:,.2f}*\n"
             )
-        message += f"\nDownload Official Return Receipt & Debit Note PDF:\n{url}\n\nThank you!"
+        if self.line_ids:
+            message += "\n*Returned Items:*\n"
+            for line in self.line_ids:
+                message += f"• {line.qty_returned} x {line.product_id.display_name} - {currency} {line.subtotal:,.2f}\n"
+
+        message += f"\n📄 *Download Official Return Receipt & Debit Note PDF:*\n{url}\n\nThank you!"
 
         whatsapp_url = f"https://api.whatsapp.com/send?phone={phone}&text={quote_plus(message)}"
         return {

@@ -5,10 +5,27 @@ from odoo import http
 from odoo.http import request
 
 
-def get_ledger_token(env, partner_id):
+def get_security_token(env, prefix, res_id):
     secret = env['ir.config_parameter'].sudo().get_param('database.secret', 'pos_retail_khata')
-    msg = f'ledger_partner_{partner_id}'.encode('utf-8')
+    msg = f'{prefix}_{res_id}'.encode('utf-8')
     return hmac.new(secret.encode('utf-8'), msg, hashlib.sha256).hexdigest()[:16]
+
+
+def get_ledger_token(env, partner_id):
+    return get_security_token(env, 'ledger_partner', partner_id)
+
+
+MODEL_REPORT_MAP = {
+    'sale.order': 'sale.action_report_saleorder',
+    'account.move': 'account.account_invoices',
+    'purchase.order': 'purchase.action_report_purchaseorder',
+    'stock.picking': 'stock.action_report_delivery',
+    'account.payment': 'pos_retail.action_report_payment_receipt',
+    'pos.order': 'pos_retail.action_report_pos_receipt_a4',
+    'pos.retail.customer.refund': 'pos_retail.action_report_customer_refund_receipt',
+    'pos.retail.vendor.return': 'pos_retail.action_report_vendor_return_receipt',
+    'res.partner': 'pos_retail.report_customer_ledger',
+}
 
 
 class PosRetailPortalLedger(http.Controller):
@@ -51,8 +68,7 @@ class PosRetailPortalLedger(http.Controller):
         if not refund.exists():
             return request.not_found()
 
-        secret = request.env['ir.config_parameter'].sudo().get_param('database.secret', 'pos_retail_khata')
-        expected_token = hmac.new(secret.encode('utf-8'), f'customer_refund_{refund_id}'.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
+        expected_token = get_security_token(request.env, 'customer_refund', refund_id)
         if token != expected_token and not request.session.uid:
             return request.make_response('Unauthorized access', status=403)
 
@@ -75,8 +91,7 @@ class PosRetailPortalLedger(http.Controller):
         if not ret.exists():
             return request.not_found()
 
-        secret = request.env['ir.config_parameter'].sudo().get_param('database.secret', 'pos_retail_khata')
-        expected_token = hmac.new(secret.encode('utf-8'), f'vendor_return_{return_id}'.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
+        expected_token = get_security_token(request.env, 'vendor_return', return_id)
         if token != expected_token and not request.session.uid:
             return request.make_response('Unauthorized access', status=403)
 
@@ -92,3 +107,122 @@ class PosRetailPortalLedger(http.Controller):
             return request.make_response(pdf, headers=headers)
         except Exception as e:
             return request.make_response(f'Error generating vendor return receipt: {str(e)}', status=500)
+
+    @http.route([
+        '/pos_retail/portal/receipt/pdf/<int:order_id>',
+        '/pos_retail/portal/receipt/pdf/<string:order_key>',
+    ], type='http', auth='public', website=False)
+    def download_public_pos_receipt_pdf(self, order_id=None, order_key=None, token=None, **kwargs):
+        env = request.env
+        key = order_id or order_key
+        order = None
+        if isinstance(key, int) or (isinstance(key, str) and key.isdigit()):
+            order = env['pos.order'].sudo().browse(int(key))
+            expected_token = get_security_token(env, 'pos_receipt', order.id) if order.exists() else None
+            if token != expected_token and not request.session.uid:
+                return request.make_response('Unauthorized access', status=403)
+        else:
+            order = env['pos.order'].sudo().search([('access_token', '=', key)], limit=1)
+            if not order:
+                return request.not_found()
+
+        if not order or not order.exists():
+            return request.not_found()
+
+        try:
+            fmt = kwargs.get('format', 'a4')
+            report_name = 'pos_retail.report_pos_receipt_thermal' if fmt == 'thermal' else 'pos_retail.report_pos_receipt_a4'
+            pdf = env['ir.actions.report'].sudo()._render_qweb_pdf(report_name, [order.id])[0]
+            clean_name = (order.pos_reference or order.name or f'Order_{order.id}').replace('/', '-').replace(' ', '_')
+            prefix = 'Credit_Return' if order.is_refund else 'Receipt'
+            filename = f'{prefix}_{clean_name}.pdf'
+            headers = [
+                ('Content-Type', 'application/pdf'),
+                ('Content-Length', len(pdf)),
+                ('Content-Disposition', f'inline; filename={filename}'),
+            ]
+            return request.make_response(pdf, headers=headers)
+        except Exception as e:
+            return request.make_response(f'Error generating receipt PDF: {str(e)}', status=500)
+
+    @http.route('/pos_retail/portal/payment/pdf/<int:payment_id>', type='http', auth='public', website=False)
+    def download_public_payment_receipt_pdf(self, payment_id, token=None, **kwargs):
+        env = request.env
+        payment = env['account.payment'].sudo().browse(payment_id)
+        if not payment.exists():
+            return request.not_found()
+
+        expected_token = get_security_token(env, 'pos_payment', payment_id)
+        if token != expected_token and not request.session.uid:
+            return request.make_response('Unauthorized access', status=403)
+
+        try:
+            pdf = env['ir.actions.report'].sudo()._render_qweb_pdf('pos_retail.report_pos_retail_payment_receipt', [payment.id])[0]
+            clean_name = (payment.name or f'Payment_{payment.id}').replace('/', '-').replace(' ', '_')
+            filename = f'Payment_Receipt_{clean_name}.pdf'
+            headers = [
+                ('Content-Type', 'application/pdf'),
+                ('Content-Length', len(pdf)),
+                ('Content-Disposition', f'inline; filename={filename}'),
+            ]
+            return request.make_response(pdf, headers=headers)
+        except Exception as e:
+            return request.make_response(f'Error generating payment receipt PDF: {str(e)}', status=500)
+
+    @http.route('/pos_retail/portal/doc/pdf/<string:model_name>/<int:res_id>', type='http', auth='public', website=False)
+    def download_public_document_pdf(self, model_name, res_id, token=None, report=None, **kwargs):
+        env = request.env
+        expected_token = get_security_token(env, model_name, res_id)
+        if token != expected_token and not request.session.uid:
+            return request.make_response('Unauthorized access', status=403)
+
+        record = env[model_name].sudo().browse(res_id)
+        if not record.exists():
+            return request.not_found()
+
+        report_name = report or MODEL_REPORT_MAP.get(model_name)
+        if not report_name:
+            return request.make_response(f'No report configured for {model_name}', status=400)
+
+        try:
+            pdf = env['ir.actions.report'].sudo()._render_qweb_pdf(report_name, [record.id])[0]
+            clean_name = (record.display_name or getattr(record, 'name', '') or f'{model_name}_{record.id}').replace('/', '-').replace(' ', '_')
+            filename = f'{clean_name}.pdf'
+            headers = [
+                ('Content-Type', 'application/pdf'),
+                ('Content-Length', len(pdf)),
+                ('Content-Disposition', f'inline; filename={filename}'),
+            ]
+            return request.make_response(pdf, headers=headers)
+        except Exception as e:
+            return request.make_response(f'Error generating document PDF: {str(e)}', status=500)
+
+    @http.route('/pos_retail/portal/get_doc_share_info', type='json', auth='user')
+    def get_doc_share_info(self, model_name, res_id, **kwargs):
+        env = request.env
+        token = get_security_token(env, model_name, res_id)
+        base_url = request.httprequest.url_root.rstrip('/')
+        if model_name == 'pos.order':
+            order = env['pos.order'].sudo().browse(res_id)
+            if order.exists() and order.access_token:
+                pdf_url = f"{base_url}/pos_retail/portal/receipt/pdf/{order.access_token}"
+            else:
+                pdf_url = f"{base_url}/pos_retail/portal/receipt/pdf/{res_id}?token={token}"
+        elif model_name == 'res.partner':
+            partner = env['res.partner'].sudo().browse(res_id)
+            is_vendor = bool(partner.supplier_rank and not partner.customer_rank)
+            route_part = 'vendor' if is_vendor else 'ledger'
+            pdf_url = f"{base_url}/pos_retail/portal/{route_part}/pdf/{res_id}?token={token}"
+        elif model_name == 'pos.retail.customer.refund':
+            pdf_url = f"{base_url}/pos_retail/portal/customer_refund/pdf/{res_id}?token={token}"
+        elif model_name == 'pos.retail.vendor.return':
+            pdf_url = f"{base_url}/pos_retail/portal/vendor_return/pdf/{res_id}?token={token}"
+        elif model_name == 'account.payment':
+            pdf_url = f"{base_url}/pos_retail/portal/payment/pdf/{res_id}?token={token}"
+        else:
+            pdf_url = f"{base_url}/pos_retail/portal/doc/pdf/{model_name}/{res_id}?token={token}"
+
+        return {
+            'token': token,
+            'pdf_url': pdf_url,
+        }

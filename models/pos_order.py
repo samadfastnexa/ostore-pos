@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 from dateutil.relativedelta import relativedelta
 
 from odoo import _, api, fields, models
@@ -329,6 +331,34 @@ class PosOrder(models.Model):
     def action_print_receipt_a4(self):
         return self.env.ref(
             'pos_retail.action_report_pos_receipt_a4').report_action(self, config=False)
+
+    def get_public_receipt_token(self):
+        self.ensure_one()
+        secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'pos_retail_khata')
+        msg = f'pos_receipt_{self.id}'.encode('utf-8')
+        return hmac.new(secret.encode('utf-8'), msg, hashlib.sha256).hexdigest()[:16]
+
+    def get_public_pdf_url(self):
+        self.ensure_one()
+        base_url = self.get_base_url().rstrip('/')
+        if self.access_token:
+            return f"{base_url}/pos_retail/portal/receipt/pdf/{self.access_token}"
+        token = self.get_public_receipt_token()
+        return f"{base_url}/pos_retail/portal/receipt/pdf/{self.id}?token={token}"
+
+    @api.model
+    def get_receipt_share_payload(self, order_id_or_access_token):
+        """Return public URL and share details for a POS order or refund."""
+        domain = [('access_token', '=', order_id_or_access_token)] if isinstance(order_id_or_access_token, str) and not order_id_or_access_token.isdigit() else [('id', '=', int(order_id_or_access_token))]
+        order = self.sudo().search(domain, limit=1)
+        if not order:
+            return {}
+        return {
+            'order_id': order.id,
+            'access_token': order.access_token,
+            'public_url': order.get_public_pdf_url(),
+            'name': order.pos_reference or order.name,
+        }
 
     def action_email_receipt_pdf(self):
         """Open the mail composer pre-loaded with the receipt template; the A4

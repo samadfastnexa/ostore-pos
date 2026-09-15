@@ -1,4 +1,6 @@
 import datetime
+import hashlib
+import hmac
 import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -223,9 +225,19 @@ class PosRetailKhataPayment(models.TransientModel):
         partner.invalidate_recordset(['credit', 'pos_outstanding_balance'])
         new_balance = partner.sudo().pos_outstanding_balance
         currency = record.currency_id or partner.currency_id or self.env.company.currency_id
+        payment_token = ''
+        pdf_url = ''
+        if created_payment:
+            secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'pos_retail_khata')
+            payment_token = hmac.new(secret.encode('utf-8'), f'pos_payment_{created_payment.id}'.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
+            base_url = self.get_base_url().rstrip('/')
+            pdf_url = f"{base_url}/pos_retail/portal/payment/pdf/{created_payment.id}?token={payment_token}"
+
         return {
             'payment_id': created_payment.id if created_payment else False,
             'payment_name': created_payment.name if created_payment else '',
+            'payment_token': payment_token,
+            'pdf_url': pdf_url,
             'partner_id': partner.id,
             'partner_name': partner.name,
             'partner_phone': partner.phone or partner.mobile or '',

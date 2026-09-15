@@ -125,12 +125,22 @@
                     <button type="button" class="btn btn-outline-secondary" t-on-click="props.close">
                         Close
                     </button>
-                    <button type="button"
-                            class="btn btn-primary fw-bold d-flex align-items-center gap-2 px-4 shadow-sm"
-                            t-on-click="printReceipt">
-                        <i class="fa fa-print"/>
-                        <span>Print Receipt</span>
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button"
+                                class="btn btn-success fw-bold d-flex align-items-center gap-2 px-3 shadow-sm"
+                                t-att-disabled="state.sharingWa"
+                                t-on-click="shareWhatsApp">
+                            <i t-if="state.sharingWa" class="fa fa-circle-o-notch fa-spin"/>
+                            <i t-else="" class="fa fa-whatsapp"/>
+                            <span>WhatsApp Receipt</span>
+                        </button>
+                        <button type="button"
+                                class="btn btn-primary fw-bold d-flex align-items-center gap-2 px-4 shadow-sm"
+                                t-on-click="printReceipt">
+                            <i class="fa fa-print"/>
+                            <span>Print Receipt</span>
+                        </button>
+                    </div>
                 </div>
             </t>
         </Dialog>

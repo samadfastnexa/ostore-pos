@@ -8,6 +8,8 @@ collects helper methods that more than one report needs.
 Abstract: nothing is stored; subclasses inherit for convenience.
 """
 
+import hashlib
+import hmac
 from odoo import api, models
 
 
@@ -65,3 +67,35 @@ class PosRetailReportService(models.AbstractModel):
                 'reference': ml.move_id.ref or '',
             })
         return result
+
+    @api.model
+    def get_doc_share_info(self, model_name, res_id):
+        secret = self.env['ir.config_parameter'].sudo().get_param('database.secret', 'pos_retail_khata')
+        msg = f'{model_name}_{res_id}'.encode('utf-8')
+        token = hmac.new(secret.encode('utf-8'), msg, hashlib.sha256).hexdigest()[:16]
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '').rstrip('/')
+
+        if model_name == 'pos.order':
+            order = self.env['pos.order'].sudo().browse(res_id)
+            if order.exists() and order.access_token:
+                pdf_url = f"{base_url}/pos_retail/portal/receipt/pdf/{order.access_token}"
+            else:
+                pdf_url = f"{base_url}/pos_retail/portal/receipt/pdf/{res_id}?token={token}"
+        elif model_name == 'res.partner':
+            partner = self.env['res.partner'].sudo().browse(res_id)
+            is_vendor = bool(partner.supplier_rank and not partner.customer_rank)
+            route_part = 'vendor' if is_vendor else 'ledger'
+            pdf_url = f"{base_url}/pos_retail/portal/{route_part}/pdf/{res_id}?token={token}"
+        elif model_name == 'pos.retail.customer.refund':
+            pdf_url = f"{base_url}/pos_retail/portal/customer_refund/pdf/{res_id}?token={token}"
+        elif model_name == 'pos.retail.vendor.return':
+            pdf_url = f"{base_url}/pos_retail/portal/vendor_return/pdf/{res_id}?token={token}"
+        elif model_name == 'account.payment':
+            pdf_url = f"{base_url}/pos_retail/portal/payment/pdf/{res_id}?token={token}"
+        else:
+            pdf_url = f"{base_url}/pos_retail/portal/doc/pdf/{model_name}/{res_id}?token={token}"
+
+        return {
+            'token': token,
+            'pdf_url': pdf_url,
+        }
