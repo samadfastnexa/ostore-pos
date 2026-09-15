@@ -53,7 +53,7 @@
                         </group>
                         <group string="Roll Fitting Status">
                             <field name="total_row_width" readonly="1"/>
-                            <div class="alert alert-info py-2 px-3 small" colspan="2">
+                            <div class="alert alert-info py-2 px-3 small" colspan="2" role="status">
                                 <i class="fa fa-info-circle me-1"/>
                                 Required width is calculated as: 
                                 <code>(Label Width × Columns) + Gap + Margins</code>.

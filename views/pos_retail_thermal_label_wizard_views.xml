@@ -62,7 +62,7 @@
                 <footer>
                     <button name="action_print" string="Print Thermal Labels" type="object" class="btn-success btn-lg px-4" icon="fa-print"/>
                     <button name="action_test_print_one" string="Test Print (1 Label)" type="object" class="btn-outline-primary" icon="fa-check"/>
-                    <button name="_compute_preview_html" string="Refresh Preview" type="object" class="btn-secondary" icon="fa-refresh"/>
+                    <button name="action_refresh_preview" string="Refresh Preview" type="object" class="btn-secondary" icon="fa-refresh"/>
                     <button string="Close" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

@@ -237,6 +237,16 @@ class PosRetailThermalLabelWizard(models.TransientModel):
             'target': 'new',
         }
 
+    def action_refresh_preview(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': self._name,
+            'res_id': self.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }
+
 
 class PosRetailThermalLabelWizardLine(models.TransientModel):
     _name = 'pos.retail.thermal.label.wizard.line'
