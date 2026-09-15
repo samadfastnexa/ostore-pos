@@ -197,11 +197,10 @@ class ResUsers(models.Model):
         if password:
             for user in self:
                 user._pos_retail_apply_password(password)
-        if 'company_id' in vals or 'company_ids' in vals or 'group_ids' in vals:
+        if 'company_id' in vals or 'company_ids' in vals:
             for user in self:
-                if not user.has_group('base.group_system') and user.company_id:
-                    if set(user.company_ids.ids) != {user.company_id.id}:
-                        super(ResUsers, user).write({'company_ids': [(6, 0, [user.company_id.id])]})
+                if user.company_id and user.company_id not in user.company_ids:
+                    super(ResUsers, user).write({'company_ids': [(4, user.company_id.id)]})
         return res
 
     @api.onchange('name')
@@ -289,9 +288,8 @@ class ResUsers(models.Model):
         open_register = self.env.ref('pos_retail.action_pos_retail_open_my_register',
                                      raise_if_not_found=False)
         for user in users:
-            if not user.has_group('base.group_system') and user.company_id:
-                if set(user.company_ids.ids) != {user.company_id.id}:
-                    super(ResUsers, user).write({'company_ids': [(6, 0, [user.company_id.id])]})
+            if user.company_id and user.company_id not in user.company_ids:
+                super(ResUsers, user).write({'company_ids': [(4, user.company_id.id)]})
             if user.share or user.action_id:
                 continue                      # portal user, or a deliberate choice
             if dashboard and user.has_group('point_of_sale.group_pos_manager'):
