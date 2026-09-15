@@ -197,7 +197,7 @@ class PosRetailPortalLedger(http.Controller):
         except Exception as e:
             return request.make_response(f'Error generating document PDF: {str(e)}', status=500)
 
-    @http.route('/pos_retail/portal/get_doc_share_info', type='json', auth='user')
+    @http.route('/pos_retail/portal/get_doc_share_info', type='jsonrpc', auth='user')
     def get_doc_share_info(self, model_name, res_id, **kwargs):
         env = request.env
         token = get_security_token(env, model_name, res_id)

@@ -255,7 +255,7 @@ class PosRetailThermalLabelWizardLine(models.TransientModel):
     wizard_id = fields.Many2one('pos.retail.thermal.label.wizard', ondelete='cascade', required=True)
     product_id = fields.Many2one('product.product', string="Product", required=True)
     product_tmpl_id = fields.Many2one(related='product_id.product_tmpl_id', readonly=True)
-    product_name = fields.Char(related='product_id.display_name', readonly=True)
+    product_name = fields.Char(related='product_id.display_name', string="Product Name", readonly=True)
     barcode = fields.Char(string="Barcode")
     default_code = fields.Char(string="SKU / Ref")
     price = fields.Float(string="Selling Price", digits='Product Price')
