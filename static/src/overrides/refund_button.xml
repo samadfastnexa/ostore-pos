@@ -1,30 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- A Refund button in the top bar, beside Register and Orders.
-
-         Returns happen often enough here to deserve a button of their own, and
-         the route to one had a trap in the middle: the orders list opens on
-         Active orders, a finished sale is not among them, so the sale being
-         returned appears to be missing until someone thinks to change the
-         filter to Paid. This lands on that filter directly.
-
-         Added rather than replacing Register. Register is the only one-tap way
-         back to the product grid, and without it a cashier who opens Orders
-         has no obvious route back to ringing up a sale.
-
-         Shown on a permission, because a refund takes money back out of the
-         drawer and a shop may well want to name who can give one. The
-         capability ships attached to "Use Point of Sale (Till)", so nothing
-         changes for a shop that has not thought about it: every cashier keeps
-         the button, exactly as before. Moving it onto the narrower "Give
-         Refunds at the Till" permission is how a shop restricts it. -->
+    <!-- Differentiated Navbar Buttons: Register, Orders, and Refund -->
     <t t-inherit="point_of_sale.Navbar" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('register-label')]" position="replace">
+            <button class="register-label btn btn-lg lh-lg d-flex align-items-center justify-content-center"
+                    t-att-class="{'active': mainButton === 'register'}"
+                    t-on-click="() => this.onClickRegister()"
+                    title="Open Register / Product Screen">
+                <span t-if="!ui.isSmall" class="d-inline-flex align-items-center">
+                    <i class="fa fa-shopping-cart me-1"/>Register
+                </span>
+                <i t-else="" class="fa fa-fw fa-shopping-cart fa-lg"/>
+            </button>
+        </xpath>
+
+        <xpath expr="//button[hasclass('orders-button')]" position="replace">
+            <button class="orders-button btn btn-lg lh-lg d-flex align-items-center justify-content-center"
+                    t-att-class="{'active': mainButton === 'order'}"
+                    t-on-click="() => this.pos.navigate('TicketScreen')"
+                    title="View Orders">
+                <span t-if="!ui.isSmall" class="d-inline-flex align-items-center">
+                    <i class="fa fa-list-alt me-1"/>Orders
+                </span>
+                <i t-else="" class="fa fa-fw fa-list-alt fa-lg"/>
+            </button>
+        </xpath>
+
         <xpath expr="//button[hasclass('orders-button')]" position="after">
             <button t-if="pos.getCashier()?._can_refund"
-                    class="pos-retail-refund-btn btn btn-lg btn-light lh-lg"
-                    t-on-click="() => this.posRetailStartRefund()">
-                <span t-if="!ui.isSmall"><i class="fa fa-undo me-1"/>Refund</span>
+                    class="pos-retail-refund-btn btn btn-lg lh-lg d-flex align-items-center justify-content-center"
+                    t-on-click="() => this.posRetailStartRefund()"
+                    title="Process Return / Refund">
+                <span t-if="!ui.isSmall" class="d-inline-flex align-items-center">
+                    <i class="fa fa-undo me-1"/>Refund
+                </span>
                 <i t-else="" class="fa fa-fw fa-undo fa-lg"/>
             </button>
         </xpath>

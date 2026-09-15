@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.CashierWelcomePopup">
+        <Dialog size="'md'" header="false" bodyClass="'p-0'" contentClass="'pos-retail-welcome-card border-0 shadow-lg overflow-hidden rounded-4'">
+            <div class="pos-retail-welcome-container text-center">
+                <!-- Top Brand Accent Header -->
+                <div class="pos-retail-welcome-hero p-4 text-white position-relative">
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3"
+                            aria-label="Close" t-on-click="() => this.closePopup()"/>
+
+                    <!-- Avatar circle with pulse ring -->
+                    <div class="pos-retail-welcome-avatar-wrapper mb-3 mx-auto">
+                        <t t-if="avatarUrl">
+                            <img t-att-src="avatarUrl" alt="Cashier Avatar" class="pos-retail-welcome-avatar-img rounded-circle shadow"/>
+                        </t>
+                        <t t-else="">
+                            <div class="pos-retail-welcome-avatar-fallback rounded-circle shadow d-flex align-items-center justify-content-center">
+                                <span class="pos-retail-welcome-initials" t-esc="cashierInitials"/>
+                            </div>
+                        </t>
+                        <span class="pos-retail-welcome-status-dot" title="Active &amp; Ready"/>
+                    </div>
+
+                    <div class="pos-retail-welcome-greeting small text-uppercase fw-bold text-white-50 letter-spacing-1">
+                        👋 Register Unlocked
+                    </div>
+                    <h2 class="pos-retail-welcome-name fw-bolder text-white mb-1">
+                        Welcome Back, <t t-esc="cashierName"/>!
+                    </h2>
+                    <div class="pos-retail-welcome-sub text-white-75 small">
+                        Ready to process sales, orders &amp; returns
+                    </div>
+                </div>
+
+                <!-- Info Grid -->
+                <div class="pos-retail-welcome-body p-4 bg-white text-dark">
+                    <div class="row g-2 mb-3 text-start">
+                        <!-- Branch -->
+                        <div class="col-6">
+                            <div class="pos-retail-welcome-info-box p-2 rounded-3 border bg-light">
+                                <div class="text-muted small d-flex align-items-center gap-1">
+                                    <i class="fa fa-building text-primary"/>
+                                    <span>Branch / Store</span>
+                                </div>
+                                <div class="fw-bold text-dark text-truncate mt-1" t-esc="branchName"/>
+                            </div>
+                        </div>
+
+                        <!-- Till / Register -->
+                        <div class="col-6">
+                            <div class="pos-retail-welcome-info-box p-2 rounded-3 border bg-light">
+                                <div class="text-muted small d-flex align-items-center gap-1">
+                                    <i class="fa fa-shopping-basket text-success"/>
+                                    <span>Register / Till</span>
+                                </div>
+                                <div class="fw-bold text-dark text-truncate mt-1" t-esc="registerName"/>
+                            </div>
+                        </div>
+
+                        <!-- Active Time (PKT) -->
+                        <div class="col-12">
+                            <div class="pos-retail-welcome-info-box p-2 rounded-3 border bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="text-muted small d-flex align-items-center gap-1">
+                                        <i class="fa fa-clock-o text-warning"/>
+                                        <span>Pakistan Standard Time (PKT)</span>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small">
+                                        <i class="fa fa-circle text-success me-1 small"/>Live
+                                    </span>
+                                </div>
+                                <div class="fw-bold fs-6 text-dark mt-1 font-monospace" t-esc="state.currentTime"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Keyboard Quick Hint -->
+                    <div class="pos-retail-welcome-hint d-flex align-items-center justify-content-center gap-2 text-muted small mb-3">
+                        <i class="fa fa-keyboard-o"/>
+                        <span>Press <kbd class="bg-light text-dark border shadow-sm px-2 py-1 rounded">Enter</kbd> or scan any barcode to begin</span>
+                    </div>
+
+                    <!-- Action Button & Countdown -->
+                    <div class="d-flex flex-column gap-2">
+                        <button class="btn btn-success btn-lg fw-bold py-3 shadow-sm d-flex align-items-center justify-content-center gap-2 pos-retail-welcome-start-btn"
+                                t-on-click="startSelling">
+                            <i class="fa fa-shopping-cart fa-lg"/>
+                            <span>Start Selling</span>
+                            <i class="fa fa-arrow-right ms-1"/>
+                        </button>
+                        <div class="text-muted small" style="font-size: 0.78rem;">
+                            Auto-continuing in <strong t-esc="state.secondsLeft"/>s...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Dialog>
+    </t>
+
+</templates>

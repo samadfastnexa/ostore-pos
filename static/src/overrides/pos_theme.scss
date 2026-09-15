@@ -92,6 +92,99 @@ $o_retail_blue: #2563eb;
     overflow-y: auto;
 }
 
+// ---- Navbar Action Buttons: Register (Green), Orders (Blue), Refund (Red) ----
+.pos .pos-topheader .navbar-menu {
+    gap: 8px !important;
+    align-items: center;
+
+    // 1. REGISTER BUTTON (Emerald Green - Primary Sales Action)
+    .register-label {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #047857 !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        padding: 6px 14px !important;
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.15s ease-in-out;
+
+        i, span {
+            color: #ffffff !important;
+        }
+
+        &:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+            box-shadow: 0 3px 8px rgba(16, 185, 129, 0.4) !important;
+            transform: translateY(-1px);
+        }
+
+        &:active, &.active {
+            background: #047857 !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(255, 255, 255, 0.4) !important;
+            transform: translateY(0);
+        }
+    }
+
+    // 2. ORDERS BUTTON (Royal Blue - Order Management)
+    .orders-button {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #1d4ed8 !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        padding: 6px 14px !important;
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.15s ease-in-out;
+
+        i, span {
+            color: #ffffff !important;
+        }
+
+        &:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            box-shadow: 0 3px 8px rgba(37, 99, 235, 0.4) !important;
+            transform: translateY(-1px);
+        }
+
+        &:active, &.active {
+            background: #1d4ed8 !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(255, 255, 255, 0.4) !important;
+            transform: translateY(0);
+        }
+    }
+
+    // 3. REFUND BUTTON (Crimson / Rose Red - Returns & Refunds)
+    .pos-retail-refund-btn {
+        background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #be123c !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        padding: 6px 14px !important;
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.15s ease-in-out;
+
+        i, span {
+            color: #ffffff !important;
+        }
+
+        &:hover {
+            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+            box-shadow: 0 3px 8px rgba(225, 29, 72, 0.4) !important;
+            transform: translateY(-1px);
+        }
+
+        &:active, &.active {
+            background: #be123c !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(255, 255, 255, 0.4) !important;
+            transform: translateY(0);
+        }
+    }
+}
+
 // ============================================================================
 // Till polish (product screen): search, category chips, receipt-style totals,
 // tile-language action buttons, softened numpad. Every selector verified
