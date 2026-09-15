@@ -146,6 +146,12 @@ export class ReturnNoReceiptPopup extends Component {
         }
     }
 
+    onKeydownReference(ev) {
+        if (ev.key === "Enter") {
+            this.lookupOriginal();
+        }
+    }
+
     get maxQty() {
         if (!this.state.linkResult?.found) {
             return Infinity;

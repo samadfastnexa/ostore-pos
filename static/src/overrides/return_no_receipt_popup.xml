@@ -97,8 +97,8 @@
                             <input type="text" class="form-control form-control-sm"
                                    placeholder="e.g. 261-2-000006"
                                    t-model="state.reference"
-                                   t-on-keydown="(ev) => { if (ev.key === 'Enter') this.lookupOriginal(); }"/>
-                            <button class="btn btn-sm btn-secondary" t-att-disabled="!state.reference.trim() or state.linking"
+                                   t-on-keydown="onKeydownReference"/>
+                            <button class="btn btn-sm btn-secondary" t-att-disabled="!state.reference.trim() || state.linking"
                                     t-on-click="() => this.lookupOriginal()">
                                 <i t-attf-class="fa {{ state.linking ? 'fa-spin fa-circle-o-notch' : 'fa-search' }}"/>
                             </button>
