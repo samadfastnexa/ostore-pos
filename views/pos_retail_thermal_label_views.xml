@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Tree View -->
+    <record id="pos_retail_thermal_label_preset_view_tree" model="ir.ui.view">
+        <field name="name">pos.retail.thermal.label.preset.tree</field>
+        <field name="model">pos.retail.thermal.label.preset</field>
+        <field name="arch" type="xml">
+            <list string="Thermal Label Presets" default_order="is_default desc, sequence, id">
+                <field name="sequence" widget="handle"/>
+                <field name="name" string="Preset Name" decoration-bf="is_default"/>
+                <field name="preset_code"/>
+                <field name="roll_width" string="Roll (mm)"/>
+                <field name="label_width" string="Width (mm)"/>
+                <field name="label_height" string="Height (mm)"/>
+                <field name="columns" string="Cols"/>
+                <field name="barcode_type"/>
+                <field name="is_default" widget="boolean_toggle"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <button name="action_print_test_label" string="Test" type="object" icon="fa-print" class="btn-sm btn-outline-primary"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="pos_retail_thermal_label_preset_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.thermal.label.preset.form</field>
+        <field name="model">pos.retail.thermal.label.preset</field>
+        <field name="arch" type="xml">
+            <form string="Thermal Label Preset">
+                <header>
+                    <button name="action_print_test_label" string="Print Test Label" type="object" class="btn-primary" icon="fa-print"/>
+                    <button name="action_set_default" string="Set as Default" type="object" class="btn-secondary" invisible="is_default"/>
+                    <button name="action_duplicate_preset" string="Duplicate / Customize" type="object" class="btn-secondary" icon="fa-copy"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box"/>
+                    <widget name="web_ribbon" title="Default Preset" bg_color="text-bg-success" invisible="not is_default"/>
+                    
+                    <div class="oe_title">
+                        <label for="name" string="Preset Name"/>
+                        <h1>
+                            <field name="name" placeholder="e.g. Standard — 50 × 30 mm"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Format Selection">
+                            <field name="preset_code" widget="selection"/>
+                            <field name="is_default" readonly="1"/>
+                            <field name="sequence"/>
+                            <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Roll Fitting Status">
+                            <field name="total_row_width" readonly="1"/>
+                            <div class="alert alert-info py-2 px-3 small" colspan="2">
+                                <i class="fa fa-info-circle me-1"/>
+                                Required width is calculated as: 
+                                <code>(Label Width × Columns) + Gap + Margins</code>.
+                                It must never exceed the physical roll width.
+                            </div>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- TAB 1: Physical Dimensions -->
+                        <page string="Physical Roll &amp; Label Dimensions" name="dimensions">
+                            <group>
+                                <group string="Roll &amp; Label Geometry">
+                                    <field name="roll_width"/>
+                                    <field name="label_width"/>
+                                    <field name="label_height"/>
+                                    <field name="columns"/>
+                                </group>
+                                <group string="Gaps &amp; Margins">
+                                    <field name="gap_horizontal" invisible="columns &lt; 2"/>
+                                    <field name="gap_vertical"/>
+                                    <field name="margin_left"/>
+                                    <field name="margin_right"/>
+                                    <field name="margin_top"/>
+                                    <field name="margin_bottom"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- TAB 2: Barcode Configuration -->
+                        <page string="Barcode Settings" name="barcode_settings">
+                            <group>
+                                <group string="Barcode Format">
+                                    <field name="barcode_type"/>
+                                    <field name="barcode_height"/>
+                                    <field name="barcode_fallback"/>
+                                </group>
+                                <group string="Barcode Standards Info">
+                                    <div class="text-muted small">
+                                        <p><strong>Code 128:</strong> Universal retail &amp; industrial standard. Encodes letters, numbers, and symbols at high density.</p>
+                                        <p><strong>EAN-13:</strong> Standard 13-digit retail barcode with modulo 10 checksum.</p>
+                                        <p><strong>EAN-8:</strong> Compact 8-digit retail barcode for small packaging.</p>
+                                        <p><strong>UPC-A:</strong> Standard 12-digit grocery &amp; retail barcode.</p>
+                                    </div>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- TAB 3: Product Label Content -->
+                        <page string="Label Content &amp; Layout" name="content_layout">
+                            <group>
+                                <group string="Visible Elements">
+                                    <field name="show_company_name"/>
+                                    <field name="show_brand"/>
+                                    <field name="show_product_name"/>
+                                    <field name="show_product_variant"/>
+                                    <field name="show_sku"/>
+                                    <field name="show_barcode"/>
+                                    <field name="show_barcode_text" invisible="not show_barcode"/>
+                                    <field name="show_price"/>
+                                    <field name="show_uom"/>
+                                    <field name="show_product_code"/>
+                                    <field name="show_lot_number"/>
+                                </group>
+                                <group string="Typography &amp; Alignment">
+                                    <field name="font_size"/>
+                                    <field name="text_align"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action for Presets -->
+    <record id="action_pos_retail_thermal_label_preset" model="ir.actions.act_window">
+        <field name="name">Thermal Label Printing Presets</field>
+        <field name="res_model">pos.retail.thermal.label.preset</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new thermal label roll preset.
+            </p>
+            <p>
+                Configure roll width, label dimensions, single or multi-column layout, and barcode formatting for your physical thermal printers.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu in Point of Sale -> Configuration -->
+    <menuitem id="menu_pos_retail_thermal_label_preset"
+              name="Thermal Label Printing"
+              parent="point_of_sale.menu_point_config_product"
+              action="action_pos_retail_thermal_label_preset"
+              sequence="35"/>
+
+    <!-- Menu in Inventory -> Configuration -->
+    <menuitem id="menu_stock_thermal_label_preset"
+              name="Thermal Label Printing"
+              parent="stock.menu_stock_config_settings"
+              action="action_pos_retail_thermal_label_preset"
+              sequence="55"/>
+
+</odoo>

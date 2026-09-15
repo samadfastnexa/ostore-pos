@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.ThermalLabelPopup">
+        <Dialog title="'Print Thermal Barcode Label'" size="'md'">
+            <div class="pos-retail-label-popup p-3">
+                <!-- Product Overview Card -->
+                <div class="d-flex align-items-center gap-3 p-3 bg-light border rounded mb-3">
+                    <div class="rounded-circle bg-primary bg-opacity-10 text-primary p-3 fs-3 d-flex align-items-center justify-content-center" style="width:50px; height:50px;">
+                        <i class="fa fa-barcode"/>
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <h5 class="mb-1 text-truncate fw-bold text-dark" t-esc="product.display_name"/>
+                        <div class="d-flex align-items-center gap-3 text-muted small flex-wrap">
+                            <span t-if="product.default_code">
+                                <strong>SKU:</strong> <t t-esc="product.default_code"/>
+                            </span>
+                            <span t-if="product.barcode">
+                                <strong>Barcode:</strong> <t t-esc="product.barcode"/>
+                            </span>
+                            <span class="text-success fw-bold">
+                                <strong>Price:</strong> <t t-esc="env.utils.formatCurrency(product.lst_price)"/>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Label Roll Preset Selection -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">
+                        <i class="fa fa-sliders me-1"/>Thermal Label Roll Preset
+                    </label>
+                    <select class="form-select form-select-lg" t-on-change="setPreset">
+                        <t t-if="!presets.length">
+                            <option value="">Standard — 50 × 30 mm (Auto)</option>
+                        </t>
+                        <t t-foreach="presets" t-as="p" t-key="p.id">
+                            <option t-att-value="p.id" t-att-selected="p.id === state.presetId">
+                                <t t-esc="p.name"/> (<t t-esc="p.roll_width"/>mm roll)
+                            </option>
+                        </t>
+                    </select>
+
+                    <div t-if="selectedPreset" class="d-flex gap-2 mt-2 flex-wrap">
+                        <span class="badge bg-primary px-2 py-1">
+                            Roll: <t t-esc="selectedPreset.roll_width"/> mm
+                        </span>
+                        <span class="badge bg-secondary px-2 py-1">
+                            Label: <t t-esc="selectedPreset.label_width"/> × <t t-esc="selectedPreset.label_height"/> mm
+                        </span>
+                        <span class="badge bg-info text-dark px-2 py-1">
+                            <t t-esc="selectedPreset.columns"/> Column(s)
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Quantity Selection -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">
+                        <i class="fa fa-print me-1"/>Print Quantity
+                    </label>
+                    <div class="input-group input-group-lg mb-2">
+                        <button class="btn btn-outline-secondary" type="button" t-on-click="() => this.incrementQty(-1)">
+                            <i class="fa fa-minus"/>
+                        </button>
+                        <input type="number"
+                               class="form-control text-center fw-bold fs-4"
+                               min="1"
+                               max="999"
+                               t-att-value="state.quantity"
+                               t-on-change="(ev) => this.setQty(ev.target.value)"/>
+                        <button class="btn btn-outline-secondary" type="button" t-on-click="() => this.incrementQty(1)">
+                            <i class="fa fa-plus"/>
+                        </button>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button class="btn btn-sm btn-outline-primary px-3" t-on-click="() => this.setQty(1)">1 Label</button>
+                        <button class="btn btn-sm btn-outline-primary px-3" t-on-click="() => this.setQty(5)">5 Labels</button>
+                        <button class="btn btn-sm btn-outline-primary px-3" t-on-click="() => this.setQty(10)">10 Labels</button>
+                        <button class="btn btn-sm btn-outline-primary px-3" t-on-click="() => this.setQty(25)">25 Labels</button>
+                    </div>
+                </div>
+            </div>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary" t-on-click="props.close">Cancel</button>
+                <button class="btn btn-outline-primary" t-on-click="() => this.printTestLabel()">
+                    <i class="fa fa-tag me-1"/>Test (1 Label)
+                </button>
+                <button class="btn btn-success px-4" t-on-click="() => this.printLabels(false)">
+                    <i class="fa fa-print me-1"/>Print <t t-esc="state.quantity"/> Label(s)
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

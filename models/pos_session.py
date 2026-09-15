@@ -12,5 +12,6 @@ class PosSession(models.Model):
                  # ships brand_id, and a many2one whose comodel is missing from
                  # this list reaches the client as a dangling relation.
                  'product.brand',
-                 'pos.retail.brand.campaign']
+                 'pos.retail.brand.campaign',
+                 'pos.retail.thermal.label.preset']
         return data

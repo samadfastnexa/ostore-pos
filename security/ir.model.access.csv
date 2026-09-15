@@ -68,3 +68,8 @@ access_pos_retail_vendor_return_system,pos.retail.vendor.return.system,model_pos
 access_pos_retail_vendor_return_item_user,pos.retail.vendor.return.item.user,model_pos_retail_vendor_return_item,base.group_user,1,1,1,0
 access_pos_retail_vendor_return_item_purchase_manager,pos.retail.vendor.return.item.purchase.manager,model_pos_retail_vendor_return_item,purchase.group_purchase_manager,1,1,1,1
 access_pos_retail_vendor_return_item_system,pos.retail.vendor.return.item.system,model_pos_retail_vendor_return_item,base.group_system,1,1,1,1
+access_pos_retail_thermal_label_preset_user,pos.retail.thermal.label.preset.user,model_pos_retail_thermal_label_preset,base.group_user,1,0,0,0
+access_pos_retail_thermal_label_preset_manager,pos.retail.thermal.label.preset.manager,model_pos_retail_thermal_label_preset,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_thermal_label_preset_system,pos.retail.thermal.label.preset.system,model_pos_retail_thermal_label_preset,base.group_system,1,1,1,1
+access_pos_retail_thermal_label_wizard_user,pos.retail.thermal.label.wizard.user,model_pos_retail_thermal_label_wizard,base.group_user,1,1,1,1
+access_pos_retail_thermal_label_wizard_line_user,pos.retail.thermal.label.wizard.line.user,model_pos_retail_thermal_label_wizard_line,base.group_user,1,1,1,1

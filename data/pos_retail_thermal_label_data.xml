@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- 1. Small — 40 × 20 mm -->
+        <record id="preset_thermal_40x20_1col" model="pos.retail.thermal.label.preset">
+            <field name="name">Small — 40 × 20 mm</field>
+            <field name="preset_code">40x20_1col</field>
+            <field name="sequence">1</field>
+            <field name="roll_width">44.0</field>
+            <field name="label_width">40.0</field>
+            <field name="label_height">20.0</field>
+            <field name="columns">1</field>
+            <field name="gap_horizontal">0.0</field>
+            <field name="gap_vertical">2.0</field>
+            <field name="margin_left">2.0</field>
+            <field name="margin_right">2.0</field>
+            <field name="margin_top">1.0</field>
+            <field name="margin_bottom">1.0</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">7.0</field>
+            <field name="font_size">small</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+        <!-- 2. Small — 50 × 25 mm -->
+        <record id="preset_thermal_50x25_1col" model="pos.retail.thermal.label.preset">
+            <field name="name">Small — 50 × 25 mm</field>
+            <field name="preset_code">50x25_1col</field>
+            <field name="sequence">2</field>
+            <field name="roll_width">54.0</field>
+            <field name="label_width">50.0</field>
+            <field name="label_height">25.0</field>
+            <field name="columns">1</field>
+            <field name="gap_horizontal">0.0</field>
+            <field name="gap_vertical">2.0</field>
+            <field name="margin_left">2.0</field>
+            <field name="margin_right">2.0</field>
+            <field name="margin_top">1.5</field>
+            <field name="margin_bottom">1.5</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">9.0</field>
+            <field name="font_size">small</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+        <!-- 3. Standard — 50 × 30 mm (DEFAULT) -->
+        <record id="preset_thermal_50x30_1col" model="pos.retail.thermal.label.preset">
+            <field name="name">Standard — 50 × 30 mm</field>
+            <field name="preset_code">50x30_1col</field>
+            <field name="sequence">3</field>
+            <field name="is_default">True</field>
+            <field name="roll_width">54.0</field>
+            <field name="label_width">50.0</field>
+            <field name="label_height">30.0</field>
+            <field name="columns">1</field>
+            <field name="gap_horizontal">0.0</field>
+            <field name="gap_vertical">2.0</field>
+            <field name="margin_left">2.0</field>
+            <field name="margin_right">2.0</field>
+            <field name="margin_top">1.5</field>
+            <field name="margin_bottom">1.5</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">11.0</field>
+            <field name="font_size">normal</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+        <!-- 4. Standard — 50 × 40 mm -->
+        <record id="preset_thermal_50x40_1col" model="pos.retail.thermal.label.preset">
+            <field name="name">Standard — 50 × 40 mm</field>
+            <field name="preset_code">50x40_1col</field>
+            <field name="sequence">4</field>
+            <field name="roll_width">54.0</field>
+            <field name="label_width">50.0</field>
+            <field name="label_height">40.0</field>
+            <field name="columns">1</field>
+            <field name="gap_horizontal">0.0</field>
+            <field name="gap_vertical">2.0</field>
+            <field name="margin_left">2.0</field>
+            <field name="margin_right">2.0</field>
+            <field name="margin_top">2.0</field>
+            <field name="margin_bottom">2.0</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">14.0</field>
+            <field name="font_size">normal</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+        <!-- 5. Medium — 60 × 30 mm -->
+        <record id="preset_thermal_60x30_1col" model="pos.retail.thermal.label.preset">
+            <field name="name">Medium — 60 × 30 mm</field>
+            <field name="preset_code">60x30_1col</field>
+            <field name="sequence">5</field>
+            <field name="roll_width">64.0</field>
+            <field name="label_width">60.0</field>
+            <field name="label_height">30.0</field>
+            <field name="columns">1</field>
+            <field name="gap_horizontal">0.0</field>
+            <field name="gap_vertical">2.0</field>
+            <field name="margin_left">2.0</field>
+            <field name="margin_right">2.0</field>
+            <field name="margin_top">1.5</field>
+            <field name="margin_bottom">1.5</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">11.0</field>
+            <field name="font_size">normal</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+        <!-- 6. Medium — 60 × 40 mm -->
+        <record id="preset_thermal_60x40_1col" model="pos.retail.thermal.label.preset">
+            <field name="name">Medium — 60 × 40 mm</field>
+            <field name="preset_code">60x40_1col</field>
+            <field name="sequence">6</field>
+            <field name="roll_width">64.0</field>
+            <field name="label_width">60.0</field>
+            <field name="label_height">40.0</field>
+            <field name="columns">1</field>
+            <field name="gap_horizontal">0.0</field>
+            <field name="gap_vertical">2.0</field>
+            <field name="margin_left">2.0</field>
+            <field name="margin_right">2.0</field>
+            <field name="margin_top">2.0</field>
+            <field name="margin_bottom">2.0</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">14.0</field>
+            <field name="font_size">normal</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+        <!-- 7. Large — 70 × 40 mm -->
+        <record id="preset_thermal_70x40_1col" model="pos.retail.thermal.label.preset">
+            <field name="name">Large — 70 × 40 mm</field>
+            <field name="preset_code">70x40_1col</field>
+            <field name="sequence">7</field>
+            <field name="roll_width">74.0</field>
+            <field name="label_width">70.0</field>
+            <field name="label_height">40.0</field>
+            <field name="columns">1</field>
+            <field name="gap_horizontal">0.0</field>
+            <field name="gap_vertical">3.0</field>
+            <field name="margin_left">2.0</field>
+            <field name="margin_right">2.0</field>
+            <field name="margin_top">2.0</field>
+            <field name="margin_bottom">2.0</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">14.0</field>
+            <field name="font_size">large</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+        <!-- 8. Large — 80 × 50 mm -->
+        <record id="preset_thermal_80x50_1col" model="pos.retail.thermal.label.preset">
+            <field name="name">Large — 80 × 50 mm</field>
+            <field name="preset_code">80x50_1col</field>
+            <field name="sequence">8</field>
+            <field name="roll_width">84.0</field>
+            <field name="label_width">80.0</field>
+            <field name="label_height">50.0</field>
+            <field name="columns">1</field>
+            <field name="gap_horizontal">0.0</field>
+            <field name="gap_vertical">3.0</field>
+            <field name="margin_left">2.0</field>
+            <field name="margin_right">2.0</field>
+            <field name="margin_top">2.5</field>
+            <field name="margin_bottom">2.5</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">18.0</field>
+            <field name="font_size">large</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+        <!-- 9. Dual Standard — 100 × 30 mm (2 Col: 48 × 30 mm each) -->
+        <record id="preset_thermal_100x30_2col" model="pos.retail.thermal.label.preset">
+            <field name="name">Dual Standard — 100 × 30 mm (2 Col)</field>
+            <field name="preset_code">100x30_2col</field>
+            <field name="sequence">9</field>
+            <field name="roll_width">100.0</field>
+            <field name="label_width">48.0</field>
+            <field name="label_height">30.0</field>
+            <field name="columns">2</field>
+            <field name="gap_horizontal">2.0</field>
+            <field name="gap_vertical">2.0</field>
+            <field name="margin_left">1.0</field>
+            <field name="margin_right">1.0</field>
+            <field name="margin_top">1.5</field>
+            <field name="margin_bottom">1.5</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">11.0</field>
+            <field name="font_size">normal</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+        <!-- 10. Dual Medium — 100 × 40 mm (2 Col: 48 × 40 mm each) -->
+        <record id="preset_thermal_100x40_2col" model="pos.retail.thermal.label.preset">
+            <field name="name">Dual Medium — 100 × 40 mm (2 Col)</field>
+            <field name="preset_code">100x40_2col</field>
+            <field name="sequence">10</field>
+            <field name="roll_width">100.0</field>
+            <field name="label_width">48.0</field>
+            <field name="label_height">40.0</field>
+            <field name="columns">2</field>
+            <field name="gap_horizontal">2.0</field>
+            <field name="gap_vertical">2.0</field>
+            <field name="margin_left">1.0</field>
+            <field name="margin_right">1.0</field>
+            <field name="margin_top">2.0</field>
+            <field name="margin_bottom">2.0</field>
+            <field name="barcode_type">code128</field>
+            <field name="barcode_height">14.0</field>
+            <field name="font_size">normal</field>
+            <field name="text_align">center</field>
+            <field name="show_company_name">True</field>
+            <field name="show_product_name">True</field>
+            <field name="show_barcode">True</field>
+            <field name="show_barcode_text">True</field>
+            <field name="show_price">True</field>
+            <field name="show_uom">True</field>
+            <field name="show_sku">True</field>
+        </record>
+
+    </data>
+</odoo>

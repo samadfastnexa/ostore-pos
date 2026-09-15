@@ -66,6 +66,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'data/pos_retail_uom_data.xml',
         'data/pos_retail_uom_measurement_data.xml',
         'data/pos_retail_pricelist_data.xml',
+        'data/pos_retail_thermal_label_data.xml',
         'views/product_brand_views.xml',
         'views/pos_retail_inventory_movement_views.xml',
         'views/pos_retail_expense_views.xml',
@@ -97,6 +98,8 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'views/product_setup_views.xml',
         'views/product_uom_views.xml',
         'views/product_label_layout_views.xml',
+        'views/pos_retail_thermal_label_views.xml',
+        'views/pos_retail_thermal_label_wizard_views.xml',
         'views/pos_retail_brand_campaign_views.xml',
         'views/pos_retail_package_report_views.xml',
         'report/pos_retail_package_label_report.xml',
@@ -269,6 +272,9 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/line_discount_popup.xml',
             'pos_retail/static/src/overrides/order_line_discount.js',
             'pos_retail/static/src/overrides/order_line_discount.xml',
+            'pos_retail/static/src/overrides/thermal_label_popup.js',
+            'pos_retail/static/src/overrides/thermal_label_popup.xml',
+            'pos_retail/static/src/overrides/thermal_label_popup.scss',
         ],
         # The customer display page is served from its own bundle, separate
         # from the main POS assets.

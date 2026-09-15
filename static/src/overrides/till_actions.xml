@@ -25,7 +25,12 @@
                     t-on-click="() => this.onClickDailySales()">
                 <i class="fa fa-line-chart me-1"/>Today's Sales
             </button>
+            <button class="btn btn-secondary btn-lg py-5 pos-retail-label-btn"
+                    t-on-click="() => this.onClickPrintThermalLabel()">
+                <i class="fa fa-barcode me-1"/>Print Label
+            </button>
         </xpath>
+
     </t>
 
 </templates>

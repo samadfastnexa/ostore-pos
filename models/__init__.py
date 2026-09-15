@@ -48,3 +48,6 @@ from . import pos_retail_vendor_statement
 from . import pos_retail_line_discount_log
 from . import pos_retail_customer_refund
 from . import pos_retail_vendor_return
+from . import thermal_barcode_generator
+from . import pos_retail_thermal_label_preset
+from . import pos_retail_thermal_label_wizard

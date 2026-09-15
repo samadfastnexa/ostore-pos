@@ -75,6 +75,11 @@ class PosConfig(models.Model):
         help="Print the manager name (if approval was required) and the "
              "discount reason on the receipt.",
     )
+    thermal_label_preset_id = fields.Many2one(
+        'pos.retail.thermal.label.preset',
+        string="Default Thermal Label Preset",
+        help="Default label format used when printing thermal product labels from this register.",
+    )
     # --- Returns & Refunds (#12) ---
     pos_retail_require_return_reason = fields.Boolean(
         string="Require Return Reason", default=True,
@@ -824,4 +829,9 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.pos_retail_receipt_terms',
         readonly=False,
         string="Receipt Terms & Conditions",
+    )
+    pos_retail_thermal_label_preset_id = fields.Many2one(
+        related='pos_config_id.thermal_label_preset_id',
+        readonly=False,
+        string="Default Thermal Label Preset",
     )

@@ -1,0 +1,15 @@
+/* Thermal Label Printing Popup in POS Till */
+.pos-retail-label-popup {
+    user-select: none;
+
+    .form-select-lg {
+        font-size: 1.05rem;
+        font-weight: 500;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+}

@@ -6,6 +6,7 @@ import { ControlButtons } from "@point_of_sale/app/screens/product_screen/contro
 import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { ThermalLabelPopup } from "@pos_retail/overrides/thermal_label_popup";
 
 // Two more jobs a cashier does at a busy counter, put where they do them.
 //
@@ -134,4 +135,23 @@ patch(ControlButtons.prototype, {
             });
         }
     },
+
+    async onClickPrintThermalLabel() {
+        const product = this.posRetailStockTarget;
+        if (!product) {
+            this.dialog.add(AlertDialog, {
+                title: _t("Select a Product"),
+                body: _t(
+                    "Please select or add a product in the order first to print its thermal barcode label."
+                ),
+            });
+            return;
+        }
+
+        this.dialog.add(ThermalLabelPopup, {
+            product: product,
+        });
+    },
 });
+
+

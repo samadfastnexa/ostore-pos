@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard Form View -->
+    <record id="pos_retail_thermal_label_wizard_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.thermal.label.wizard.form</field>
+        <field name="model">pos.retail.thermal.label.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Print Thermal Barcode Labels">
+                <sheet>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 bg-light border rounded mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <label for="preset_id" class="fw-bold mb-0"/>
+                            <field name="preset_id" options="{'no_create': True, 'no_open': True}" class="fw-bold fs-6 mb-0"/>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge bg-primary px-2 py-1">
+                                Roll: <field name="roll_width" class="mb-0"/> mm
+                            </span>
+                            <span class="badge bg-secondary px-2 py-1">
+                                Label: <field name="label_width" class="mb-0"/> × <field name="label_height" class="mb-0"/> mm
+                            </span>
+                            <span class="badge bg-info text-dark px-2 py-1">
+                                <field name="columns" class="mb-0"/> Col(s)
+                            </span>
+                            <span class="badge bg-success text-white px-2 py-1">
+                                Total: <field name="total_labels" class="mb-0"/> labels (<field name="total_rows" class="mb-0"/> rows)
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="text-muted small">Quick Quantity Helpers:</span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button name="action_set_qty_all" string="Set All Qty = 1" type="object" context="{'qty': 1}" class="btn btn-outline-secondary"/>
+                            <button name="action_set_qty_all" string="Set All Qty = 5" type="object" context="{'qty': 5}" class="btn btn-outline-secondary"/>
+                            <button name="action_set_qty_all" string="Set All Qty = 10" type="object" context="{'qty': 10}" class="btn btn-outline-secondary"/>
+                        </div>
+                    </div>
+
+                    <notebook>
+                        <!-- TAB 1: Product Lines & Quantities -->
+                        <page string="Products &amp; Quantities" name="products">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="default_code" readonly="1" optional="show"/>
+                                    <field name="barcode"/>
+                                    <field name="price" widget="monetary"/>
+                                    <field name="on_hand_qty" string="Stock Qty" readonly="1" optional="show"/>
+                                    <field name="quantity" string="Print Qty" decoration-bf="quantity &gt; 0"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <!-- TAB 2: Live Roll Preview -->
+                        <page string="Live Roll Preview" name="preview">
+                            <field name="preview_html" widget="html" readonly="1" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button name="action_print" string="Print Thermal Labels" type="object" class="btn-success btn-lg px-4" icon="fa-print"/>
+                    <button name="action_test_print_one" string="Test Print (1 Label)" type="object" class="btn-outline-primary" icon="fa-check"/>
+                    <button name="_compute_preview_html" string="Refresh Preview" type="object" class="btn-secondary" icon="fa-refresh"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Window Action -->
+    <record id="action_pos_retail_thermal_label_wizard" model="ir.actions.act_window">
+        <field name="name">Print Thermal Labels</field>
+        <field name="res_model">pos.retail.thermal.label.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="product.model_product_template"/>
+        <field name="binding_view_types">list,form</field>
+    </record>
+
+    <!-- Also bind to product.product for variant list and form -->
+    <record id="action_pos_retail_thermal_label_wizard_product" model="ir.actions.act_window">
+        <field name="name">Print Thermal Labels</field>
+        <field name="res_model">pos.retail.thermal.label.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="product.model_product_product"/>
+        <field name="binding_view_types">list,form</field>
+    </record>
+
+    <!-- Direct Menu in Point of Sale -> Products -->
+    <menuitem id="menu_pos_retail_thermal_label_wizard_pos"
+              name="Print Thermal Labels"
+              parent="point_of_sale.menu_pos_products"
+              action="action_pos_retail_thermal_label_wizard"
+              sequence="25"/>
+
+    <!-- Direct Menu in Inventory -> Products -->
+    <menuitem id="menu_pos_retail_thermal_label_wizard_stock"
+              name="Print Thermal Labels"
+              parent="stock.menu_stock_inventory_control"
+              action="action_pos_retail_thermal_label_wizard"
+              sequence="25"/>
+
+</odoo>
+
