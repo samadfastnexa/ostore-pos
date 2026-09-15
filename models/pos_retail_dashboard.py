@@ -121,6 +121,19 @@ class PosRetailDashboard(models.AbstractModel):
         start, end = self._resolve_period_bounds(period, date_from, date_to, today_local)
         trend_start = self._local_midnight_utc(today_local - timedelta(days=29))
 
+        if period == 'custom':
+            d_from = fields.Date.from_string(date_from) if date_from else today_local
+            d_to = fields.Date.from_string(date_to) if date_to else today_local
+            if d_from > d_to:
+                d_from, d_to = d_to, d_from
+            date_start, date_end = d_from, d_to
+        elif period == 'today':
+            date_start, date_end = today_local, today_local
+        elif period == 'week':
+            date_start, date_end = today_local - timedelta(days=today_local.weekday()), today_local
+        else:  # month
+            date_start, date_end = today_local.replace(day=1), today_local
+
         # Selectively gather data only for visible sections
         kpis = {}
         if visible_sections['sales_kpis'] or visible_sections['financial_kpis'] or visible_sections['payment_kpis']:
@@ -148,9 +161,11 @@ class PosRetailDashboard(models.AbstractModel):
             })
 
         if visible_sections['financial_kpis']:
-            kpis.update(self._get_expense_kpis())
+            expense_kpis = self._get_expense_kpis(date_start, date_end)
+            kpis.update(expense_kpis)
+            kpis['net_profit'] = kpis.get('gross_profit', 0.0) - expense_kpis.get('expenses', 0.0)
         else:
-            kpis.update({'expenses_today': 0.0, 'expenses_month': 0.0})
+            kpis.update({'expenses': 0.0, 'expenses_today': 0.0, 'expenses_month': 0.0, 'net_profit': 0.0})
 
         if visible_sections['stock_movement']:
             kpis.update(self._get_stock_flow_today())
@@ -198,6 +213,8 @@ class PosRetailDashboard(models.AbstractModel):
             'period': period,
             'period_start': fields.Datetime.to_string(start) if start else False,
             'period_end': fields.Datetime.to_string(end) if end else False,
+            'date_from': fields.Date.to_string(date_start) if date_start else False,
+            'date_to': fields.Date.to_string(date_end) if date_end else False,
             'drill': self._get_drill_targets(start, end, movement),
             'currency_id': self.env.company.currency_id.id,
             'company_name': selected.name if selected else ", ".join(self.env.companies.mapped('name')),
@@ -310,11 +327,20 @@ class PosRetailDashboard(models.AbstractModel):
         }
 
     # ------------------------------------------------------------------
-    # Expense KPIs (fixed Today / This Month, independent of the period filter)
+    # Expense KPIs (aligned to the selected period filter)
     # ------------------------------------------------------------------
-    def _get_expense_kpis(self):
+    def _get_expense_kpis(self, date_start=None, date_end=None):
         Expense = self.env['pos.retail.expense']
         today_local = fields.Date.context_today(self)
+        domain = []
+        if date_start:
+            domain.append(('date', '>=', date_start))
+        if date_end:
+            domain.append(('date', '<=', date_end))
+        expense_amt = Expense._read_group(
+            domain, aggregates=['amount:sum']
+        )[0][0] or 0.0
+
         month_start = today_local.replace(day=1)
         today_amt = Expense._read_group(
             [('date', '=', today_local)], aggregates=['amount:sum']
@@ -322,7 +348,11 @@ class PosRetailDashboard(models.AbstractModel):
         month_amt = Expense._read_group(
             [('date', '>=', month_start), ('date', '<=', today_local)], aggregates=['amount:sum']
         )[0][0] or 0.0
-        return {'expenses_today': today_amt, 'expenses_month': month_amt}
+        return {
+            'expenses': expense_amt,
+            'expenses_today': today_amt,
+            'expenses_month': month_amt,
+        }
 
     # ------------------------------------------------------------------
     # Sales by cashier (this period)

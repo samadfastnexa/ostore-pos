@@ -367,6 +367,17 @@ export class PosRetailDashboard extends Component {
         });
     }
 
+    openPeriodExpenses(name) {
+        const d = [];
+        if (this.state.data?.date_from) {
+            d.push(["date", ">=", this.state.data.date_from]);
+        }
+        if (this.state.data?.date_to) {
+            d.push(["date", "<=", this.state.data.date_to]);
+        }
+        this.openExpenses(d, `${name} — ${this.periodLabel}`);
+    }
+
     openPayments(name) {
         this.openList(
             "pos.payment",

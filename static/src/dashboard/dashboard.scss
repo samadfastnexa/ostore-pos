@@ -83,7 +83,9 @@
     .o_kpi_cogs     { background: linear-gradient(135deg, #475569, #64748b); }
     .o_kpi_tax      { background: linear-gradient(135deg, #92400e, #b45309); }
     .o_kpi_discount { background: linear-gradient(135deg, #c2410c, #fb923c); }
-    .o_kpi_expense  { background: linear-gradient(135deg, #be123c, #e11d48); }
+    .o_kpi_expense    { background: linear-gradient(135deg, #be123c, #e11d48); }
+    .o_kpi_netprofit  { background: linear-gradient(135deg, #059669, #10b981); }
+    .o_kpi_netprofit.o_kpi_loss { background: linear-gradient(135deg, #991b1b, #dc2626); }
     .o_kpi_pay_cash   { background: linear-gradient(135deg, #15803d, #22c55e); }
     .o_kpi_pay_card   { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
     .o_kpi_pay_online { background: linear-gradient(135deg, #6d28d9, #8b5cf6); }

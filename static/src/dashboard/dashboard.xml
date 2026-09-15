@@ -227,18 +227,20 @@ How to use: switch Today/Week/Month/Custom above to change the period; click any
                         </div>
                         <div class="col-6 col-md-3">
                             <div class="o_kpi_card o_kpi_expense"
-                                 t-on-click="() => this.openExpenses([['date','=', this.today]], 'Expenses Today')">
+                                 t-on-click="() => this.openPeriodExpenses('Expenses')">
                                 <i class="fa fa-credit-card o_kpi_icon"/>
-                                <div class="o_kpi_label">Expenses Today</div>
-                                <div class="o_kpi_value" t-esc="money(state.data.kpis.expenses_today)"/>
+                                <div class="o_kpi_label"><t t-esc="periodLabel"/> Expenses</div>
+                                <div class="o_kpi_value" t-esc="money(state.data.kpis.expenses)"/>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="o_kpi_card o_kpi_expense"
-                                 t-on-click="() => this.openExpenses([['date','&gt;=', this.today.slice(0, 8) + '01']], 'Expenses This Month')">
-                                <i class="fa fa-credit-card o_kpi_icon"/>
-                                <div class="o_kpi_label">Expenses This Month</div>
-                                <div class="o_kpi_value" t-esc="money(state.data.kpis.expenses_month)"/>
+                            <div class="o_kpi_card o_kpi_netprofit"
+                                 t-att-class="state.data.kpis.net_profit &lt; 0 ? 'o_kpi_loss' : ''"
+                                 t-on-click="() => this.openSoldLines('Gross Profit')">
+                                <i class="fa fa-balance-scale o_kpi_icon"/>
+                                <div class="o_kpi_label">Net Profit</div>
+                                <div class="o_kpi_value" t-esc="money(state.data.kpis.net_profit)"/>
+                                <div class="o_kpi_sub">Gross Profit − Expenses</div>
                             </div>
                         </div>
                     </div>
