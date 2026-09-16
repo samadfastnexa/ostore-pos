@@ -40,21 +40,6 @@ patch(PosStore.prototype, {
         }
     },
 
-    closeOtherTabs() {
-        console.log("[POS-DIAG] PosStore.closeOtherTabs() executing", {
-            hasSession: Boolean(this.session),
-            sessionId: this.session?.id,
-        });
-        if (!this.session || !this.session.id) {
-            console.warn("[POS-DIAG] Skipping closeOtherTabs because session is missing");
-            return;
-        }
-        try {
-            return super.closeOtherTabs(...arguments);
-        } catch (err) {
-            console.warn("[POS-DIAG] closeOtherTabs error caught safely:", err);
-        }
-    },
 
     async connectToProxy() {
         const proxyIp = this.config?.proxy_ip || "";

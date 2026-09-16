@@ -21,13 +21,9 @@
     padding: 0.85rem 1.5rem 1rem;
     border-radius: 1rem;
     text-align: center;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.85);
-    // Frosts whatever is behind the card so busy backdrops cannot compete
-    // with the text. Ignored by browsers that do not support it, which then
-    // simply get the flat translucent panel above: no fallback needed.
-    backdrop-filter: blur(10px);
-    box-shadow: 0 6px 24px rgba(31, 31, 46, 0.14);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 6px 24px rgba(31, 31, 46, 0.12);
 }
 
 .pos-retail-login-branch {
