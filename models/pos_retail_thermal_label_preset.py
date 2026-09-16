@@ -380,8 +380,11 @@ class PosRetailThermalLabelPreset(models.Model):
         }
 
     @api.model
-    def _load_pos_data_domain(self, data):
-        return [('active', '=', True)]
+    def _load_pos_data_domain(self, data, config=None):
+        domain = [('active', '=', True)]
+        if config and hasattr(config, 'company_id') and config.company_id:
+            domain += ['|', ('company_id', '=', False), ('company_id', '=', config.company_id.id)]
+        return domain
 
     @api.model
     def _load_pos_data_fields(self, config):

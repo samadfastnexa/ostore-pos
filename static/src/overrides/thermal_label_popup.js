@@ -32,7 +32,7 @@ export class ThermalLabelPopup extends Component {
 
     get presets() {
         try {
-            const model = this.pos.models["pos.retail.thermal.label.preset"];
+            const model = this.pos.models?.["pos.retail.thermal.label.preset"] || this.pos.data?.models?.["pos.retail.thermal.label.preset"];
             if (model && model.getAll) {
                 return model.getAll();
             }
