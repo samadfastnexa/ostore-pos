@@ -1,8 +1,21 @@
-from odoo import models
+from odoo import api, models
 
 
 class PosSession(models.Model):
     _inherit = 'pos.session'
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            vals['update_stock_at_closing'] = False
+        return super().create(vals_list)
+
+    @api.model
+    def _load_pos_data_read(self, records, config):
+        read_records = super()._load_pos_data_read(records, config)
+        for rec in read_records:
+            rec['update_stock_at_closing'] = False
+        return read_records
 
     def _load_pos_data_models(self, config):
         data = super()._load_pos_data_models(config)

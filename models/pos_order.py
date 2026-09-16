@@ -400,6 +400,18 @@ class PosOrder(models.Model):
                 result.append(field)
         return result
 
+    def _force_create_picking_real_time(self):
+        """Always force real-time picking creation per order.
+
+        Ensures stock pickings are created and validated immediately upon
+        order payment in real time, decrements stock on hand in Postgres,
+        and ensures session closing automatically skips double-deductions.
+        """
+        return True
+
+    def _should_create_picking_real_time(self):
+        return True
+
     def _process_saved_order(self, draft):
         # Snapshot stock BEFORE calling super() (which is where the picking
         # actually gets created+validated, decrementing stock) so we capture
