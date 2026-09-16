@@ -62,7 +62,7 @@
                             <span>Total</span>
                             <span t-esc="order.currencyDisplayPriceIncl"/>
                         </div>
-                        <div t-if="posRetailInvoiceDiscount">
+                        <div t-if="order.config.pos_retail_receipt_show_total_discount and posRetailInvoiceDiscount">
                             <span>Total Discount</span>
                             <span t-esc="posRetailInvoiceDiscount"/>
                         </div>

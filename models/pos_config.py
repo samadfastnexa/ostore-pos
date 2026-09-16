@@ -75,6 +75,12 @@ class PosConfig(models.Model):
         help="Print the manager name (if approval was required) and the "
              "discount reason on the receipt.",
     )
+    pos_retail_receipt_show_total_discount = fields.Boolean(
+        string="Show Total Discount on Receipt", default=False,
+        help="If enabled, prints the Total Discount line on customer receipts. "
+             "Disabled by default so customers only see the final total, while "
+             "all discounts remain fully recorded in the backend discount logs.",
+    )
     thermal_label_preset_id = fields.Many2one(
         'pos.retail.thermal.label.preset',
         string="Default Thermal Label Preset",
@@ -784,6 +790,11 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.pos_retail_receipt_show_discount_details',
         readonly=False,
         string="Show Discount Details on Receipt",
+    )
+    pos_retail_receipt_show_total_discount = fields.Boolean(
+        related='pos_config_id.pos_retail_receipt_show_total_discount',
+        readonly=False,
+        string="Show Total Discount on Receipt",
     )
     pos_retail_receipt_style = fields.Selection(
         related='pos_config_id.pos_retail_receipt_style',

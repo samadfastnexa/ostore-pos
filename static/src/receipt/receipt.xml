@@ -60,9 +60,9 @@
             </div>
         </xpath>
 
-        <!-- Total Discount positioned next to Total -->
+        <!-- Total Discount positioned next to Total (hidden by default, enabled via pos_retail_receipt_show_total_discount) -->
         <xpath expr="//div[hasclass('receipt-total')]" position="after">
-            <div t-if="posRetailTotalDiscount" class="pos-receipt-amount receipt-discount text-start pt-1">
+            <div t-if="order.config.pos_retail_receipt_show_total_discount and posRetailTotalDiscount" class="pos-receipt-amount receipt-discount text-start pt-1">
                 <span class="label-total-discount fw-normal">Total Discount</span>
                 <span t-out="posRetailTotalDiscount" class="pos-receipt-right-align font-monospace text-danger"/>
             </div>

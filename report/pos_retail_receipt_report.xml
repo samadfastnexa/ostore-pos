@@ -97,11 +97,11 @@
                     <td>Subtotal</td>
                     <td class="text-end"><span t-esc="d['subtotal']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                 </tr>
-                <tr t-if="d['product_discount']">
+                <tr t-if="cfg.pos_retail_receipt_show_total_discount and d['product_discount']">
                     <td>Product Discounts</td>
                     <td class="text-end">-<span t-esc="d['product_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                 </tr>
-                <tr t-if="d['order_discount']">
+                <tr t-if="cfg.pos_retail_receipt_show_total_discount and d['order_discount']">
                     <td>Order Discount</td>
                     <td class="text-end">-<span t-esc="d['order_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td>
                 </tr>
@@ -284,8 +284,8 @@
                     <div class="col-5">
                         <table class="table table-sm">
                             <tr><td>Subtotal</td><td class="text-end"><span t-esc="d['subtotal']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
-                            <tr t-if="d['product_discount']"><td>Product Discounts</td><td class="text-end">-<span t-esc="d['product_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
-                            <tr t-if="d['order_discount']"><td>Order Discount</td><td class="text-end">-<span t-esc="d['order_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
+                            <tr t-if="cfg.pos_retail_receipt_show_total_discount and d['product_discount']"><td>Product Discounts</td><td class="text-end">-<span t-esc="d['product_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
+                            <tr t-if="cfg.pos_retail_receipt_show_total_discount and d['order_discount']"><td>Order Discount</td><td class="text-end">-<span t-esc="d['order_discount']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
                             <tr t-if="d['round_off']"><td>Round-Off</td><td class="text-end"><span t-esc="d['round_off']" t-options='{"widget": "monetary", "display_currency": o.currency_id}'/></td></tr>
                             <tr t-foreach="d['tax_groups']" t-as="tax_name">
                                 <td t-esc="tax_name"/>
