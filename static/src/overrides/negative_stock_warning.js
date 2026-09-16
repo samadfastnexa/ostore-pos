@@ -3,7 +3,17 @@
 import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
-import OrderPaymentValidation from "@point_of_sale/app/utils/order_payment_validation";
+import { PosStore } from "@point_of_sale/app/services/pos_store";
+
+// Defensive guard: never allow closeOtherTabs to crash if session is still resolving
+patch(PosStore.prototype, {
+    closeOtherTabs() {
+        if (!this.session) {
+            return;
+        }
+        return super.closeOtherTabs(...arguments);
+    },
+});
 
 function _posRetailExtractOrderLines(order) {
     const linesData = [];
@@ -57,23 +67,6 @@ function _posRetailApplyStockDeductions(pos, linesData) {
             });
     }
 }
-
-// Order validation pipeline hook (covers normal checkout and fast payment)
-patch(OrderPaymentValidation.prototype, {
-    async finalizeValidation() {
-        const order = this.order;
-        const linesData = _posRetailExtractOrderLines(order);
-
-        const result = await super.finalizeValidation(...arguments);
-
-        if (order && !order._posRetailStockUpdated && order.state !== "draft") {
-            order._posRetailStockUpdated = true;
-            _posRetailApplyStockDeductions(this.pos, linesData);
-        }
-
-        return result;
-    },
-});
 
 // Live, best-effort warning before sale, plus fallback trigger after checkout
 patch(PaymentScreen.prototype, {

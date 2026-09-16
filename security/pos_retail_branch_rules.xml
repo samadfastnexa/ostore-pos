@@ -239,9 +239,9 @@
         </record>
 
         <record id="pos_session_branch_rule" model="ir.rule">
-            <field name="name">POS Session: visible to its own active branch</field>
+            <field name="name">POS Session: visible to its own branch</field>
             <field name="model_id" ref="point_of_sale.model_pos_session"/>
-            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', '=', company_id)]</field>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
             <field name="global" eval="True"/>
         </record>
 
