@@ -57,7 +57,11 @@
                         <span class="pos-retail-login-staff-names">
                             <t t-foreach="posRetailCashierNames" t-as="cashierName"
                                t-key="cashierName">
-                                <span class="pos-retail-login-staff-name" t-esc="cashierName"/>
+                                <button type="button"
+                                        class="pos-retail-login-staff-name btn btn-sm"
+                                        t-on-click="() => this.posRetailLoginEmployee(cashierName)"
+                                        title="Click to sign in"
+                                        t-esc="cashierName"/>
                             </t>
                         </span>
                     </div>

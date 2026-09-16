@@ -3,6 +3,8 @@
 import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 import { LoginScreen } from "@point_of_sale/app/screens/login_screen/login_screen";
+import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
+import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 
 // "Backend" is developer's English on the one screen a cashier reads before
 // their shift starts, and it names a place they may well have no business in:
@@ -90,5 +92,77 @@ patch(LoginScreen.prototype, {
 
     get posRetailCashierNames() {
         return this._cachedCashierNames || [];
+    },
+
+    async openRegister() {
+        console.log("%c[POS-DIAG] LoginScreen openRegister() CLICKED", "background: #ff5722; color: #fff; font-weight: bold; padding: 2px 6px;", {
+            module_pos_hr: this.pos?.config?.module_pos_hr,
+            currentLogin: this.pos?.login,
+            employees: this._cachedCashierNames,
+        });
+
+        if (this.pos?.config?.module_pos_hr) {
+            this.pos.login = true;
+            if (this.pos?.resetCashier) {
+                this.pos.resetCashier();
+            }
+            if (typeof this.selectCashier === "function") {
+                try {
+                    return await this.selectCashier(false, true, true);
+                } catch (err) {
+                    console.warn("[POS-DIAG] selectCashier prompt error:", err);
+                }
+            }
+            return;
+        }
+
+        return super.openRegister(...arguments);
+    },
+
+    async posRetailLoginEmployee(cashierName) {
+        console.log("%c[POS-DIAG] Staff badge clicked:", "background: #2e7d32; color: #fff; padding: 2px 6px;", cashierName);
+        if (!this.pos?.config?.module_pos_hr) {
+            return this.openRegister();
+        }
+        const employees = this.pos?.models?.["hr.employee"]?.getAll?.() || [];
+        const emp = employees.find((e) => e.name === cashierName);
+        if (!emp) {
+            return this.openRegister();
+        }
+
+        // If employee has no PIN set, log in directly without asking for an empty password
+        if (!emp._pin) {
+            console.log("[POS-DIAG] Employee has no PIN, logging in directly:", emp.name);
+            this.pos.hasLoggedIn = true;
+            this.selectOneCashier(emp);
+            return emp;
+        }
+
+        // Employee has PIN configured, prompt directly with NumberPopup
+        if (this.dialog) {
+            try {
+                const inputPin = await makeAwaitable(this.dialog, NumberPopup, {
+                    formatDisplayedValue: (x) => x.replace(/./g, "•"),
+                    title: _t("Password?"),
+                });
+                if (!inputPin) {
+                    return false;
+                }
+                const hashed = typeof Sha1 !== "undefined" ? Sha1.hash(inputPin) : inputPin;
+                if (emp._pin !== hashed) {
+                    this.pos.notification?.add?.(_t("PIN not found"), {
+                        type: "warning",
+                        title: _t("Wrong PIN"),
+                    });
+                    return false;
+                }
+                this.pos.hasLoggedIn = true;
+                this.selectOneCashier(emp);
+                return emp;
+            } catch (err) {
+                console.warn("[POS-DIAG] PIN prompt error:", err);
+            }
+        }
+        return this.selectCashier(false, true, true);
     },
 });

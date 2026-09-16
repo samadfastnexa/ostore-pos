@@ -74,43 +74,45 @@ patch(Chrome.prototype, {
             session: this.pos?.session ? { id: this.pos.session.id, state: this.pos.session.state } : "NONE",
         });
         super.setup(...arguments);
-        setTimeout(() => {
-            console.log("[POS-DIAG] Chrome watchdog fired at 1.8s. Checking loader overlay...");
+
+        const clearLoader = () => {
             try {
                 this.props?.disableLoader?.();
-            } catch (err) {
-                console.warn("[POS-DIAG] disableLoader error:", err);
-            }
+            } catch (_) {}
             const loaderEl = document.querySelector(".pos-loader");
-            if (loaderEl) {
-                console.log("[POS-DIAG] Dismissing .pos-loader element from DOM");
-                loaderEl.style.transition = "opacity 0.3s ease";
-                loaderEl.style.opacity = "0";
-                setTimeout(() => {
-                    try {
-                        loaderEl.remove();
-                    } catch (_) {}
-                }, 350);
-            }
-        }, 1800);
-    },
-});
-
-// Global emergency watchdog: if the loader element remains visible after 4.5 seconds, remove it
-if (typeof window !== "undefined") {
-    setTimeout(() => {
-        const loaderEl = document.querySelector(".pos-loader");
-        if (loaderEl) {
-            console.warn("[POS-DIAG] Emergency watchdog at 4.5s: removing stuck loader element");
-            loaderEl.style.transition = "opacity 0.3s ease";
-            loaderEl.style.opacity = "0";
-            setTimeout(() => {
+            if (loaderEl && !loaderEl.querySelector(".pos-error")) {
+                loaderEl.style.pointerEvents = "none";
+                loaderEl.style.display = "none";
                 try {
                     loaderEl.remove();
                 } catch (_) {}
-            }, 350);
+            }
+        };
+
+        // Clear immediately upon component mount, plus safe backstops
+        clearLoader();
+        setTimeout(clearLoader, 250);
+        setTimeout(clearLoader, 1000);
+    },
+});
+
+// Global emergency watchdog: remove stuck loader immediately
+if (typeof window !== "undefined") {
+    const globalClearLoader = () => {
+        const loaderEl = document.querySelector(".pos-loader");
+        if (loaderEl && !loaderEl.querySelector(".pos-error")) {
+            loaderEl.style.pointerEvents = "none";
+            loaderEl.style.display = "none";
+            try {
+                loaderEl.remove();
+            } catch (_) {}
         }
-    }, 4500);
+    };
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => setTimeout(globalClearLoader, 300));
+    } else {
+        setTimeout(globalClearLoader, 300);
+    }
 }
 
 function _posRetailExtractOrderLines(order) {

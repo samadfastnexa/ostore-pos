@@ -22,6 +22,16 @@ $o_retail_red: #dc2626;
 $o_retail_red_dark: #b91c1c;
 $o_retail_blue: #2563eb;
 
+// ---- Loader overlay: never block pointer clicks once faded or dismissed ----
+.pos-loader {
+    pointer-events: none !important;
+
+    // Only allow interaction if a critical error dialog is displayed inside the loader
+    &:has(.pos-error) {
+        pointer-events: auto !important;
+    }
+}
+
 // ---- Pay / Validate (green) ------------------------------------------------
 .pos .validation-button.highlight {
     background-color: $o_retail_green;
