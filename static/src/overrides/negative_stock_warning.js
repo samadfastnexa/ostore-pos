@@ -6,44 +6,99 @@ import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment
 import { PosStore } from "@point_of_sale/app/services/pos_store";
 import { Chrome } from "@point_of_sale/app/pos_app";
 
-// Defensive guard: never allow closeOtherTabs or connectToProxy to crash or hang POS startup
+// Install global error listeners so unhandled errors or promise rejections are never silent
+if (typeof window !== "undefined" && !window._posRetailDiagInstalled) {
+    window._posRetailDiagInstalled = true;
+    window.addEventListener("unhandledrejection", (ev) => {
+        console.error("[POS-DIAG] Unhandled Promise Rejection:", ev.reason);
+    });
+    window.addEventListener("error", (ev) => {
+        console.error("[POS-DIAG] Unhandled Window Error:", ev.error || ev.message, ev.filename, ev.lineno);
+    });
+    console.log("%c[POS-DIAG] pos_retail diagnostic monitoring active", "background: #222; color: #00ffcc; font-weight: bold; padding: 2px 6px;");
+}
+
+// Defensive guard & diagnostics on PosStore startup lifecycle
 patch(PosStore.prototype, {
+    async setup() {
+        console.log("%c[POS-DIAG] PosStore.setup() STARTING", "color: #00b4d8; font-weight: bold;", {
+            pos_config_id: odoo?.pos_config_id,
+            pos_session_id: odoo?.pos_session_id,
+            from_backend: odoo?.from_backend,
+        });
+        try {
+            const res = await super.setup(...arguments);
+            console.log("%c[POS-DIAG] PosStore.setup() FINISHED", "color: #52b788; font-weight: bold;", {
+                session: this.session ? { id: this.session.id, state: this.session.state } : "NONE",
+                config: this.config ? { id: this.config.id, name: this.config.name, useProxy: this.config.useProxy } : "NONE",
+                activeRoute: this.router?.state?.current,
+            });
+            return res;
+        } catch (err) {
+            console.error("%c[POS-DIAG] PosStore.setup() FAILED WITH ERROR:", "color: #e63946; font-weight: bold;", err);
+            throw err;
+        }
+    },
+
     closeOtherTabs() {
+        console.log("[POS-DIAG] PosStore.closeOtherTabs() executing", {
+            hasSession: Boolean(this.session),
+            sessionId: this.session?.id,
+        });
         if (!this.session || !this.session.id) {
+            console.warn("[POS-DIAG] Skipping closeOtherTabs because session is missing");
             return;
         }
         try {
             return super.closeOtherTabs(...arguments);
-        } catch (_) {}
+        } catch (err) {
+            console.warn("[POS-DIAG] closeOtherTabs error caught safely:", err);
+        }
     },
 
     async connectToProxy() {
         const proxyIp = this.config?.proxy_ip || "";
         const storedUrl = typeof localStorage !== "undefined" ? localStorage.hw_proxy_url : "";
+        console.log("[POS-DIAG] PosStore.connectToProxy() called", {
+            proxyIp,
+            storedUrl,
+            useProxy: this.config?.useProxy,
+        });
         if (!proxyIp && !storedUrl) {
+            console.warn("[POS-DIAG] Skipping connectToProxy to avoid hanging dead promise (no proxy IP configured)");
             return;
         }
         try {
-            // Core autoConnect returns an unresolving pending promise if no URL exists,
-            // or hangs on network timeouts. Race with 2s timeout so POS startup never hangs.
+            console.log("[POS-DIAG] Attempting connectToProxy with 2s timeout guard...");
             await Promise.race([
                 super.connectToProxy(...arguments),
                 new Promise((resolve) => setTimeout(resolve, 2000)),
             ]);
-        } catch (_) {}
+            console.log("[POS-DIAG] connectToProxy completed or timed out cleanly");
+        } catch (err) {
+            console.warn("[POS-DIAG] connectToProxy error caught safely:", err);
+        }
     },
 });
 
 // Guard Chrome root component: ensure the 3-dots loader is dismissed promptly after mount
 patch(Chrome.prototype, {
     setup() {
+        console.log("%c[POS-DIAG] Chrome root component setup() RUNNING", "background: #005577; color: #fff; padding: 2px 6px;", {
+            currentRoute: this.pos?.router?.state?.current,
+            session: this.pos?.session ? { id: this.pos.session.id, state: this.pos.session.state } : "NONE",
+        });
         super.setup(...arguments);
         setTimeout(() => {
+            console.log("[POS-DIAG] Chrome watchdog fired at 1.8s. Checking loader overlay...");
             try {
                 this.props?.disableLoader?.();
-            } catch (_) {}
+            } catch (err) {
+                console.warn("[POS-DIAG] disableLoader error:", err);
+            }
             const loaderEl = document.querySelector(".pos-loader");
             if (loaderEl) {
+                console.log("[POS-DIAG] Dismissing .pos-loader element from DOM");
                 loaderEl.style.transition = "opacity 0.3s ease";
                 loaderEl.style.opacity = "0";
                 setTimeout(() => {
@@ -61,6 +116,7 @@ if (typeof window !== "undefined") {
     setTimeout(() => {
         const loaderEl = document.querySelector(".pos-loader");
         if (loaderEl) {
+            console.warn("[POS-DIAG] Emergency watchdog at 4.5s: removing stuck loader element");
             loaderEl.style.transition = "opacity 0.3s ease";
             loaderEl.style.opacity = "0";
             setTimeout(() => {

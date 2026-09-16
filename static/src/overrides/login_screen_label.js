@@ -18,6 +18,18 @@ import { LoginScreen } from "@point_of_sale/app/screens/login_screen/login_scree
 // to be recognised by whoever is standing at it, not be elegant. Two familiar
 // words beat one word half of them would have to guess at.
 patch(LoginScreen.prototype, {
+    setup() {
+        super.setup(...arguments);
+        console.log("%c[POS-DIAG] LoginScreen setup() RUNNING", "background: #2e7d32; color: #fff; padding: 2px 6px;", {
+            branch: this.posRetailBranchName,
+            register: this.posRetailRegisterName,
+            sessionIsOpen: this.posRetailSessionIsOpen,
+            sessionState: this.posRetailSessionState,
+            cashiersCount: this.posRetailCashierNames.length,
+            cashiers: this.posRetailCashierNames,
+        });
+    },
+
     get backBtnName() {
         return _t("Admin Panel / Control Center");
     },
