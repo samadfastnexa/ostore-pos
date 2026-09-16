@@ -4,16 +4,73 @@ import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
 import { PosStore } from "@point_of_sale/app/services/pos_store";
+import { Chrome } from "@point_of_sale/app/pos_app";
 
-// Defensive guard: never allow closeOtherTabs to crash if session is still resolving
+// Defensive guard: never allow closeOtherTabs or connectToProxy to crash or hang POS startup
 patch(PosStore.prototype, {
     closeOtherTabs() {
-        if (!this.session) {
+        if (!this.session || !this.session.id) {
             return;
         }
-        return super.closeOtherTabs(...arguments);
+        try {
+            return super.closeOtherTabs(...arguments);
+        } catch (_) {}
+    },
+
+    async connectToProxy() {
+        const proxyIp = this.config?.proxy_ip || "";
+        const storedUrl = typeof localStorage !== "undefined" ? localStorage.hw_proxy_url : "";
+        if (!proxyIp && !storedUrl) {
+            return;
+        }
+        try {
+            // Core autoConnect returns an unresolving pending promise if no URL exists,
+            // or hangs on network timeouts. Race with 2s timeout so POS startup never hangs.
+            await Promise.race([
+                super.connectToProxy(...arguments),
+                new Promise((resolve) => setTimeout(resolve, 2000)),
+            ]);
+        } catch (_) {}
     },
 });
+
+// Guard Chrome root component: ensure the 3-dots loader is dismissed promptly after mount
+patch(Chrome.prototype, {
+    setup() {
+        super.setup(...arguments);
+        setTimeout(() => {
+            try {
+                this.props?.disableLoader?.();
+            } catch (_) {}
+            const loaderEl = document.querySelector(".pos-loader");
+            if (loaderEl) {
+                loaderEl.style.transition = "opacity 0.3s ease";
+                loaderEl.style.opacity = "0";
+                setTimeout(() => {
+                    try {
+                        loaderEl.remove();
+                    } catch (_) {}
+                }, 350);
+            }
+        }, 1800);
+    },
+});
+
+// Global emergency watchdog: if the loader element remains visible after 4.5 seconds, remove it
+if (typeof window !== "undefined") {
+    setTimeout(() => {
+        const loaderEl = document.querySelector(".pos-loader");
+        if (loaderEl) {
+            loaderEl.style.transition = "opacity 0.3s ease";
+            loaderEl.style.opacity = "0";
+            setTimeout(() => {
+                try {
+                    loaderEl.remove();
+                } catch (_) {}
+            }, 350);
+        }
+    }, 4500);
+}
 
 function _posRetailExtractOrderLines(order) {
     const linesData = [];

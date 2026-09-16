@@ -36,11 +36,13 @@ patch(LoginScreen.prototype, {
     // was lost to exactly that: a correct PIN, typed at a till that had
     // never heard of that employee, reported only "PIN not found".
     get posRetailBranchName() {
-        return this.pos.config.company_id?.name || this.pos.company?.name || "";
+        const companyId = this.pos?.config?.company_id?.id || this.pos?.config?.company_id;
+        const companyRec = companyId ? this.pos?.models?.["res.company"]?.get(companyId) : null;
+        return companyRec?.name || this.pos?.config?.company_id?.name || this.pos?.company?.name || "";
     },
 
     get posRetailRegisterName() {
-        return this.pos.config.name || "";
+        return this.pos?.config?.name || "";
     },
 
     // Whether the till is mid-day or waiting to be opened. The button below
@@ -56,7 +58,7 @@ patch(LoginScreen.prototype, {
     // template testing a translated string turns green into grey the moment
     // somebody runs this shop in Urdu.
     get posRetailSessionIsOpen() {
-        const session = this.pos.session;
+        const session = this.pos?.session;
         return Boolean(session && session.id && session.state === "opened");
     },
 
@@ -85,9 +87,9 @@ patch(LoginScreen.prototype, {
     // No PINs, obviously. The whole point of a PIN is that it is not on the
     // screen everybody can see.
     get posRetailCashierNames() {
-        const employees = this.pos.models["hr.employee"]?.getAll?.() || [];
+        const employees = this.pos?.models?.["hr.employee"]?.getAll?.() || [];
         return employees
-            .map((employee) => employee.name)
+            .map((employee) => employee?.name)
             .filter(Boolean)
             .sort((a, b) => a.localeCompare(b));
     },
