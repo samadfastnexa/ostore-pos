@@ -249,12 +249,26 @@ class PosRetailPortalLedger(http.Controller):
             html_bytes = report_record._render_qweb_html(report_name, [doc_id])[0]
             html_content = html_bytes.decode('utf-8', errors='ignore') if isinstance(html_bytes, bytes) else html_bytes
 
-            auto_print_script = """
+            is_thermal = 'thermal' in (report or '') or 'receipt' in (report or '')
+            page_css = """
+                    @page {
+                        size: 80mm auto;
+                        margin: 0mm !important;
+                    }
+                    html, body {
+                        width: 80mm !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: transparent !important;
+                    }
+            """ if is_thermal else "@page { margin: 2mm; }"
+
+            auto_print_script = f"""
             <style>
-                @media print {
-                    @page { margin: 2mm; }
-                    .no-print { display: none !important; }
-                }
+                @media print {{
+                    {page_css}
+                    .no-print {{ display: none !important; }}
+                }}
                 .pos-retail-print-toolbar {
                     position: fixed;
                     top: 10px;

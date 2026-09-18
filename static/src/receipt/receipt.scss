@@ -18,16 +18,113 @@
 .pos-receipt-print.pos-retail-font-small { font-size: 18px; }
 .pos-receipt-print.pos-retail-font-large { font-size: 26px; }
 
-// ---- browser print path. Native forces 266px/14px with !important, so these
-// must out-specify it. 177px = 266 x 48/72 printable-width ratio.
+// ---- browser print path for thermal receipt roll (80mm / 58mm)
 @media print {
-    .render-container .pos-receipt.pos-retail-w58 {
-        width: 177px !important;
-        font-size: 12px !important;
+    // 1. Force the page to thermal roll dimensions and zero margins
+    @page {
+        size: 80mm auto;
+        margin: 0mm !important;
     }
-    .render-container .pos-receipt.pos-retail-font-small { font-size: 12px !important; }
-    .render-container .pos-receipt.pos-retail-font-large { font-size: 16px !important; }
-    .render-container .pos-receipt.pos-retail-w58.pos-retail-font-large { font-size: 14px !important; }
+
+    @page pos_receipt_58 {
+        size: 58mm auto;
+        margin: 0mm !important;
+    }
+
+    // 2. Set root HTML/body to exact roll width and eliminate browser margins/padding
+    html, body {
+        width: 80mm !important;
+        max-width: 80mm !important;
+        min-width: 80mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        overflow: visible !important;
+    }
+
+    // 3. Reset positioning containers from core Odoo so receipt isn't offset or restricted
+    .pos, .pos * {
+        position: static !important;
+    }
+
+    .o-main-components-container {
+        position: static !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .render-container-parent {
+        position: static !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .render-container {
+        position: static !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    // 4. Standard 80mm thermal receipt sizing: fill roll width with neat side padding
+    .render-container .pos-receipt {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 auto !important;
+        padding: 3mm 2mm 8mm 2mm !important;
+        font-size: 13px !important;
+        line-height: 1.25 !important;
+        color: #000000 !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: hidden !important;
+    }
+
+    .render-container .pos-receipt * {
+        background-color: transparent !important;
+        color: #000000 !important;
+    }
+
+    // 5. 58mm compact thermal roll override
+    .render-container .pos-receipt.pos-retail-w58 {
+        page: pos_receipt_58;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 2mm 1mm 6mm 1mm !important;
+        font-size: 11px !important;
+        line-height: 1.2 !important;
+    }
+
+    .render-container .pos-receipt.pos-retail-font-small { font-size: 11px !important; }
+    .render-container .pos-receipt.pos-retail-font-large { font-size: 15px !important; }
+    .render-container .pos-receipt.pos-retail-w58.pos-retail-font-large { font-size: 13px !important; }
+
+    // 6. Ensure receipt tables, logos, and separators fit cleanly
+    .render-container .pos-receipt img,
+    .render-container .pos-receipt .pos-receipt-logo {
+        max-width: 65% !important;
+        height: auto !important;
+        margin: 0 auto 4px auto !important;
+        display: block !important;
+    }
+
+    .render-container .pos-receipt table {
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
 }
 
 // ---- template styles ------------------------------------------------------
