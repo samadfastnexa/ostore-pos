@@ -568,14 +568,39 @@ export class PosRetailCustomerProfile extends Component {
         }
     }
 
-    /** Print Ledger PDF directly in browser */
+    /** Print Ledger directly in printer dialog without downloading file */
     printLedger() {
         const isCustomer = this.state.activeSide === "customer";
         const reportName = isCustomer
             ? "pos_retail.report_customer_ledger"
             : "pos_retail.report_vendor_statement";
-        const url = `/report/pdf/${reportName}/${this.partner.id}`;
-        window.open(url, "_blank");
+        const url = `/pos_retail/print_report?report=${reportName}&id=${this.partner.id}`;
+
+        let iframe = document.getElementById("pos_retail_direct_print_frame");
+        if (!iframe) {
+            iframe = document.createElement("iframe");
+            iframe.id = "pos_retail_direct_print_frame";
+            iframe.style.position = "fixed";
+            iframe.style.right = "0";
+            iframe.style.bottom = "0";
+            iframe.style.width = "0";
+            iframe.style.height = "0";
+            iframe.style.border = "0";
+            document.body.appendChild(iframe);
+        }
+
+        iframe.onload = () => {
+            setTimeout(() => {
+                try {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                } catch (e) {
+                    console.warn("Direct iframe print failed, opening print window:", e);
+                    window.open(url, "_blank");
+                }
+            }, 250);
+        };
+        iframe.src = url;
     }
 }
 

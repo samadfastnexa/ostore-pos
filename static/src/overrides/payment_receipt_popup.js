@@ -29,7 +29,35 @@ export class PaymentReceiptPopup extends Component {
     }
 
     printReceipt() {
-        window.print();
+        if (this.receipt.payment_id) {
+            const url = `/pos_retail/print_report?report=pos_retail.report_pos_retail_payment_receipt&id=${this.receipt.payment_id}`;
+            let iframe = document.getElementById("pos_retail_direct_print_frame");
+            if (!iframe) {
+                iframe = document.createElement("iframe");
+                iframe.id = "pos_retail_direct_print_frame";
+                iframe.style.position = "fixed";
+                iframe.style.right = "0";
+                iframe.style.bottom = "0";
+                iframe.style.width = "0";
+                iframe.style.height = "0";
+                iframe.style.border = "0";
+                document.body.appendChild(iframe);
+            }
+            iframe.onload = () => {
+                setTimeout(() => {
+                    try {
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                    } catch (e) {
+                        console.warn("Direct iframe print failed, falling back to window.print:", e);
+                        window.print();
+                    }
+                }, 250);
+            };
+            iframe.src = url;
+        } else {
+            window.print();
+        }
     }
 
     get whatsappShareText() {

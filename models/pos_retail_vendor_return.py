@@ -342,7 +342,11 @@ class PosRetailVendorReturn(models.Model):
 
     def action_print_receipt(self):
         self.ensure_one()
-        return self.env.ref('pos_retail.action_report_vendor_return_receipt').report_action(self)
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/pos_retail/print_report?report=pos_retail.action_report_vendor_return_receipt&id={self.id}',
+            'target': 'new',
+        }
 
     def action_share_whatsapp(self):
         self.ensure_one()

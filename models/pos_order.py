@@ -325,8 +325,12 @@ class PosOrder(models.Model):
         return info
 
     def action_print_receipt_thermal(self):
-        return self.env.ref(
-            'pos_retail.action_report_pos_receipt_thermal').report_action(self, config=False)
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/pos_retail/print_report?report=pos_retail.report_pos_receipt_thermal&id={self.id}',
+            'target': 'new',
+        }
 
     def action_print_receipt_a4(self):
         return self.env.ref(

@@ -1323,7 +1323,16 @@ class ResPartner(models.Model):
         return rows
 
     def action_print_customer_ledger(self):
-        """Trigger Customer Ledger PDF download/print."""
+        """Directly open printer for Customer Ledger without downloading."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/pos_retail/print_report?report=pos_retail.report_customer_ledger&id={self.id}',
+            'target': 'new',
+        }
+
+    def action_download_customer_ledger_pdf(self):
+        """Download Customer Ledger PDF file."""
         self.ensure_one()
         return self.env.ref('pos_retail.action_report_customer_ledger').report_action(self)
 

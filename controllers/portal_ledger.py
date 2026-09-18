@@ -226,3 +226,95 @@ class PosRetailPortalLedger(http.Controller):
             'token': token,
             'pdf_url': pdf_url,
         }
+
+    @http.route('/pos_retail/print_report', type='http', auth='user', website=False)
+    def direct_print_report(self, report, id, **kwargs):
+        """
+        Renders a report as HTML with an embedded auto-print script.
+        Directly opens the browser's printer dialog upon loading,
+        without triggering a file download.
+        """
+        env = request.env
+        doc_id = int(id)
+        report_record = env['ir.actions.report'].sudo()._get_report_from_name(report)
+        if not report_record:
+            report_record = env.ref(report, raise_if_not_found=False)
+        if not report_record:
+            return request.not_found(f"Report {report} not found.")
+
+        try:
+            report_name = report_record.report_name
+            html_bytes = report_record._render_qweb_html(report_name, [doc_id])[0]
+            html_content = html_bytes.decode('utf-8', errors='ignore') if isinstance(html_bytes, bytes) else html_bytes
+
+            auto_print_script = """
+            <style>
+                @media print {
+                    @page { margin: 2mm; }
+                    .no-print { display: none !important; }
+                }
+                .pos-retail-print-toolbar {
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    z-index: 99999;
+                    background: rgba(15, 23, 42, 0.85);
+                    padding: 8px 14px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    display: flex;
+                    gap: 8px;
+                    align-items: center;
+                }
+                .pos-retail-print-toolbar button {
+                    background: #2563eb;
+                    color: white;
+                    border: none;
+                    padding: 6px 14px;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    font-size: 13px;
+                }
+                .pos-retail-print-toolbar button:hover {
+                    background: #1d4ed8;
+                }
+                .pos-retail-print-toolbar .btn-close-tab {
+                    background: #64748b;
+                }
+                .pos-retail-print-toolbar .btn-close-tab:hover {
+                    background: #475569;
+                }
+            </style>
+            <div class="no-print pos-retail-print-toolbar">
+                <button onclick="window.print()">🖨️ Open Printer</button>
+                <button class="btn-close-tab" onclick="window.close()">Close</button>
+            </div>
+            <script type="text/javascript">
+                (function() {
+                    function doPrint() {
+                        setTimeout(function() {
+                            window.focus();
+                            window.print();
+                        }, 250);
+                    }
+                    if (document.readyState === 'complete') {
+                        doPrint();
+                    } else {
+                        window.addEventListener('load', doPrint);
+                    }
+                })();
+            </script>
+            """
+
+            if "</body>" in html_content:
+                html_content = html_content.replace("</body>", f"{auto_print_script}</body>")
+            else:
+                html_content += auto_print_script
+
+            return request.make_response(html_content, headers=[
+                ('Content-Type', 'text/html; charset=utf-8'),
+                ('Cache-Control', 'no-cache, no-store, must-revalidate'),
+            ])
+        except Exception as e:
+            return request.make_response(f"Error rendering printable report: {str(e)}", status=500)

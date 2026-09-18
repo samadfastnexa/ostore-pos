@@ -264,6 +264,9 @@
                             groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups"
                             invisible="not pos_outstanding_balance"/>
                     <button name="action_print_customer_ledger" type="object"
+                            string="Print Ledger" icon="fa-print" class="btn-secondary"
+                            groups="account.group_account_invoice,account.group_account_readonly,point_of_sale.group_pos_user,pos_retail.perm_customer_ledger_view_res_groups"/>
+                    <button name="action_download_customer_ledger_pdf" type="object"
                             string="Download Ledger PDF" icon="fa-file-pdf-o" class="btn-secondary"
                             groups="account.group_account_invoice,account.group_account_readonly,point_of_sale.group_pos_user,pos_retail.perm_customer_ledger_view_res_groups"/>
                     <button name="action_open_ledger_adjustment" type="object"

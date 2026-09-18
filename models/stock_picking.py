@@ -54,8 +54,12 @@ class StockPicking(models.Model):
                 "Use the Delivery Slip for %(names)s.",
                 names=", ".join(outgoing.mapped('name')),
             ))
-        return self.env.ref(
-            'pos_retail.action_report_goods_receipt').report_action(self, config=False)
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/pos_retail/print_report?report=pos_retail.action_report_goods_receipt&id={self.id}',
+            'target': 'new',
+        }
 
     def action_print_vendor_return(self):
         """Vendor Return Note: what is going back to the supplier, why, and
@@ -72,5 +76,9 @@ class StockPicking(models.Model):
                 "supplier. %(names)s is not a vendor return.",
                 names=", ".join(not_returns.mapped('name')),
             ))
-        return self.env.ref(
-            'pos_retail.action_report_vendor_return').report_action(self, config=False)
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/pos_retail/print_report?report=pos_retail.action_report_vendor_return&id={self.id}',
+            'target': 'new',
+        }
