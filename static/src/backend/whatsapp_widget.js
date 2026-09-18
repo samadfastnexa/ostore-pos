@@ -188,46 +188,14 @@ export class PosRetailWhatsappWidget extends Component {
 
             const number = this.normalize(shareData.phone, shareData.phoneCode);
 
-            // 1. Native mobile share sheet: share PDF file ONLY
-            if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
-                try {
-                    const file = new File([blob], filename, { type: "application/pdf" });
-                    if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: this.shareTitle,
-                        });
-                        this.notification.add(_t("Document PDF shared successfully on WhatsApp."), { type: "success" });
-                        return;
-                    }
-                } catch (err) {
-                    if (err && err.name === "AbortError") {
-                        return; // User canceled share sheet
-                    }
-                    console.warn("pos_retail: native share failed, falling back to download", err);
-                }
+            // Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
+            const shared = await openWhatsAppChoice(this.dialog, number, { blob, filename });
+            if (shared) {
+                this.notification.add(
+                    _t("Document PDF processed for WhatsApp sharing."),
+                    { type: "info" }
+                );
             }
-
-            // 2. Desktop fallback: automatically download the PDF file to user's computer
-            try {
-                const blobUrl = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = blobUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-            } catch (dlErr) {
-                console.warn("pos_retail: automatic PDF download failed", dlErr);
-            }
-
-            // 3. Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
-            await openWhatsAppChoice(this.dialog, number);
-            this.notification.add(
-                _t("The document PDF has been downloaded so you can attach it in WhatsApp."),
-                { type: "info" }
-            );
         } catch (err) {
             console.warn("pos_retail: WhatsApp share error", err);
             this.notification.add(

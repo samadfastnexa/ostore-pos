@@ -32,7 +32,7 @@
             </div>
         </xpath>
         <xpath expr="//div[hasclass('pos-receipt-customer')]" position="after">
-            <div t-if="!order.partner_id" class="pos-receipt-customer pos-retail-walkin mt-2 text-center">
+            <div t-if="!order.partner_id" class="pos-receipt-customer pos-retail-walkin my-1 text-center">
                 <span class="fw-bold">Walk-in Customer</span>
             </div>
         </xpath>

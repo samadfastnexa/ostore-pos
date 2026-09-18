@@ -503,46 +503,14 @@ export class PosRetailCustomerProfile extends Component {
                 throw new Error(_t("The generated ledger PDF was empty. Please check server connection."));
             }
 
-            // 2. Try native file share (supported on mobile / modern secure platforms)
-            if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
-                try {
-                    const file = new File([pdfBlob], filename, { type: "application/pdf" });
-                    if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: filename,
-                        });
-                        this.notification.add(_t("Ledger PDF shared successfully on WhatsApp."), { type: "success" });
-                        return;
-                    }
-                } catch (err) {
-                    if (err?.name === "AbortError") {
-                        return; // User canceled share drawer
-                    }
-                    console.warn("pos_retail: native file share failed, falling back to download workflow", err);
-                }
-            }
-
-            // 3. Truthful fallback: Download the PDF file + open WhatsApp Web
-            try {
-                const url = URL.createObjectURL(pdfBlob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setTimeout(() => URL.revokeObjectURL(url), 2000);
-            } catch (dlErr) {
-                console.warn("Automatic PDF download failed:", dlErr);
-            }
-
             // Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
-            await openWhatsAppChoice(this.dialog, phone);
-            this.notification.add(
-                _t("The ledger PDF has been downloaded so you can attach it in WhatsApp."),
-                { type: "info" }
-            );
+            const shared = await openWhatsAppChoice(this.dialog, phone, { blob: pdfBlob, filename });
+            if (shared) {
+                this.notification.add(
+                    _t("Ledger PDF processed for WhatsApp sharing."),
+                    { type: "info" }
+                );
+            }
         } catch (err) {
             console.error("WhatsApp share failed:", err);
             this.dialog.add(AlertDialog, {

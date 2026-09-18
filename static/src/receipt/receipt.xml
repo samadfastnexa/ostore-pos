@@ -13,7 +13,7 @@
 
         <!-- Replace core OrderDisplay with clean columnar table: ITEM | QTY | PRICE | TOTAL -->
         <xpath expr="//OrderDisplay" position="replace">
-            <div class="pos-retail-receipt-table-wrapper my-2">
+            <div class="pos-retail-receipt-table-wrapper my-1">
                 <table class="pos-retail-receipt-table w-100">
                     <thead>
                         <tr class="pos-retail-receipt-th-row">
@@ -184,15 +184,15 @@
 
             <!-- Return policy block -->
             <div t-if="order.config.return_policy"
-                 class="pos-retail-return-policy pt-3 mt-2 text-center"
-                 style="white-space:pre-line; border-top:1px dashed currentColor; padding-top:6px;">
+                 class="pos-retail-return-policy pt-1 mt-1 text-center"
+                 style="white-space:pre-line; border-top:1px dashed currentColor; padding-top:3px;">
                 <div class="fw-bolder">Return Policy</div>
                 <div style="font-size:80%;"><t t-esc="order.config.return_policy"/></div>
             </div>
 
             <!-- Thank-you message (Receipt Studio). -->
             <div t-if="order.config.pos_retail_receipt_thankyou"
-                 class="pos-retail-thankyou text-center fw-bolder pt-2">
+                 class="pos-retail-thankyou text-center fw-bolder pt-1 mt-1">
                 <t t-esc="order.config.pos_retail_receipt_thankyou"/>
             </div>
 
@@ -202,9 +202,9 @@
                  same QR twice per render. -->
             <t t-if="order.config.pos_retail_receipt_show_qr">
                 <t t-set="posRetailQR" t-value="posRetailReceiptQR"/>
-                <div t-if="posRetailQR" class="pos-retail-receipt-qr text-center pt-3">
+                <div t-if="posRetailQR" class="pos-retail-receipt-qr text-center pt-2">
                     <img t-att-src="posRetailQR"
-                         style="width:104px; height:104px;" alt="Receipt reference QR"/>
+                         style="width:96px; height:96px;" alt="Receipt reference QR"/>
                     <div style="font-size:70%;">Scan for receipt reference</div>
                 </div>
             </t>
@@ -212,26 +212,31 @@
             <!-- Scannable reference barcode (optional; fetched from the
                  server, so it needs connectivity at render time). -->
             <div t-if="order.config.pos_retail_receipt_show_ref_barcode and order.pos_reference"
-                 class="pos-retail-ref-barcode text-center pt-2">
+                 class="pos-retail-ref-barcode text-center pt-1">
                 <img t-att-src="posRetailRefBarcodeUrl"
-                     style="width:80%; max-height:44px;" alt="Receipt reference barcode"/>
+                     style="width:80%; max-height:40px;" alt="Receipt reference barcode"/>
                 <div style="font-size:70%;" t-esc="order.pos_reference"/>
             </div>
 
             <!-- Refund signatures -->
-            <div t-if="order.is_refund" class="pos-retail-refund-signatures pt-3 mt-2" style="border-top:1px dashed currentColor;">
-                <div class="d-flex justify-content-between text-center small mt-3">
+            <div t-if="order.is_refund" class="pos-retail-refund-signatures pt-2 mt-1" style="border-top:1px dashed currentColor;">
+                <div class="d-flex justify-content-between text-center small mt-2">
                     <div style="width:45%;">
-                        <div style="border-top:1px solid currentColor; margin-top:20px;"/>
+                        <div style="border-top:1px solid currentColor; margin-top:16px;"/>
                         <div style="font-size:75%;">Customer Signature</div>
                     </div>
                     <div style="width:45%;">
-                        <div style="border-top:1px solid currentColor; margin-top:20px;"/>
+                        <div style="border-top:1px solid currentColor; margin-top:16px;"/>
                         <div style="font-size:75%;">Cashier Signature</div>
                     </div>
                 </div>
             </div>
 
+        </xpath>
+
+        <!-- Suppress duplicate branch name sitting above the dashed line before store branding -->
+        <xpath expr="//div[hasclass('pos-config-name')]" position="replace">
+            <!-- Suppressed: Branch/company name is branded cleanly below -->
         </xpath>
 
         <!-- Remove "Powered by Odoo" and brand the receipt footer with the
@@ -240,8 +245,8 @@
              message (order.config.receipt_header) all remain native and stay
              configurable in POS Settings, Bills and Receipts. -->
         <xpath expr="//div[hasclass('footer-powered-by')]" position="replace">
-            <div class="pos-retail-receipt-branding pos-receipt-center-align text-center pt-3"
-                 style="border-top:1px dashed currentColor; padding-top:6px;">
+            <div class="pos-retail-receipt-branding pos-receipt-center-align text-center pt-1"
+                 style="border-top:1px dashed currentColor; padding-top:3px; margin-top:2px;">
                 <div class="fw-bolder" t-esc="order.company?.name"/>
                 <div t-if="order.config.pos_retail_receipt_social"
                      class="pos-retail-receipt-social" style="font-size:80%;"

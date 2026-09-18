@@ -145,10 +145,12 @@
     // 6. Ensure receipt tables, logos, and separators fit cleanly
     .render-container .pos-receipt img,
     .render-container .pos-receipt .pos-receipt-logo {
-        max-width: 65% !important;
+        max-height: 48px !important;
+        max-width: 50% !important;
         height: auto !important;
-        margin: 0 auto 4px auto !important;
+        margin: 0 auto 2px auto !important;
         display: block !important;
+        object-fit: contain;
     }
 
     .render-container .pos-receipt table {
@@ -160,6 +162,81 @@
 // On screen receipt preview: hide cutter feed spacer so preview remains compact
 .pos-retail-receipt-cutter-feed {
     display: none;
+}
+
+// ---- compact receipt layout for screen preview and print ------------------
+.pos-receipt {
+    .pos-receipt-logo {
+        max-height: 48px !important;
+        max-width: 50% !important;
+        margin: 0 auto 2px auto !important;
+        display: block !important;
+        object-fit: contain;
+    }
+    > div.text-center.pt-3, .text-center.pt-3 {
+        padding-top: 2px !important;
+        margin-top: 0 !important;
+        line-height: 1.15 !important;
+    }
+    #order-date {
+        margin-top: 1px !important;
+        line-height: 1.15 !important;
+    }
+    .pos-receipt-contact {
+        margin-top: 1px !important;
+        line-height: 1.15 !important;
+        div, .cashier {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.15 !important;
+        }
+    }
+    .pos-receipt-customer, .pos-retail-walkin {
+        margin-top: 1px !important;
+        margin-bottom: 2px !important;
+        padding: 0 !important;
+        line-height: 1.15 !important;
+    }
+    .pos-retail-receipt-table-wrapper {
+        margin: 2px 0 !important;
+
+        .pos-retail-receipt-table {
+            th {
+                padding: 2px 0 !important;
+            }
+            td {
+                padding: 2px 0 !important;
+            }
+        }
+    }
+    .pos-retail-return-policy {
+        padding-top: 2px !important;
+        margin-top: 2px !important;
+        line-height: 1.15 !important;
+        > div {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.15 !important;
+        }
+    }
+    .pos-retail-thankyou {
+        padding-top: 2px !important;
+        margin-top: 1px !important;
+        margin-bottom: 2px !important;
+        line-height: 1.15 !important;
+    }
+    .pos-config-name {
+        display: none !important;
+    }
+    .d-flex.gap-2.pt-3 {
+        padding-top: 2px !important;
+        margin-top: 0 !important;
+    }
+    .pos-retail-receipt-branding {
+        padding-top: 2px !important;
+        margin-top: 2px !important;
+        line-height: 1.2 !important;
+    }
 }
 
 // ---- template styles ------------------------------------------------------

@@ -194,46 +194,17 @@ patch(ReceiptScreen.prototype, {
                 throw new Error(_t("The generated receipt PDF was empty."));
             }
 
-            // 2. Native mobile share sheet: share PDF file ONLY
-            if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
-                try {
-                    const file = new File([pdfBlob], filename, { type: "application/pdf" });
-                    if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: filename,
-                        });
-                        this.notification.add(_t("Receipt PDF shared successfully on WhatsApp."), { type: "success" });
-                        return;
-                    }
-                } catch (err) {
-                    if (err && err.name === "AbortError") {
-                        return; // User canceled share drawer
-                    }
-                    console.warn("pos_retail: native file share failed, falling back to download", err);
-                }
+            // 2. Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
+            const shared = await openWhatsAppChoice(this.dialog || this.env.services.dialog, number, {
+                blob: pdfBlob,
+                filename: filename,
+            });
+            if (shared) {
+                this.notification.add(
+                    _t("Receipt PDF processed for WhatsApp sharing."),
+                    { type: "info" }
+                );
             }
-
-            // 3. Desktop fallback: automatically download the PDF receipt to cashier's computer
-            try {
-                const blobUrl = URL.createObjectURL(pdfBlob);
-                const a = document.createElement("a");
-                a.href = blobUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-            } catch (dlErr) {
-                console.warn("pos_retail: automatic PDF download failed", dlErr);
-            }
-
-            // 4. Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
-            await openWhatsAppChoice(this.dialog || this.env.services.dialog, number);
-            this.notification.add(
-                _t("The PDF receipt has been downloaded so you can attach it in WhatsApp."),
-                { type: "info" }
-            );
         } catch (err) {
             console.error("pos_retail: WhatsApp receipt share failed", err);
             this.notification.add(

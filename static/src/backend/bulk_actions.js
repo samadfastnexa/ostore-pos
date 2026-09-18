@@ -94,46 +94,14 @@ patch(ListController.prototype, {
                 throw new Error(_t("Generated bulk PDF was empty."));
             }
 
-            // 1. Native mobile share sheet: share PDF file ONLY
-            if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
-                try {
-                    const file = new File([blob], filename, { type: "application/pdf" });
-                    if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: report.label,
-                        });
-                        this.notification.add(_t("Bulk PDF shared successfully on WhatsApp."), { type: "success" });
-                        return;
-                    }
-                } catch (err) {
-                    if (err && err.name === "AbortError") {
-                        return; // User canceled share sheet
-                    }
-                    console.warn("pos_retail: bulk WhatsApp native share failed, falling back", err);
-                }
+            // Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
+            const shared = await openWhatsAppChoice(this._posRetailDialog, "", { blob, filename });
+            if (shared) {
+                this.notification.add(
+                    _t("Bulk PDF processed for WhatsApp sharing."),
+                    { type: "info" }
+                );
             }
-
-            // 2. Desktop fallback: automatically download the PDF file to user's computer
-            try {
-                const blobUrl = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = blobUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-            } catch (dlErr) {
-                console.warn("pos_retail: bulk PDF download failed", dlErr);
-            }
-
-            // 3. Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
-            await openWhatsAppChoice(this._posRetailDialog, "");
-            this.notification.add(
-                _t("The bulk PDF has been downloaded so you can attach it in WhatsApp."),
-                { type: "info" }
-            );
         } catch (err) {
             console.warn("pos_retail: bulk WhatsApp share error", err);
             this.notification.add(
