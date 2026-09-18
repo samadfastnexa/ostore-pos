@@ -19,16 +19,27 @@
 .pos-receipt-print.pos-retail-font-large { font-size: 26px; }
 
 // ---- browser print path for thermal receipt roll (80mm / 58mm)
+// Top-level @page ensures browser print dialog initializes with zero margins
+@page {
+    margin: 0;
+    size: auto;
+}
+
+@page pos_receipt_58 {
+    margin: 0;
+    size: auto;
+}
+
 @media print {
-    // 1. Force the page to thermal roll dimensions and zero margins
+    // 1. Force the page to thermal roll dimensions and zero margins (valid syntax: no !important)
     @page {
-        size: 80mm auto;
-        margin: 0mm !important;
+        margin: 0;
+        size: auto;
     }
 
     @page pos_receipt_58 {
-        size: 58mm auto;
-        margin: 0mm !important;
+        margin: 0;
+        size: auto;
     }
 
     // 2. Set root HTML/body to exact roll width and eliminate browser margins/padding
@@ -37,7 +48,7 @@
         max-width: 80mm !important;
         min-width: 80mm !important;
         height: auto !important;
-        min-height: 100% !important;
+        min-height: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
         background: transparent !important;
@@ -88,17 +99,17 @@
         overflow: visible !important;
     }
 
-    // 4. Standard 80mm thermal receipt sizing: dynamic height, visible overflow
+    // 4. Standard 80mm thermal receipt sizing: dynamic height, zero top padding
     .render-container .pos-receipt {
         box-sizing: border-box !important;
         width: 100% !important;
-        max-width: 100% !important;
+        max-width: 78mm !important;
         min-width: 0 !important;
         height: auto !important;
         max-height: none !important;
         min-height: 0 !important;
         margin: 0 auto !important;
-        padding: 3mm 2mm 4mm 2mm !important;
+        padding: 0 2mm 5mm 2mm !important;
         font-size: 13px !important;
         line-height: 1.25 !important;
         color: #000000 !important;
@@ -114,16 +125,21 @@
         color: #000000 !important;
     }
 
-    // Physical thermal roll cutter feed buffer: advances paper past printer auto-cutter knife
+    // Physical thermal roll cutter feed buffer: advances paper past printer auto-cutter knife.
+    // Must NOT be visibility:hidden so Chromium print engine allocates real paper feed height.
     .render-container .pos-receipt .pos-retail-receipt-cutter-feed {
         display: block !important;
-        height: 22mm !important;
-        min-height: 22mm !important;
-        max-height: 22mm !important;
+        height: 35mm !important;
+        min-height: 35mm !important;
+        max-height: 35mm !important;
+        line-height: 35mm !important;
         width: 100% !important;
+        font-size: 1px !important;
+        color: transparent !important;
         clear: both !important;
         page-break-inside: avoid !important;
-        visibility: hidden !important;
+        overflow: hidden !important;
+        border-bottom: 1px solid transparent !important;
     }
 
     // 5. 58mm compact thermal roll override
@@ -133,7 +149,7 @@
         max-width: 100% !important;
         height: auto !important;
         max-height: none !important;
-        padding: 2mm 1mm 4mm 1mm !important;
+        padding: 0 1mm 5mm 1mm !important;
         font-size: 11px !important;
         line-height: 1.2 !important;
     }
@@ -161,7 +177,7 @@
 
 // On screen receipt preview: hide cutter feed spacer so preview remains compact
 .pos-retail-receipt-cutter-feed {
-    display: none;
+    display: none !important;
 }
 
 // ---- compact receipt layout for screen preview and print ------------------

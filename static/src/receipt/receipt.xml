@@ -8,8 +8,8 @@
              every output (screen, thermal raster, browser print, email JPEG).
              See receipt.scss for the matching rules. -->
         <xpath expr="//div[hasclass('pos-receipt')]" position="attributes">
-            <attribute name="t-attf-class">pos-retail-style-{{order.config.pos_retail_receipt_style || 'standard'}} pos-retail-w{{order.config.pos_retail_receipt_width || '80'}} pos-retail-font-{{order.config.pos_retail_receipt_font || 'normal'}}</attribute>
-</xpath>
+            <attribute name="t-attf-class">pos-receipt pos-retail-style-{{order.config.pos_retail_receipt_style || 'standard'}} pos-retail-w{{order.config.pos_retail_receipt_width || '80'}} pos-retail-font-{{order.config.pos_retail_receipt_font || 'normal'}}</attribute>
+        </xpath>
 
         <!-- Replace core OrderDisplay with clean columnar table: ITEM | QTY | PRICE | TOTAL -->
         <xpath expr="//OrderDisplay" position="replace">
@@ -253,7 +253,7 @@
                      t-esc="order.config.pos_retail_receipt_social"/>
             </div>
             <!-- Physical thermal roll auto-cutter feed buffer: advances paper past cutter knife -->
-            <div class="pos-retail-receipt-cutter-feed" aria-hidden="true"/>
+            <div class="pos-retail-receipt-cutter-feed" aria-hidden="true">&#160;</div>
         </xpath>
     </t>
 
