@@ -2,6 +2,7 @@
 
 import { patch } from "@web/core/utils/patch";
 import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
+import OrderPaymentValidation from "@point_of_sale/app/utils/order_payment_validation";
 
 // Reloading a receipt URL took the whole POS down with a blank screen.
 //
@@ -28,5 +29,25 @@ patch(ReceiptScreen.prototype, {
             this.pos.models["pos.order"].getBy("uuid", this.props.orderUuid) ||
             this.pos.getOrder()
         );
+    },
+});
+
+patch(OrderPaymentValidation.prototype, {
+    get nextPage() {
+        // Retail counters must always land on ReceiptScreen so cashiers
+        // can view the receipt preview and choose between "Print Full Receipt", "Send on WhatsApp", or start a new order.
+        return !this.error
+            ? {
+                  page: "ReceiptScreen",
+                  params: {
+                      orderUuid: this.order.uuid,
+                  },
+              }
+            : this.pos.defaultPage;
+    },
+    get canPrintReceipt() {
+        // Never auto-trigger the browser print dialog right as the payment button is clicked.
+        // The cashier will choose whether to click "Print Full Receipt" or "Send on WhatsApp" on the ReceiptScreen.
+        return false;
     },
 });

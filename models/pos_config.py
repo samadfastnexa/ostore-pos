@@ -31,6 +31,14 @@ class PosConfig(models.Model):
         default=DEFAULT_RETURN_POLICY,
         help="Printed as a dedicated block on the POS receipt, above the footer.",
     )
+    iface_print_auto = fields.Boolean(
+        string="Automatic Receipt Printing", default=False,
+        help="The receipt will automatically be printed at the end of each order.",
+    )
+    iface_print_skip_screen = fields.Boolean(
+        string="Skip Preview Screen", default=False,
+        help="The receipt screen will be skipped if the receipt can be printed automatically.",
+    )
 
     pos_retail_discount_enabled = fields.Boolean(
         string="Enable Order Discounts", default=True,
