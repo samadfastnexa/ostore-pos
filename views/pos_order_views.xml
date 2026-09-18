@@ -25,7 +25,7 @@
                      quotations, purchase orders and invoices, pointed at this
                      module's own thermal receipt. -->
                 <widget name="pos_retail_whatsapp"
-                        report="pos_retail.action_report_pos_receipt_thermal"
+                        report="pos_retail.report_pos_receipt_a4"
                         title="Receipt"/>
             </xpath>
         </field>

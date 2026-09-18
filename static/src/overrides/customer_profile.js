@@ -517,12 +517,12 @@ export class PosRetailCustomerProfile extends Component {
                 }
             }
 
+            // 2. Native mobile share sheet: share PDF file ONLY
             if (sharedFile) {
                 try {
                     await navigator.share({
                         files: [sharedFile],
                         title: filename,
-                        text: text,
                     });
                     this.notification.add(_t("Ledger PDF shared successfully on WhatsApp."), { type: "success" });
                     return;
@@ -547,14 +547,14 @@ export class PosRetailCustomerProfile extends Component {
                 }
             }
 
-            // 4. Open WhatsApp Web with formatted statement text + direct PDF link
+            // 4. Open WhatsApp Web directly to customer's chat
             const waUrl = phone
-                ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
-                : `https://wa.me/?text=${encodeURIComponent(text)}`;
+                ? `https://web.whatsapp.com/send?phone=${phone}`
+                : `https://web.whatsapp.com/`;
             window.open(waUrl, "_blank");
 
             this.notification.add(
-                _t("PDF statement downloaded! WhatsApp opened. You can also drag & drop the PDF file into the chat."),
+                _t("PDF statement downloaded! WhatsApp opened. Please attach or drag & drop the PDF file into the chat."),
                 { type: "success" }
             );
         } catch (err) {

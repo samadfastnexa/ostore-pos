@@ -196,7 +196,7 @@ patch(ReceiptScreen.prototype, {
             console.warn("pos_retail: receipt PDF fetch error", fetchErr);
         }
 
-        // 1. Native mobile share sheet (attaches PDF file AND passes text)
+        // 1. Native mobile share sheet: share PDF file ONLY
         if (canShareFiles && pdfBlob) {
             try {
                 const file = new File([pdfBlob], filename, { type: "application/pdf" });
@@ -204,9 +204,8 @@ patch(ReceiptScreen.prototype, {
                     await navigator.share({
                         files: [file],
                         title: filename,
-                        text: text,
                     });
-                    this.notification.add(_t("Receipt PDF and text shared successfully."), { type: "success" });
+                    this.notification.add(_t("Receipt PDF shared successfully on WhatsApp."), { type: "success" });
                     return;
                 }
             } catch (err) {
@@ -233,11 +232,10 @@ patch(ReceiptScreen.prototype, {
             }
         }
 
-        // 3. Open WhatsApp Web with complete formatted receipt text + direct PDF link
-        const encoded = encodeURIComponent(text);
+        // 3. Open WhatsApp Web directly to customer's chat
         const url = number
-            ? `https://wa.me/${number}?text=${encoded}`
-            : `https://wa.me/?text=${encoded}`;
+            ? `https://web.whatsapp.com/send?phone=${number}`
+            : `https://web.whatsapp.com/`;
 
         if (win && !win.closed) {
             win.location = url;
@@ -246,7 +244,7 @@ patch(ReceiptScreen.prototype, {
         }
 
         this.notification.add(
-            _t("PDF receipt downloaded! WhatsApp opened with full receipt text and link. You can also drag & drop the PDF into the chat."),
+            _t("PDF receipt downloaded! WhatsApp opened. Please attach or drag & drop the PDF into the chat."),
             { type: "success" }
         );
     },

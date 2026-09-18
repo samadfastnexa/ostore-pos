@@ -286,3 +286,107 @@ def generate_barcode_data_uri(text, barcode_type='code128', **kwargs):
     svg = generate_barcode_svg(text, barcode_type=barcode_type, **kwargs)
     b64 = base64.b64encode(svg.encode('utf-8')).decode('ascii')
     return f"data:image/svg+xml;base64,{b64}"
+
+
+# ----------------------------------------------------------------------
+# 5. ZPL GENERATOR (Zebra Browser Print — direct/silent printing)
+#
+# Each ^B command takes its parameters in a slightly different order in
+# Zebra's own ZPL II reference, so a small per-type builder is simpler and
+# safer than trying to force one shared format string.
+# ----------------------------------------------------------------------
+_ZPL_BARCODE_BUILDERS = {
+    'code128': lambda h, mod, show_text: f"^BY{mod}\n^BCN,{h},{'Y' if show_text else 'N'},N,N",
+    'ean13': lambda h, mod, show_text: f"^BY{mod}\n^BEN,{h},{'Y' if show_text else 'N'},N",
+    'ean8': lambda h, mod, show_text: f"^BY{mod}\n^B8N,{h},{'Y' if show_text else 'N'},N",
+    'upca': lambda h, mod, show_text: f"^BY{mod}\n^BUN,{h},{'Y' if show_text else 'N'},N,N",
+    'code39': lambda h, mod, show_text: f"^BY{mod}\n^B3N,N,{h},{'Y' if show_text else 'N'},N",
+}
+
+
+def _zpl_escape(text):
+    """^ and ~ start ZPL commands, so free-text product names/SKUs must
+    never be allowed to inject them into the command stream."""
+    return (text or "").replace("^", "'").replace("~", "-").replace("\\", "/")[:120]
+
+
+def _mm_to_dots(mm, dpi):
+    return max(1, int(round(mm * dpi / 25.4)))
+
+
+def build_zpl_label(item, preset, currency_symbol, company_name, dpi=203):
+    """
+    Build one ZPL ^XA...^XZ form for a single physical label, sized to the
+    preset's label_width/label_height.
+
+    Deliberately ignores the preset's column count: Zebra desktop printers
+    (like the ZD410) feed one die-cut label at a time, never a multi-column
+    roll, so 'columns' is only meaningful for the HTML/browser-print path
+    below, which this is an alternative to, not a wrapper around.
+    """
+    w = _mm_to_dots(preset.label_width, dpi)
+    h = _mm_to_dots(preset.label_height, dpi)
+    margin_l = _mm_to_dots(preset.margin_left, dpi)
+    margin_r = _mm_to_dots(preset.margin_right, dpi)
+    margin_t = _mm_to_dots(preset.margin_top, dpi)
+    margin_b = _mm_to_dots(preset.margin_bottom, dpi)
+    content_w = max(1, w - margin_l - margin_r)
+
+    font_mm = {'small': 2.2, 'normal': 2.75, 'large': 3.5}.get(preset.font_size, 2.75)
+    font_h = _mm_to_dots(font_mm, dpi)
+    font_h_meta = max(14, int(font_h * 0.75))
+    font_h_price = int(font_h * 1.25)
+    module_dots = max(2, _mm_to_dots(0.25, dpi))
+
+    align = {'left': 'L', 'center': 'C', 'right': 'R'}.get(preset.text_align, 'C')
+
+    lines = ["^XA", "^MMT", f"^PW{w}", f"^LL{h}", "^LH0,0", "^CI28"]
+    y = margin_t
+
+    top_items = []
+    if preset.show_company_name and company_name:
+        top_items.append(company_name)
+    if preset.show_brand and item.get('brand'):
+        top_items.append(item['brand'])
+    if top_items:
+        text = _zpl_escape(" - ".join(top_items))
+        lines.append(f"^FO{margin_l},{y}^A0N,{font_h_meta},{font_h_meta}"
+                     f"^FB{content_w},1,0,{align},0^FD{text}^FS")
+        y += font_h_meta + 6
+
+    if preset.show_product_name:
+        text = _zpl_escape(item.get('product_name'))
+        lines.append(f"^FO{margin_l},{y}^A0N,{font_h},{font_h}"
+                     f"^FB{content_w},2,0,{align},0^FD{text}^FS")
+        y += (font_h * 2) + 10
+
+    barcode_val = item.get('barcode') or (item.get('sku') if preset.barcode_fallback == 'sku' else '')
+    if preset.show_barcode and barcode_val:
+        barcode_h = _mm_to_dots(preset.barcode_height, dpi)
+        builder = _ZPL_BARCODE_BUILDERS.get(preset.barcode_type, _ZPL_BARCODE_BUILDERS['code128'])
+        lines.append(f"^FO{margin_l},{y}")
+        lines.append(builder(barcode_h, module_dots, preset.show_barcode_text))
+        lines.append(f"^FD{_zpl_escape(barcode_val)}^FS")
+        y += barcode_h + (30 if preset.show_barcode_text else 8)
+
+    bottom_y = max(y, h - margin_b - font_h_meta)
+    if preset.show_sku and item.get('sku'):
+        text = _zpl_escape(f"SKU: {item['sku']}")
+        lines.append(f"^FO{margin_l},{bottom_y}^A0N,{font_h_meta},{font_h_meta}^FD{text}^FS")
+    if preset.show_price:
+        uom_str = f"/{item.get('uom')}" if preset.show_uom and item.get('uom') else ""
+        text = _zpl_escape(f"{currency_symbol} {item.get('price', 0):,.2f}{uom_str}")
+        lines.append(f"^FO0,{bottom_y}^A0N,{font_h_price},{font_h_price}"
+                     f"^FB{w - margin_r},1,0,R,0^FD{text}^FS")
+
+    lines.append("^XZ")
+    return "\n".join(lines)
+
+
+def build_zpl_document(items, preset, currency_symbol, company_name):
+    """Concatenate one ZPL form per label; Browser Print sends it as a single job."""
+    dpi = int(preset.browserprint_dpi or 203)
+    return "\n".join(
+        build_zpl_label(item, preset, currency_symbol, company_name, dpi=dpi)
+        for item in items
+    )

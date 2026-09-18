@@ -204,7 +204,7 @@ export class PosRetailWhatsappWidget extends Component {
                 console.warn("pos_retail: could not fetch PDF blob", blobErr);
             }
 
-            // 1. Native mobile share sheet (attaches file AND sets text)
+            // 1. Native mobile share sheet: share PDF file ONLY
             if (canShareFiles && blob) {
                 try {
                     const file = new File([blob], filename, { type: "application/pdf" });
@@ -212,9 +212,8 @@ export class PosRetailWhatsappWidget extends Component {
                         await navigator.share({
                             files: [file],
                             title: this.shareTitle,
-                            text: text,
                         });
-                        this.notification.add(_t("Document PDF and text shared successfully."), { type: "success" });
+                        this.notification.add(_t("Document PDF shared successfully on WhatsApp."), { type: "success" });
                         return;
                     }
                 } catch (err) {
@@ -241,11 +240,10 @@ export class PosRetailWhatsappWidget extends Component {
                 }
             }
 
-            // 3. Open WhatsApp Web with complete formatted message + direct PDF link
-            const encoded = encodeURIComponent(text);
+            // 3. Open WhatsApp Web directly to customer's chat
             const url = number
-                ? `https://wa.me/${number}?text=${encoded}`
-                : `https://wa.me/?text=${encoded}`;
+                ? `https://web.whatsapp.com/send?phone=${number}`
+                : `https://web.whatsapp.com/`;
 
             if (win && !win.closed) {
                 win.location = url;
@@ -254,7 +252,7 @@ export class PosRetailWhatsappWidget extends Component {
             }
 
             this.notification.add(
-                _t("PDF downloaded! WhatsApp opened with message and direct PDF link. You can also drag & drop the PDF into the chat."),
+                _t("PDF downloaded! WhatsApp opened. Please attach or drag & drop the PDF into the chat."),
                 { type: "success" }
             );
         } catch (err) {

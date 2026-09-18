@@ -102,7 +102,37 @@
                             </group>
                         </page>
 
-                        <!-- TAB 3: Product Label Content -->
+                        <!-- TAB 3: Direct / Silent Printing -->
+                        <page string="Direct Printing (Zebra)" name="direct_printing">
+                            <group>
+                                <group string="Zebra Browser Print">
+                                    <field name="use_browser_print"/>
+                                    <field name="browserprint_dpi" invisible="not use_browser_print"/>
+                                </group>
+                                <group string="How This Works">
+                                    <div class="text-muted small">
+                                        <p>
+                                            When enabled, "Print" sends real ZPL straight to the
+                                            default Zebra printer on this till &#8212; no print
+                                            dialog, no picking a printer each time.
+                                        </p>
+                                        <p>
+                                            Requires Zebra's free <strong>Browser Print</strong> app
+                                            running on the till, and its SDK file placed under
+                                            <code>pos_retail/static/src/lib/browserprint/</code>.
+                                        </p>
+                                        <p>
+                                            If either isn't available on a given till, printing
+                                            falls back automatically to the normal browser print
+                                            dialog (the Physical Roll/Barcode/Content settings
+                                            still apply there).
+                                        </p>
+                                    </div>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- TAB 4: Product Label Content -->
                         <page string="Label Content &amp; Layout" name="content_layout">
                             <group>
                                 <group string="Visible Elements">

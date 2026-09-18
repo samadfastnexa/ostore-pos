@@ -286,6 +286,23 @@ class PosRetailThermalLabelPreset(models.Model):
         ('right', "Right"),
     ], string="Text Alignment", default='center', required=True)
 
+    # Direct / Silent Printing (Zebra Browser Print)
+    use_browser_print = fields.Boolean(
+        string="Print Directly via Zebra Browser Print",
+        default=False,
+        help="Requires Zebra's free 'Browser Print' app running on the till, plus its "
+             "SDK file placed in this module (see static/src/lib/browserprint/README.txt). "
+             "When enabled, this preset sends real ZPL straight to the default Zebra "
+             "printer with no print dialog. If the app/SDK isn't available on a given "
+             "till, it automatically falls back to the normal browser print dialog below.",
+    )
+    browserprint_dpi = fields.Selection([
+        ('203', "203 dpi (most Zebra desktop printers, incl. ZD410)"),
+        ('300', "300 dpi (high-resolution variant)"),
+    ], string="Printer Resolution", default='203', required=True,
+       help="Must match the physical printer's print head resolution, or ZPL "
+            "positioning/sizing will be off.")
+
     @api.depends('label_width', 'columns', 'gap_horizontal', 'margin_left', 'margin_right')
     def _compute_total_row_width(self):
         for rec in self:

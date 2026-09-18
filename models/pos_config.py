@@ -442,6 +442,8 @@ class PosConfig(models.Model):
             repairs['active'] = True
         if not product.sale_ok:
             repairs['sale_ok'] = True
+        if product.company_id:
+            repairs['company_id'] = False
         if repairs:
             product.sudo().write(repairs)
 
@@ -452,8 +454,6 @@ class PosConfig(models.Model):
         # there is no in-flight discount to disturb -- and skipping would leave
         # the panel broken on exactly the register someone is standing at.
         for config in self.sudo().search([('discount_product_id', '=', False)]):
-            if product.company_id and product.company_id != config.company_id:
-                continue
             config.discount_product_id = product.id
 
     @api.model

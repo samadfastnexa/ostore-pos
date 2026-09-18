@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import html
+import json
 import math
 
 from odoo import http
 from odoo.http import request
 
-from ..models.thermal_barcode_generator import generate_barcode_svg
+from ..models.thermal_barcode_generator import build_zpl_document, generate_barcode_svg
 
 
 class PosRetailThermalLabelController(http.Controller):
@@ -98,13 +99,13 @@ class PosRetailThermalLabelController(http.Controller):
             rows.append(row)
 
         # Generate HTML Page
-        html_content = self._render_thermal_html(preset, rows, cols, currency_symbol, company_name)
+        html_content = self._render_thermal_html(preset, rows, cols, currency_symbol, company_name, labels)
         return request.make_response(html_content, headers=[
             ('Content-Type', 'text/html; charset=utf-8'),
             ('Cache-Control', 'no-cache, no-store, must-revalidate'),
         ])
 
-    def _render_thermal_html(self, preset, rows, cols, currency_symbol, company_name):
+    def _render_thermal_html(self, preset, rows, cols, currency_symbol, company_name, flat_labels):
         font_size = "11px" if preset.font_size == 'normal' else ("9px" if preset.font_size == 'small' else "13px")
         align = preset.text_align or 'center'
 
@@ -311,8 +312,54 @@ class PosRetailThermalLabelController(http.Controller):
             body_parts.append("</div>")  # .thermal-row
 
         body_parts.append("</div>")  # .print-container
-        # Auto-trigger print dialog after load
-        body_parts.append("<script>window.addEventListener('load', () => { setTimeout(() => window.print(), 180); });</script>")
+        body_parts.append(self._render_print_script(preset, flat_labels, currency_symbol, company_name))
         body_parts.append("</body></html>")
 
         return "".join(body_parts)
+
+    def _render_print_script(self, preset, flat_labels, currency_symbol, company_name):
+        """
+        Default behaviour (unchanged): auto-open the OS print dialog.
+
+        When a preset has 'Print Directly via Zebra Browser Print' enabled,
+        try that first instead -- real ZPL sent straight to the default
+        Zebra printer via the Browser Print local app, no dialog. If the
+        app or its SDK file isn't present on this till, it falls back to
+        the exact same window.print() behaviour as every other preset.
+        """
+        if not preset.use_browser_print:
+            return "<script>window.addEventListener('load', () => { setTimeout(() => window.print(), 180); });</script>"
+
+        zpl = build_zpl_document(flat_labels, preset, currency_symbol, company_name)
+        zpl_json = json.dumps(zpl)
+        return f"""
+        <script src="/pos_retail/static/src/lib/browserprint/BrowserPrint-3.x.min.js"></script>
+        <script>
+        (function() {{
+            const zpl = {zpl_json};
+            function fallbackToDialog() {{ setTimeout(() => window.print(), 180); }}
+            if (typeof BrowserPrint === "undefined") {{
+                console.warn("[pos_retail] Zebra Browser Print SDK not found on this page -- " +
+                    "falling back to the print dialog. See static/src/lib/browserprint/README.txt.");
+                fallbackToDialog();
+                return;
+            }}
+            BrowserPrint.getDefaultDevice("printer", function(device) {{
+                if (!device) {{
+                    console.warn("[pos_retail] Browser Print app has no default Zebra printer -- falling back.");
+                    fallbackToDialog();
+                    return;
+                }}
+                device.send(zpl, function() {{
+                    console.log("[pos_retail] Label(s) sent to Zebra printer '" + device.name + "' via Browser Print.");
+                }}, function(err) {{
+                    console.error("[pos_retail] Browser Print failed to send ZPL, falling back to print dialog:", err);
+                    fallbackToDialog();
+                }});
+            }}, function(err) {{
+                console.error("[pos_retail] Browser Print app not reachable, falling back to print dialog:", err);
+                fallbackToDialog();
+            }});
+        }})();
+        </script>
+        """

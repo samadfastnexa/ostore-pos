@@ -126,7 +126,7 @@ export class PaymentReceiptPopup extends Component {
                 }
             }
 
-            // 1. Native mobile share sheet
+            // 1. Native mobile share sheet: share PDF file ONLY
             if (canShareFiles && blob) {
                 try {
                     const file = new File([blob], filename, { type: "application/pdf" });
@@ -134,9 +134,8 @@ export class PaymentReceiptPopup extends Component {
                         await navigator.share({
                             files: [file],
                             title: filename,
-                            text: text,
                         });
-                        this.notification.add(_t("Payment receipt PDF and text shared successfully."), { type: "success" });
+                        this.notification.add(_t("Payment receipt PDF shared successfully on WhatsApp."), { type: "success" });
                         return;
                     }
                 } catch (err) {
@@ -161,11 +160,10 @@ export class PaymentReceiptPopup extends Component {
                 }
             }
 
-            // 3. Open WhatsApp Web with complete formatted message + direct PDF link
-            const encoded = encodeURIComponent(text);
+            // 3. Open WhatsApp Web directly to customer's chat
             const url = phone
-                ? `https://wa.me/${phone}?text=${encoded}`
-                : `https://wa.me/?text=${encoded}`;
+                ? `https://web.whatsapp.com/send?phone=${phone}`
+                : `https://web.whatsapp.com/`;
 
             if (win && !win.closed) {
                 win.location = url;
@@ -174,7 +172,7 @@ export class PaymentReceiptPopup extends Component {
             }
 
             this.notification.add(
-                _t("PDF receipt downloaded! WhatsApp opened. You can also drag & drop the PDF into the chat."),
+                _t("Payment receipt PDF downloaded! WhatsApp opened. Please attach or drag & drop the PDF into the chat."),
                 { type: "success" }
             );
         } catch (err) {
