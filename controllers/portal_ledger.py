@@ -263,12 +263,12 @@ class PosRetailPortalLedger(http.Controller):
                     }
             """ if is_thermal else "@page { margin: 2mm; }"
 
-            auto_print_script = f"""
+            auto_print_script = """
             <style>
-                @media print {{
-                    {page_css}
-                    .no-print {{ display: none !important; }}
-                }}
+                @media print {
+                    """ + page_css + """
+                    .no-print { display: none !important; }
+                }
                 .pos-retail-print-toolbar {
                     position: fixed;
                     top: 10px;
