@@ -481,7 +481,6 @@ export class PosRetailCustomerProfile extends Component {
         if (!partner?.id || this.state.sharingWa) return;
 
         this.state.sharingWa = true;
-        const text = this.whatsappShareText;
         const phone = this.whatsappNumber;
         const isCustomer = this.state.activeSide === "customer";
         const reportName = isCustomer

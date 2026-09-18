@@ -41,33 +41,6 @@
 
                 <!-- Right Header Actions: Switch/Change partner & Cart sync -->
                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
-                            style="font-size: 0.78rem;"
-                            t-att-disabled="state.exportingPdf"
-                            t-on-click="downloadLedgerPdf"
-                            title="Download Ledger PDF statement">
-                        <i t-att-class="state.exportingPdf ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-file-pdf-o'"/>
-                        <span>PDF</span>
-                    </button>
-                    <button type="button"
-                            class="btn btn-sm fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm text-white"
-                            style="font-size: 0.78rem; background-color: #25d366; border-color: #25d366;"
-                            t-att-disabled="state.sharingWa"
-                            t-on-click="shareWhatsApp"
-                            title="Share Ledger Statement on WhatsApp">
-                        <i t-att-class="state.sharingWa ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-whatsapp'"/>
-                        <span>WhatsApp</span>
-                    </button>
-                    <button t-if="state.activeSide === 'customer'"
-                            type="button"
-                            class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
-                            style="font-size: 0.78rem;"
-                            t-on-click="onClickReceivePayment"
-                            title="Receive Khata payment from this customer">
-                        <i class="fa fa-money"/>
-                        <span>Receive Payment</span>
-                    </button>
                     <span t-if="isCurrentOrderPartner" class="badge text-bg-success py-1 px-2" style="font-size: 0.75rem;">
                         <i class="fa fa-check-circle me-1"/>In Current Cart
                     </span>
@@ -289,15 +262,6 @@
                                     title="Download Customer Ledger as PDF">
                                 <i t-att-class="state.exportingPdf ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-file-pdf-o'"/>
                                 <span>Export PDF</span>
-                            </button>
-                            <button type="button"
-                                    class="btn btn-sm fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm text-white"
-                                    style="font-size: 0.78rem; background-color: #25d366; border-color: #25d366;"
-                                    t-att-disabled="state.sharingWa"
-                                    t-on-click="shareWhatsApp"
-                                    title="Share Customer Ledger on WhatsApp">
-                                <i t-att-class="state.sharingWa ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-whatsapp'"/>
-                                <span>WhatsApp</span>
                             </button>
                             <button type="button"
                                     class="btn btn-sm btn-outline-secondary fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
@@ -701,15 +665,6 @@
                                 title="Download Vendor Statement as PDF">
                             <i t-att-class="state.exportingPdf ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-file-pdf-o'"/>
                             <span>Export PDF</span>
-                        </button>
-                        <button type="button"
-                                class="btn btn-sm fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm text-white"
-                                style="font-size: 0.78rem; background-color: #25d366; border-color: #25d366;"
-                                t-att-disabled="state.sharingWa"
-                                t-on-click="shareWhatsApp"
-                                title="Share Vendor Statement on WhatsApp">
-                            <i t-att-class="state.sharingWa ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-whatsapp'"/>
-                            <span>WhatsApp</span>
                         </button>
                         <button type="button"
                                 class="btn btn-sm btn-outline-secondary fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
