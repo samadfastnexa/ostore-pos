@@ -161,10 +161,11 @@
     // 6. Ensure receipt tables, logos, and separators fit cleanly
     .render-container .pos-receipt img,
     .render-container .pos-receipt .pos-receipt-logo {
-        max-height: 48px !important;
-        max-width: 50% !important;
+        max-height: 75px !important;
+        max-width: 70% !important;
+        width: auto !important;
         height: auto !important;
-        margin: 0 auto 2px auto !important;
+        margin: 0 auto 4px auto !important;
         display: block !important;
         object-fit: contain;
     }
@@ -183,9 +184,11 @@
 // ---- compact receipt layout for screen preview and print ------------------
 .pos-receipt {
     .pos-receipt-logo {
-        max-height: 48px !important;
-        max-width: 50% !important;
-        margin: 0 auto 2px auto !important;
+        max-height: 75px !important;
+        max-width: 70% !important;
+        width: auto !important;
+        height: auto !important;
+        margin: 0 auto 4px auto !important;
         display: block !important;
         object-fit: contain;
     }
