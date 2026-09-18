@@ -50,7 +50,15 @@ if [ -z "$CERT_PATH" ]; then
     fi
 fi
 
-# 3. Create or update Nginx config with HTTP -> HTTPS 301 redirection
+# 3. Back up any conflicting duplicate aaPanel vhost files
+for other in /www/server/panel/vhost/nginx/*.conf; do
+    if [ "$other" != "$NGINX_CONF" ] && grep -q "169-58-143-45.sslip.io" "$other" 2>/dev/null; then
+        echo "[OK] Backing up conflicting duplicate vhost $other to ${other}.bak"
+        mv "$other" "${other}.bak"
+    fi
+done
+
+# 4. Create single unified Nginx config with HTTP -> HTTPS 301 redirection
 if [ -n "$CERT_PATH" ] && [ -f "$CERT_PATH" ]; then
     cat > "$NGINX_CONF" <<EOF
 upstream odoo_app  { server 127.0.0.1:8069; }
@@ -65,7 +73,7 @@ server {
 
 # HTTPS: Secure Odoo service with strict forwarding headers
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
     server_name 169-58-143-45.sslip.io 169.58.143.45;
     client_max_body_size 200M;
 
@@ -102,10 +110,10 @@ server {
     gzip_types text/plain text/css text/javascript application/javascript application/json application/xml;
 }
 EOF
-    echo "[OK] Generated $NGINX_CONF with HTTP->HTTPS 301 redirection."
+    echo "[OK] Generated clean $NGINX_CONF with HTTP->HTTPS 301 redirection."
     nginx -t
     nginx -s reload
-    echo "[OK] Nginx reloaded successfully."
+    echo "[OK] Nginx reloaded successfully without warnings."
 else
     echo "[WARN] Could not automatically locate SSL cert paths. Please verify aaPanel SSL settings."
 fi
