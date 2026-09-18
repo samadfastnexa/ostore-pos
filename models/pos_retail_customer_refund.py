@@ -214,7 +214,9 @@ class PosRetailCustomerRefund(models.Model):
         self.ensure_one()
         if not self.access_token:
             self.access_token = _get_customer_refund_token(self.env, self.id)
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        base_url = self.get_base_url().rstrip('/')
+        if base_url.startswith('http://') and not ('localhost' in base_url or '127.0.0.1' in base_url):
+            base_url = 'https://' + base_url[7:]
         return f"{base_url}/pos_retail/portal/customer_refund/pdf/{self.id}?token={self.access_token}"
 
     def action_confirm(self):
@@ -426,7 +428,7 @@ class PosRetailCustomerRefund(models.Model):
 
         message += f"\n📄 *Download Official PDF Receipt:*\n{url}\n\nThank you!"
 
-        whatsapp_url = f"https://api.whatsapp.com/send?phone={phone}&text={quote_plus(message)}"
+        whatsapp_url = f"https://web.whatsapp.com/send?phone={phone}"
         return {
             'type': 'ir.actions.act_url',
             'url': whatsapp_url,

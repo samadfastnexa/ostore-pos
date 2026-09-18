@@ -169,55 +169,49 @@ patch(ReceiptScreen.prototype, {
             return;
         }
         const number = this.posRetailWhatsappNumber;
-        const text = this.posRetailWhatsappText;
         const isRefund = order.isRefund || (order.priceIncl < 0) || (order.totalDue < 0);
         const ref = String(order.pos_reference || order.name || "receipt").replace(/[\\/]/g, "-");
         const filename = `${isRefund ? "Return_Receipt" : "Receipt"}_${ref}.pdf`;
 
-        // Claim popup window synchronously to prevent desktop browser blocking
-        const canShareFiles = typeof navigator !== "undefined" && !!navigator.share && !!navigator.canShare;
-        let win = null;
-        if (!canShareFiles) {
-            win = window.open("about:blank", "_blank");
-        }
-
-        let pdfBlob = null;
         try {
+            // 1. Fetch PDF blob directly
             const pdfEndpoint = order.id
                 ? `/report/pdf/pos_retail.report_pos_receipt_a4/${order.id}`
                 : (order.access_token ? `/pos_retail/portal/receipt/pdf/${order.access_token}` : null);
-            if (pdfEndpoint) {
-                const res = await fetch(pdfEndpoint, { credentials: "same-origin" });
-                if (res.ok) {
-                    pdfBlob = await res.blob();
+            if (!pdfEndpoint) {
+                throw new Error(_t("No valid receipt reference found for this order."));
+            }
+
+            const res = await fetch(pdfEndpoint, { credentials: "same-origin" });
+            if (!res.ok) {
+                throw new Error(_t("Could not generate receipt PDF (Status %s).", res.status));
+            }
+            const pdfBlob = await res.blob();
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error(_t("The generated receipt PDF was empty."));
+            }
+
+            // 2. Native mobile share sheet: share PDF file ONLY
+            if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
+                try {
+                    const file = new File([pdfBlob], filename, { type: "application/pdf" });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: filename,
+                        });
+                        this.notification.add(_t("Receipt PDF shared successfully on WhatsApp."), { type: "success" });
+                        return;
+                    }
+                } catch (err) {
+                    if (err && err.name === "AbortError") {
+                        return; // User canceled share drawer
+                    }
+                    console.warn("pos_retail: native file share failed, falling back to download", err);
                 }
             }
-        } catch (fetchErr) {
-            console.warn("pos_retail: receipt PDF fetch error", fetchErr);
-        }
 
-        // 1. Native mobile share sheet: share PDF file ONLY
-        if (canShareFiles && pdfBlob) {
-            try {
-                const file = new File([pdfBlob], filename, { type: "application/pdf" });
-                if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: filename,
-                    });
-                    this.notification.add(_t("Receipt PDF shared successfully on WhatsApp."), { type: "success" });
-                    return;
-                }
-            } catch (err) {
-                if (err && err.name === "AbortError") {
-                    return;
-                }
-                console.warn("pos_retail: native file share failed, falling back", err);
-            }
-        }
-
-        // 2. Desktop fallback: automatically download the PDF receipt to cashier's computer
-        if (pdfBlob) {
+            // 3. Desktop fallback: automatically download the PDF receipt to cashier's computer
             try {
                 const blobUrl = URL.createObjectURL(pdfBlob);
                 const a = document.createElement("a");
@@ -226,26 +220,27 @@ patch(ReceiptScreen.prototype, {
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-                URL.revokeObjectURL(blobUrl);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
             } catch (dlErr) {
                 console.warn("pos_retail: automatic PDF download failed", dlErr);
             }
-        }
 
-        // 3. Open WhatsApp Web directly to customer's chat
-        const url = number
-            ? `https://web.whatsapp.com/send?phone=${number}`
-            : `https://web.whatsapp.com/`;
-
-        if (win && !win.closed) {
-            win.location = url;
-        } else {
+            // 4. Open WhatsApp Web directly to customer's chat
+            const url = number
+                ? `https://web.whatsapp.com/send?phone=${number}`
+                : `https://web.whatsapp.com/`;
             window.open(url, "_blank", "noopener,noreferrer");
-        }
 
-        this.notification.add(
-            _t("PDF receipt downloaded! WhatsApp opened. Please attach or drag & drop the PDF into the chat."),
-            { type: "success" }
-        );
+            this.notification.add(
+                _t("PDF sharing is not supported by this browser. The PDF receipt has been downloaded so you can attach it manually in WhatsApp."),
+                { type: "warning" }
+            );
+        } catch (err) {
+            console.error("pos_retail: WhatsApp receipt share failed", err);
+            this.notification.add(
+                err?.message || _t("Could not generate or share receipt PDF. Please verify connection."),
+                { type: "danger" }
+            );
+        }
     },
 });

@@ -345,6 +345,8 @@ class PosOrder(models.Model):
     def get_public_pdf_url(self):
         self.ensure_one()
         base_url = self.get_base_url().rstrip('/')
+        if base_url.startswith('http://') and not ('localhost' in base_url or '127.0.0.1' in base_url):
+            base_url = 'https://' + base_url[7:]
         if self.access_token:
             return f"{base_url}/pos_retail/portal/receipt/pdf/{self.access_token}"
         token = self.get_public_receipt_token()

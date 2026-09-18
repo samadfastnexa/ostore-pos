@@ -490,77 +490,67 @@ export class PosRetailCustomerProfile extends Component {
         const filename = `${isCustomer ? "Customer_Ledger" : "Vendor_Statement"}_${cleanName}.pdf`;
 
         try {
-            // 1. Fetch PDF blob
-            let pdfBlob = null;
-            try {
-                const response = await fetch(`/report/pdf/${reportName}/${partner.id}`, {
-                    credentials: "same-origin",
-                });
-                if (response.ok) {
-                    pdfBlob = await response.blob();
-                }
-            } catch (fetchErr) {
-                console.warn("Failed to fetch PDF blob:", fetchErr);
+            // 1. Fetch PDF blob directly
+            const response = await fetch(`/report/pdf/${reportName}/${partner.id}`, {
+                credentials: "same-origin",
+            });
+            if (!response.ok) {
+                throw new Error(_t("Could not generate the ledger PDF (Status %s).", response.status));
+            }
+            const pdfBlob = await response.blob();
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error(_t("The generated ledger PDF was empty. Please check server connection."));
             }
 
-            // 2. Try native file share (on mobile / Android / iOS)
-            let sharedFile = false;
-            if (pdfBlob && typeof navigator !== "undefined" && navigator.canShare) {
+            // 2. Try native file share (supported on mobile / modern secure platforms)
+            if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
                 try {
                     const file = new File([pdfBlob], filename, { type: "application/pdf" });
                     if (navigator.canShare({ files: [file] })) {
-                        sharedFile = file;
+                        await navigator.share({
+                            files: [file],
+                            title: filename,
+                        });
+                        this.notification.add(_t("Ledger PDF shared successfully on WhatsApp."), { type: "success" });
+                        return;
                     }
-                } catch (e) {
-                    sharedFile = false;
-                }
-            }
-
-            // 2. Native mobile share sheet: share PDF file ONLY
-            if (sharedFile) {
-                try {
-                    await navigator.share({
-                        files: [sharedFile],
-                        title: filename,
-                    });
-                    this.notification.add(_t("Ledger PDF shared successfully on WhatsApp."), { type: "success" });
-                    return;
                 } catch (err) {
-                    if (err?.name === "AbortError") return;
+                    if (err?.name === "AbortError") {
+                        return; // User canceled share drawer
+                    }
+                    console.warn("pos_retail: native file share failed, falling back to download workflow", err);
                 }
             }
 
-            // 3. Desktop fallback: Automatically download the PDF file to cashier's computer
-            if (pdfBlob) {
-                try {
-                    const url = URL.createObjectURL(pdfBlob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                } catch (dlErr) {
-                    console.warn("Automatic PDF download failed:", dlErr);
-                }
+            // 3. Truthful fallback: Download the PDF file + open WhatsApp Web
+            try {
+                const url = URL.createObjectURL(pdfBlob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 2000);
+            } catch (dlErr) {
+                console.warn("Automatic PDF download failed:", dlErr);
             }
 
-            // 4. Open WhatsApp Web directly to customer's chat
+            // Open WhatsApp Web directly to customer's chat
             const waUrl = phone
                 ? `https://web.whatsapp.com/send?phone=${phone}`
                 : `https://web.whatsapp.com/`;
-            window.open(waUrl, "_blank");
+            window.open(waUrl, "_blank", "noopener,noreferrer");
 
             this.notification.add(
-                _t("PDF statement downloaded! WhatsApp opened. Please attach or drag & drop the PDF file into the chat."),
-                { type: "success" }
+                _t("PDF sharing is not supported by this browser. The PDF statement has been downloaded so you can attach it manually in WhatsApp."),
+                { type: "warning" }
             );
         } catch (err) {
             console.error("WhatsApp share failed:", err);
             this.dialog.add(AlertDialog, {
                 title: _t("WhatsApp Share Failed"),
-                body: _t("Could not open WhatsApp. Please allow popups or check device settings."),
+                body: err?.message || _t("Could not generate or share PDF. Please check server connection."),
             });
         } finally {
             this.state.sharingWa = false;

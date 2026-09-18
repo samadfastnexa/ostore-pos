@@ -79,42 +79,66 @@ patch(ListController.prototype, {
         if (!ids.length) return;
 
         const report = config.reports[0];
-        // For WhatsApp: generate the PDF and open wa.me link.
-        // Build the PDF URL for all selected IDs.
+        const filename = `${report.label.replace(/[\\/]/g, "-")}.pdf`;
         const pdfUrl = `/report/pdf/${report.name}/${ids.join(",")}`;
 
-        // Try fetching the PDF and sharing via navigator.share if available.
-        const canShareFiles =
-            typeof navigator !== "undefined" && !!navigator.share && !!navigator.canShare;
+        try {
+            const res = await fetch(pdfUrl, { credentials: "same-origin" });
+            if (!res.ok) {
+                throw new Error(_t("Could not generate bulk PDF report (Status %s).", res.status));
+            }
+            const blob = await res.blob();
+            if (!blob || blob.size === 0) {
+                throw new Error(_t("Generated bulk PDF was empty."));
+            }
 
-        if (canShareFiles) {
-            try {
-                const res = await fetch(pdfUrl, { credentials: "same-origin" });
-                if (res.ok) {
-                    const blob = await res.blob();
-                    const file = new File(
-                        [blob],
-                        `${report.label.replace(/[\\/]/g, "-")}.pdf`,
-                        { type: "application/pdf" }
-                    );
+            // 1. Native mobile share sheet: share PDF file ONLY
+            if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
+                try {
+                    const file = new File([blob], filename, { type: "application/pdf" });
                     if (navigator.canShare({ files: [file] })) {
                         await navigator.share({
                             files: [file],
                             title: report.label,
                         });
+                        this.notification.add(_t("Bulk PDF shared successfully on WhatsApp."), { type: "success" });
                         return;
                     }
+                } catch (err) {
+                    if (err && err.name === "AbortError") {
+                        return; // User canceled share sheet
+                    }
+                    console.warn("pos_retail: bulk WhatsApp native share failed, falling back", err);
                 }
-            } catch (err) {
-                if (err && err.name === "AbortError") return;
-                console.warn("pos_retail: bulk WhatsApp share failed", err);
             }
-        }
 
-        // Fallback: open wa.me with text only.
-        const text = encodeURIComponent(
-            `*${report.label}*\n${ids.length} record(s) selected`
-        );
-        window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+            // 2. Desktop fallback: automatically download the PDF file to user's computer
+            try {
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+            } catch (dlErr) {
+                console.warn("pos_retail: bulk PDF download failed", dlErr);
+            }
+
+            // 3. Open WhatsApp Web
+            window.open("https://web.whatsapp.com/", "_blank", "noopener,noreferrer");
+
+            this.notification.add(
+                _t("PDF sharing is not supported by this browser. The bulk PDF has been downloaded so you can attach it manually in WhatsApp."),
+                { type: "warning" }
+            );
+        } catch (err) {
+            console.warn("pos_retail: bulk WhatsApp share error", err);
+            this.notification.add(
+                err?.message || _t("Could not generate or share bulk PDF. Please check connection."),
+                { type: "danger" }
+            );
+        }
     },
 });

@@ -30,7 +30,7 @@
                     <button name="action_confirm" string="Confirm Return" type="object" class="btn-primary" invisible="state != 'draft'"/>
                     <button name="action_process" string="Process Refund &amp; Move Stock" type="object" class="btn-success" invisible="state != 'confirmed'"/>
                     <button name="action_print_receipt" string="Print Refund Receipt" type="object" class="btn-secondary" invisible="state != 'done'" icon="fa-print"/>
-                    <button name="action_share_whatsapp" string="Share via WhatsApp" type="object" class="btn-secondary text-success" invisible="state != 'done'" icon="fa-whatsapp"/>
+                    <widget name="pos_retail_whatsapp" report="pos_retail.action_report_customer_refund_receipt" title="Customer Refund" invisible="state != 'done'"/>
                     <button name="action_cancel" string="Cancel" type="object" invisible="state in ('done', 'cancel')"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,done"/>
                 </header>

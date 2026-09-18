@@ -164,48 +164,30 @@ export class PosRetailWhatsappWidget extends Component {
             }
         }
 
-        // Claim popup window synchronously to prevent desktop browser blocking
-        const canShareFiles =
-            typeof navigator !== "undefined" && !!navigator.share && !!navigator.canShare;
-        let win = null;
-        if (!canShareFiles) {
-            win = window.open("about:blank", "_blank");
-        }
-
         try {
-            const { phone, phoneCode } = await this.fetchShareData();
-            const number = this.normalize(phone, phoneCode);
-
-            // Fetch public PDF URL
-            let pdfUrl = "";
-            try {
-                const info = await this.orm.call("pos.retail.report.service", "get_doc_share_info", [
-                    rec.resModel,
-                    rec.resId,
-                ]);
-                pdfUrl = info?.pdf_url || "";
-            } catch (infoErr) {
-                console.warn("pos_retail: could not get doc share info", infoErr);
-            }
-
-            const text = this.buildShareText(pdfUrl);
             const filename = `${this.shareTitle.replace(/[\\/]/g, "-")}.pdf`;
 
-            // Fetch PDF blob
-            let blob = null;
-            try {
-                const res = await fetch(`/report/pdf/${this.props.report}/${rec.resId}`, {
-                    credentials: "same-origin",
-                });
-                if (res.ok) {
-                    blob = await res.blob();
-                }
-            } catch (blobErr) {
-                console.warn("pos_retail: could not fetch PDF blob", blobErr);
+            // Run phone lookup and PDF generation concurrently to preserve browser user activation
+            const [shareData, res] = await Promise.all([
+                this.fetchShareData().catch((err) => {
+                    console.warn("pos_retail: could not fetch share data", err);
+                    return { phone: "", phoneCode: "" };
+                }),
+                fetch(`/report/pdf/${this.props.report}/${rec.resId}`, { credentials: "same-origin" }),
+            ]);
+
+            if (!res.ok) {
+                throw new Error(_t("Could not generate document PDF (Status %s).", res.status));
+            }
+            const blob = await res.blob();
+            if (!blob || blob.size === 0) {
+                throw new Error(_t("Generated document PDF was empty."));
             }
 
+            const number = this.normalize(shareData.phone, shareData.phoneCode);
+
             // 1. Native mobile share sheet: share PDF file ONLY
-            if (canShareFiles && blob) {
+            if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
                 try {
                     const file = new File([blob], filename, { type: "application/pdf" });
                     if (navigator.canShare({ files: [file] })) {
@@ -218,51 +200,41 @@ export class PosRetailWhatsappWidget extends Component {
                     }
                 } catch (err) {
                     if (err && err.name === "AbortError") {
-                        return;
+                        return; // User canceled share sheet
                     }
-                    console.warn("pos_retail: native share failed, falling back", err);
+                    console.warn("pos_retail: native share failed, falling back to download", err);
                 }
             }
 
             // 2. Desktop fallback: automatically download the PDF file to user's computer
-            if (blob) {
-                try {
-                    const blobUrl = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = blobUrl;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(blobUrl);
-                } catch (dlErr) {
-                    console.warn("pos_retail: automatic PDF download failed", dlErr);
-                }
+            try {
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+            } catch (dlErr) {
+                console.warn("pos_retail: automatic PDF download failed", dlErr);
             }
 
             // 3. Open WhatsApp Web directly to customer's chat
             const url = number
                 ? `https://web.whatsapp.com/send?phone=${number}`
                 : `https://web.whatsapp.com/`;
-
-            if (win && !win.closed) {
-                win.location = url;
-            } else {
-                window.open(url, "_blank", "noopener,noreferrer");
-            }
+            window.open(url, "_blank", "noopener,noreferrer");
 
             this.notification.add(
-                _t("PDF downloaded! WhatsApp opened. Please attach or drag & drop the PDF into the chat."),
-                { type: "success" }
+                _t("PDF sharing is not supported by this browser. The document PDF has been downloaded so you can attach it manually in WhatsApp."),
+                { type: "warning" }
             );
         } catch (err) {
             console.warn("pos_retail: WhatsApp share error", err);
-            if (win && !win.closed) {
-                win.close();
-            }
             this.notification.add(
-                _t("Could not share on WhatsApp. Please check network connection."),
-                { type: "warning" }
+                err?.message || _t("Could not generate or share document PDF. Please check connection."),
+                { type: "danger" }
             );
         }
     }

@@ -202,6 +202,8 @@ class PosRetailPortalLedger(http.Controller):
         env = request.env
         token = get_security_token(env, model_name, res_id)
         base_url = request.httprequest.url_root.rstrip('/')
+        if base_url.startswith('http://') and not ('localhost' in base_url or '127.0.0.1' in base_url):
+            base_url = 'https://' + base_url[7:]
         if model_name == 'pos.order':
             order = env['pos.order'].sudo().browse(res_id)
             if order.exists() and order.access_token:
