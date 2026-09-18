@@ -4,6 +4,7 @@ import { patch } from "@web/core/utils/patch";
 import { useState } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
 import { useService } from "@web/core/utils/hooks";
+import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
 import { openWhatsAppChoice } from "../backend/whatsapp_choice_dialog";
 
 // Send the receipt over WhatsApp.
