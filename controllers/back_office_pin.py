@@ -76,14 +76,17 @@ class PosRetailBackOfficePin(http.Controller):
     @http.route('/pos_retail/back_office/pin', type='jsonrpc', auth='user')
     def open_with_pin(self, config_id, employee_id, pin):
         config = request.env['pos.config'].sudo().browse(int(config_id)).exists()
-        if not config or not config.pos_retail_kiosk_token:
+        if not config:
             return {'ok': False, 'message': _("This till is not set up for it.")}
 
-        # The device must already be this till. Checked against the session,
-        # not against anything the browser sends: a request can claim any
-        # config id it likes, but it cannot claim to be signed in as an
-        # account it is not.
-        if request.session.uid != config.pos_retail_kiosk_user_id.id:
+        company_id = config.company_id.id
+        redirect_url = f'/odoo?cids={company_id}'
+
+        # If the browser is already signed into an internal backend user account (e.g. Admin),
+        # return directly without trapping them in a kiosk-only restriction:
+        if not config.pos_retail_kiosk_token or (config.pos_retail_kiosk_user_id and request.session.uid != config.pos_retail_kiosk_user_id.id):
+            if request.env.user and request.env.user.has_group('base.group_user'):
+                return {'ok': True, 'redirect': redirect_url}
             return {'ok': False, 'message': _(
                 "The back office can only be opened this way from the till itself.")}
 
@@ -134,7 +137,7 @@ class PosRetailBackOfficePin(http.Controller):
             'config_id': config.id,
             'token': config.pos_retail_kiosk_token,
         }
-        return {'ok': True, 'redirect': '/odoo'}
+        return {'ok': True, 'redirect': redirect_url}
 
     @http.route('/pos_retail/back_to_till', type='http', auth='user', methods=['GET'])
     def back_to_till(self, **kwargs):

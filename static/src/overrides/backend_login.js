@@ -3,22 +3,30 @@
 import { patch } from "@web/core/utils/patch";
 import { LoginScreen } from "@point_of_sale/app/screens/login_screen/login_screen";
 
-// pos_hr's own "Back to Backend" requires selecting a cashier whose employee
-// record happens to be linked to the currently authenticated web user -- if
-// no employee is linked to that particular login (or the wrong one is
-// picked), it fails with "Only the cashier linked to the logged-in user
-// (X) can proceed to the Backend." and, worse, first pops up a list of every
-// employee just to find out. For an admin managing multiple backend logins,
-// re-authenticating with real credentials is both simpler and safer than
-// trusting whichever web session happens to be cached in the terminal's
-// browser. Log out and land on the real Odoo login page instead -- same
-// route (/web/session/logout) as the standard "Log out" menu item.
+// Navigate back to the Admin Panel / Control Center cleanly.
+//
+// Previously, if module_pos_hr was enabled and !this.pos.login, it forcibly logged
+// the user out to /web/session/logout. That destroyed the admin session.
+// Instead, if the browser is already signed into a user account with backend access,
+// we navigate directly back to /odoo with active branch scoping preserved.
 patch(LoginScreen.prototype, {
     async clickBack() {
-        if (this.pos.config.module_pos_hr && !this.pos.login) {
-            window.location.href = "/web/session/logout";
+        const kioskUserId = this.pos.config.pos_retail_kiosk_user_id?.[0] || this.pos.config.pos_retail_kiosk_user_id;
+        const isKiosk = kioskUserId && this.pos.user?.id === kioskUserId;
+        if (isKiosk) {
+            window.location.href = "/web/login";
             return;
         }
-        return super.clickBack();
+        if (typeof this.pos.redirectToBackend === "function") {
+            this.pos.redirectToBackend();
+            return;
+        }
+        const companyId =
+            this.pos.company?.id ||
+            this.pos.config?.company_id?.[0] ||
+            this.pos.config?.company_id?.id ||
+            this.pos.config?.company_id;
+        const cidsParam = companyId ? `?cids=${companyId}` : "";
+        window.location.href = `/odoo${cidsParam}`;
     },
 });

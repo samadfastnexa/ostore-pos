@@ -10,6 +10,7 @@ import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { PartnerList } from "@point_of_sale/app/screens/partner_list/partner_list";
 import { ReceivePaymentPopup } from "./receive_payment_popup";
 import { PaymentReceiptPopup } from "./payment_receipt_popup";
+import { openWhatsAppChoice } from "../backend/whatsapp_choice_dialog";
 
 
 // Unified Customer & Vendor Profile + Ledger + Transaction History for POS Cashiers.
@@ -536,15 +537,11 @@ export class PosRetailCustomerProfile extends Component {
                 console.warn("Automatic PDF download failed:", dlErr);
             }
 
-            // Open WhatsApp Web directly to customer's chat
-            const waUrl = phone
-                ? `https://web.whatsapp.com/send?phone=${phone}`
-                : `https://web.whatsapp.com/`;
-            window.open(waUrl, "_blank", "noopener,noreferrer");
-
+            // Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
+            await openWhatsAppChoice(this.dialog, phone);
             this.notification.add(
-                _t("PDF sharing is not supported by this browser. The PDF statement has been downloaded so you can attach it manually in WhatsApp."),
-                { type: "warning" }
+                _t("The ledger PDF has been downloaded so you can attach it in WhatsApp."),
+                { type: "info" }
             );
         } catch (err) {
             console.error("WhatsApp share failed:", err);

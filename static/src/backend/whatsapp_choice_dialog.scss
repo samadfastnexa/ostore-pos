@@ -1,0 +1,10 @@
+.pos-retail-wa-choice-modal {
+    button {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        border-radius: 8px;
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+        }
+    }
+}

@@ -13,12 +13,14 @@ import { ListController } from "@web/views/list/list_controller";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 import { posRetailReportRegistry } from "./report_registry";
+import { openWhatsAppChoice } from "./whatsapp_choice_dialog";
 
 patch(ListController.prototype, {
     setup() {
         super.setup(...arguments);
         this._posRetailActionService = useService("action");
         this._posRetailNotification = useService("notification");
+        this._posRetailDialog = useService("dialog");
     },
 
     // ── Helpers ──────────────────────────────────────────────────────────
@@ -126,12 +128,11 @@ patch(ListController.prototype, {
                 console.warn("pos_retail: bulk PDF download failed", dlErr);
             }
 
-            // 3. Open WhatsApp Web
-            window.open("https://web.whatsapp.com/", "_blank", "noopener,noreferrer");
-
+            // 3. Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
+            await openWhatsAppChoice(this._posRetailDialog, "");
             this.notification.add(
-                _t("PDF sharing is not supported by this browser. The bulk PDF has been downloaded so you can attach it manually in WhatsApp."),
-                { type: "warning" }
+                _t("The bulk PDF has been downloaded so you can attach it in WhatsApp."),
+                { type: "info" }
             );
         } catch (err) {
             console.warn("pos_retail: bulk WhatsApp share error", err);

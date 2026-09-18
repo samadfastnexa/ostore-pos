@@ -5,6 +5,7 @@ import { Dialog } from "@web/core/dialog/dialog";
 import { _t } from "@web/core/l10n/translation";
 import { usePos } from "@point_of_sale/app/hooks/pos_hook";
 import { useService } from "@web/core/utils/hooks";
+import { openWhatsAppChoice } from "../backend/whatsapp_choice_dialog";
 
 /**
  * Customer Payment Receipt Modal with complete audit breakdown, print support,
@@ -20,6 +21,7 @@ export class PaymentReceiptPopup extends Component {
 
     setup() {
         this.pos = usePos();
+        this.dialog = useService("dialog");
         this.notification = useService("notification");
         this.state = useState({ sharingWa: false });
     }
@@ -181,15 +183,11 @@ export class PaymentReceiptPopup extends Component {
                 console.warn("pos_retail: automatic PDF download failed", dlErr);
             }
 
-            // 3. Open WhatsApp Web directly to customer's chat
-            const url = phone
-                ? `https://web.whatsapp.com/send?phone=${phone}`
-                : `https://web.whatsapp.com/`;
-            window.open(url, "_blank", "noopener,noreferrer");
-
+            // 3. Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
+            await openWhatsAppChoice(this.dialog, phone);
             this.notification.add(
-                _t("PDF sharing is not supported by this browser. The payment receipt has been downloaded so you can attach it manually in WhatsApp."),
-                { type: "warning" }
+                _t("The payment receipt PDF has been downloaded so you can attach it in WhatsApp."),
+                { type: "info" }
             );
         } catch (err) {
             console.warn("pos_retail: payment receipt WhatsApp share failed", err);

@@ -50,7 +50,7 @@ patch(Navbar.prototype, {
         } catch (error) {
             result = {
                 ok: false,
-                message: error?.data?.message || error?.message || _("Please try again."),
+                message: error?.data?.message || error?.message || _t("Please try again."),
             };
         }
 

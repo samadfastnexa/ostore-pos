@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.7.33.0',
+    'version': '19.0.7.34.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -173,6 +173,9 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/backend/whatsapp_share_dialog.js',
             'pos_retail/static/src/backend/whatsapp_share_dialog.xml',
             'pos_retail/static/src/backend/whatsapp_share_dialog.scss',
+            'pos_retail/static/src/backend/whatsapp_choice_dialog.js',
+            'pos_retail/static/src/backend/whatsapp_choice_dialog.xml',
+            'pos_retail/static/src/backend/whatsapp_choice_dialog.scss',
             'pos_retail/static/src/backend/bulk_actions.js',
             'pos_retail/static/src/backend/bulk_actions.xml',
             'pos_retail/static/src/backend/bulk_actions.scss',
@@ -191,6 +194,10 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/report/pos_retail_receipt_report.scss',
         ],
         'point_of_sale._assets_pos': [
+            'pos_retail/static/src/overrides/pos_store_navigation.js',
+            'pos_retail/static/src/backend/whatsapp_choice_dialog.js',
+            'pos_retail/static/src/backend/whatsapp_choice_dialog.xml',
+            'pos_retail/static/src/backend/whatsapp_choice_dialog.scss',
             'pos_retail/static/src/overrides/receipt_screen_guard.js',
             'pos_retail/static/src/receipt/receipt.js',
             'pos_retail/static/src/receipt/receipt.xml',

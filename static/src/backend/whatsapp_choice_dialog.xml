@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.WhatsAppChoiceDialog">
+        <Dialog title="'Open WhatsApp'" size="'sm'">
+            <div class="pos-retail-wa-choice-modal text-center p-3">
+                <div class="mb-3">
+                    <i class="fa fa-whatsapp text-success" style="font-size: 3.5rem;"/>
+                </div>
+                <h5 class="fw-bold mb-2">How would you like to open WhatsApp?</h5>
+                <p t-if="props.phone" class="text-muted small mb-4">
+                    Sending to: <span class="badge bg-light text-dark font-monospace fs-6 px-2 py-1"><t t-esc="props.phone"/></span>
+                </p>
+                <div class="d-grid gap-3 my-3">
+                    <button type="button" class="btn btn-outline-success btn-lg d-flex align-items-center justify-content-start p-3 text-start shadow-sm"
+                            t-on-click="selectWeb">
+                        <i class="fa fa-globe fa-2x me-3 text-success"/>
+                        <div>
+                            <div class="fw-bold fs-6 text-dark">WhatsApp Web</div>
+                            <div class="small text-muted">Open in browser tab</div>
+                        </div>
+                    </button>
+                    <button type="button" class="btn btn-success btn-lg d-flex align-items-center justify-content-start p-3 text-start shadow-sm text-white"
+                            t-on-click="selectApp">
+                        <i class="fa fa-mobile fa-2x me-3 text-white"/>
+                        <div>
+                            <div class="fw-bold fs-6 text-white">WhatsApp App</div>
+                            <div class="small text-white-50">Open WhatsApp Desktop / Mobile App</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary w-100" t-on-click="props.close">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

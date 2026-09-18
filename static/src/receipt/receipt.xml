@@ -247,6 +247,8 @@
                      class="pos-retail-receipt-social" style="font-size:80%;"
                      t-esc="order.config.pos_retail_receipt_social"/>
             </div>
+            <!-- Physical thermal roll auto-cutter feed buffer: advances paper past cutter knife -->
+            <div class="pos-retail-receipt-cutter-feed" aria-hidden="true"/>
         </xpath>
     </t>
 

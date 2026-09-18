@@ -3,7 +3,8 @@
 import { patch } from "@web/core/utils/patch";
 import { useState } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
-import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
+import { useService } from "@web/core/utils/hooks";
+import { openWhatsAppChoice } from "../backend/whatsapp_choice_dialog";
 
 // Send the receipt over WhatsApp.
 //
@@ -20,6 +21,7 @@ import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt
 patch(ReceiptScreen.prototype, {
     setup() {
         super.setup(...arguments);
+        this.dialog = useService("dialog");
         // Rendering the PDF takes wkhtmltopdf a few seconds, during which the
         // button used to sit inert -- so people clicked it again and again,
         // queueing a render per click. Reactive busy flag: the template swaps
@@ -225,15 +227,11 @@ patch(ReceiptScreen.prototype, {
                 console.warn("pos_retail: automatic PDF download failed", dlErr);
             }
 
-            // 4. Open WhatsApp Web directly to customer's chat
-            const url = number
-                ? `https://web.whatsapp.com/send?phone=${number}`
-                : `https://web.whatsapp.com/`;
-            window.open(url, "_blank", "noopener,noreferrer");
-
+            // 4. Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
+            await openWhatsAppChoice(this.dialog || this.env.services.dialog, number);
             this.notification.add(
-                _t("PDF sharing is not supported by this browser. The PDF receipt has been downloaded so you can attach it manually in WhatsApp."),
-                { type: "warning" }
+                _t("The PDF receipt has been downloaded so you can attach it in WhatsApp."),
+                { type: "info" }
             );
         } catch (err) {
             console.error("pos_retail: WhatsApp receipt share failed", err);

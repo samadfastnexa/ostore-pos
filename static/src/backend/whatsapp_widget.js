@@ -6,6 +6,7 @@ import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 import { standardWidgetProps } from "@web/views/widgets/standard_widget_props";
 import { formatMonetary } from "@web/views/fields/formatters";
+import { openWhatsAppChoice } from "./whatsapp_choice_dialog";
 
 // "Send on WhatsApp" for backend documents: quotations, purchase orders,
 // invoices, payment receipts, delivery slips and the khata statement.
@@ -32,6 +33,7 @@ export class PosRetailWhatsappWidget extends Component {
 
     setup() {
         this.orm = useService("orm");
+        this.dialog = useService("dialog");
         this.notification = useService("notification");
         // The PDF render takes seconds; without feedback the button looks
         // dead and gets clicked repeatedly, queueing a render per click.
@@ -220,15 +222,11 @@ export class PosRetailWhatsappWidget extends Component {
                 console.warn("pos_retail: automatic PDF download failed", dlErr);
             }
 
-            // 3. Open WhatsApp Web directly to customer's chat
-            const url = number
-                ? `https://web.whatsapp.com/send?phone=${number}`
-                : `https://web.whatsapp.com/`;
-            window.open(url, "_blank", "noopener,noreferrer");
-
+            // 3. Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
+            await openWhatsAppChoice(this.dialog, number);
             this.notification.add(
-                _t("PDF sharing is not supported by this browser. The document PDF has been downloaded so you can attach it manually in WhatsApp."),
-                { type: "warning" }
+                _t("The document PDF has been downloaded so you can attach it in WhatsApp."),
+                { type: "info" }
             );
         } catch (err) {
             console.warn("pos_retail: WhatsApp share error", err);
