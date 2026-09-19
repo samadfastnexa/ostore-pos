@@ -6,19 +6,18 @@
         <xpath expr="//div[hasclass('product-name')]" position="inside">
             <div t-if="props.onDiscount and line.qty &gt; 0 and !line.refunded_orderline_id and !line.isGlobalDiscountLine?.()"
                  class="pos-retail-line-actions d-inline-flex align-items-center gap-1 ms-2">
-                <button class="pos-retail-line-disc-btn btn btn-sm py-0 px-2 shadow-sm"
-                        t-att-class="line.discount ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'"
-                        style="font-size: 0.75rem; line-height: 1.4; border-radius: 4px;"
+                <button class="pos-retail-line-disc-btn btn"
+                        t-att-class="line.discount ? 'pos-retail-line-disc-btn--active' : 'pos-retail-line-disc-btn--idle'"
                         title="Apply or edit product discount"
                         t-on-pointerdown.stop="() => {}"
                         t-on-pointerup.stop="() => {}"
                         t-on-click.stop="() => props.onDiscount(line)">
-                    <i class="fa fa-percent me-1"/>
+                    <i t-attf-class="fa {{ line.discount ? 'fa-tag' : 'fa-percent' }} me-1"/>
                     <t t-if="line.discount">
                         <t t-esc="line.discount"/>% OFF
                     </t>
                     <t t-else="">
-                        Discount
+                        % Discount
                     </t>
                 </button>
             </div>
