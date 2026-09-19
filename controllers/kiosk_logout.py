@@ -69,8 +69,15 @@ class PosRetailSession(Session):
         # very device the cashier has to sell from next.
         pin_till = request.session.get('pos_retail_pin_till')
         if pin_till:
+            token = pin_till.get('token')
+            config_id = pin_till.get('config_id')
+            config = request.env['pos.config'].sudo().browse(int(config_id or 0)).exists() if config_id else None
             super().logout(redirect=redirect)
-            return request.redirect('/pos_retail/kiosk/%s' % pin_till['token'])
+            if config and config.pos_retail_kiosk_user_id and token:
+                return request.redirect('/pos_retail/kiosk/%s' % token)
+            elif config:
+                return request.redirect('/pos/ui/%s' % config.id)
+            return request.redirect('/web/login')
 
         response = super().logout(redirect=redirect)
         if not is_till_account:

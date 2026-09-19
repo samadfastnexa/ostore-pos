@@ -79,16 +79,28 @@ class PosRetailBackOfficePin(http.Controller):
         if not config:
             return {'ok': False, 'message': _("This till is not set up for it.")}
 
-        company_id = config.company_id.id
-        redirect_url = f'/odoo?cids={company_id}'
+        employee = request.env['hr.employee'].sudo().browse(int(employee_id)).exists()
+        if not employee:
+            return {'ok': False, 'message': _("Employee not found.")}
 
-        # If the browser is already signed into an internal backend user account (e.g. Admin),
-        # return directly without trapping them in a kiosk-only restriction:
-        if not config.pos_retail_kiosk_token or (config.pos_retail_kiosk_user_id and request.session.uid != config.pos_retail_kiosk_user_id.id):
-            if request.env.user and request.env.user.has_group('base.group_user'):
-                return {'ok': True, 'redirect': redirect_url}
+        user = employee.user_id
+        if not user:
             return {'ok': False, 'message': _(
-                "The back office can only be opened this way from the till itself.")}
+                "%(name)s has no login of their own, so there is no back office to "
+                "open for them. A login is added under Staff & Access > Logins.",
+                name=employee.name)}
+
+        if not employee.pin:
+            return {'ok': False, 'message': _(
+                "%(name)s has no PIN code set. Set a PIN in Staff & Access > Employees.",
+                name=employee.name)}
+
+        allowed = request.env['pos.retail.access.permission'] \
+            ._pos_retail_user_has_till_capability(user, '_can_back_office')
+        if not allowed and not user.has_group('base.group_system') and not user.has_group('point_of_sale.group_pos_manager'):
+            return {'ok': False, 'message': _(
+                "%(name)s is not allowed to open the back office from the till. It is "
+                "granted under Staff & Access > Roles & Permissions.", name=employee.name)}
 
         remaining = self._locked_for(config)
         if remaining:
@@ -96,23 +108,8 @@ class PosRetailBackOfficePin(http.Controller):
                 "Too many wrong PINs. Try again in %(minutes)s minute(s).",
                 minutes=max(1, remaining // 60))}
 
-        employee = request.env['hr.employee'].sudo().browse(int(employee_id)).exists()
-        user = employee.user_id if employee else None
-        if not user:
-            # Not counted as a failure: it is a setup gap, not a guess, and
-            # locking the till because somebody has no login would punish the
-            # wrong thing.
-            return {'ok': False, 'message': _(
-                "%(name)s has no login of their own, so there is no back office to "
-                "open for them. A login is added under Staff & Access > Logins.",
-                name=employee.name if employee else _("This person"))}
-
-        allowed = request.env['pos.retail.access.permission'] \
-            ._pos_retail_user_has_till_capability(user, '_can_back_office')
-        if not allowed:
-            return {'ok': False, 'message': _(
-                "%(name)s is not allowed to open the back office from the till. It is "
-                "granted under Staff & Access > Roles & Permissions.", name=employee.name)}
+        if not config.pos_retail_kiosk_token:
+            config.action_pos_retail_generate_kiosk_token()
 
         credential = {
             'type': 'pos_retail_pin',
@@ -120,7 +117,7 @@ class PosRetailBackOfficePin(http.Controller):
             'employee_id': employee.id,
             'config_id': config.id,
             'kiosk_token': config.pos_retail_kiosk_token,
-            'pin': pin,
+            'pin': str(pin or '').strip(),
         }
         try:
             request.session.authenticate(request.env, credential)
@@ -129,15 +126,28 @@ class PosRetailBackOfficePin(http.Controller):
             return {'ok': False, 'message': _("Wrong PIN.")}
 
         self._clear_failures(config)
-        # Set AFTER authenticating, so it belongs to the cashier's session and
-        # not to the till's one that has just been replaced. It is what lets
-        # "Back to Till" and an ordinary Log out put this device back on its
-        # till instead of stranding it on a login page.
+
+        # Scoped company: user's branch / assigned company
+        user_cids = user.company_ids.ids
+        if config.company_id.id in user_cids:
+            active_cid = config.company_id.id
+        elif user.company_id and user.company_id.id in user_cids:
+            active_cid = user.company_id.id
+        elif user_cids:
+            active_cid = user_cids[0]
+        else:
+            active_cid = config.company_id.id
+
         request.session[PIN_SESSION_KEY] = {
             'config_id': config.id,
             'token': config.pos_retail_kiosk_token,
         }
-        return {'ok': True, 'redirect': redirect_url}
+
+        if hasattr(request.session, 'context') and isinstance(request.session.context, dict):
+            request.session.context['allowed_company_ids'] = [active_cid]
+
+        redirect_url = f'/odoo?cids={active_cid}'
+        return {'ok': True, 'redirect': redirect_url, 'cids': str(active_cid)}
 
     @http.route('/pos_retail/back_to_till', type='http', auth='user', methods=['GET'])
     def back_to_till(self, **kwargs):
@@ -152,5 +162,14 @@ class PosRetailBackOfficePin(http.Controller):
         marker = request.session.get(PIN_SESSION_KEY)
         if not marker:
             return request.redirect('/odoo')
-        request.session.logout(keep_db=True)
-        return request.redirect('/pos_retail/kiosk/%s' % marker['token'])
+        token = marker.get('token')
+        config_id = marker.get('config_id')
+        config = request.env['pos.config'].sudo().browse(int(config_id or 0)).exists() if config_id else None
+
+        request.session.pop(PIN_SESSION_KEY, None)
+        if config and config.pos_retail_kiosk_user_id and token:
+            request.session.logout(keep_db=True)
+            return request.redirect('/pos_retail/kiosk/%s' % token)
+        elif config:
+            return request.redirect('/pos/ui/%s' % config.id)
+        return request.redirect('/odoo')

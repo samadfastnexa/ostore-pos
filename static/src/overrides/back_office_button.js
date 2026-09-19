@@ -61,6 +61,12 @@ patch(Navbar.prototype, {
             });
             return;
         }
+
+        if (result.cids) {
+            // Overwrite any old multi-company cookie with the user's active branch
+            document.cookie = `cids=${result.cids}; path=/; max-age=31536000`;
+        }
+
         // A full navigation, not a client-side route. The browser now holds a
         // different user's session, and the POS in memory was loaded for the
         // till account; carrying on inside it would mix the two.

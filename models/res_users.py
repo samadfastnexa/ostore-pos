@@ -496,22 +496,31 @@ class ResUsers(models.Model):
         config = self.env['pos.config'].sudo().browse(
             int(credential.get('config_id') or 0)).exists()
         token = (credential.get('kiosk_token') or '').strip()
-        if not config or not token or not hmac.compare_digest(
-                token, config.pos_retail_kiosk_token or ''):
+        if not config:
             raise AccessDenied(_("This PIN sign-in did not come from a till."))
+
+        if config.pos_retail_kiosk_token:
+            if not token or not hmac.compare_digest(token, config.pos_retail_kiosk_token):
+                raise AccessDenied(_("This PIN sign-in did not come from a till."))
 
         employee = self.env['hr.employee'].sudo().browse(
             int(credential.get('employee_id') or 0)).exists()
         if not employee or employee.user_id != self:
             raise AccessDenied(_("That PIN does not belong to this person."))
 
-        offered = self.env['hr.employee'].sudo().search(
-            config._employee_domain(config.current_user_id.id))
-        if employee not in offered:
+        # Verify employee belongs to this company / till hierarchy
+        if employee.company_id and config.company_id:
+            allowed_companies = config.company_id | config.company_id.child_ids | config.company_id.parent_id
+            if employee.company_id not in allowed_companies:
+                raise AccessDenied(_("That person does not work at this till."))
+
+        allowed_employees = config.basic_employee_ids | config.advanced_employee_ids | config.minimal_employee_ids
+        if allowed_employees and employee not in allowed_employees:
             raise AccessDenied(_("That person does not work at this till."))
 
-        pin = str(credential.get('pin') or '')
-        if not employee.pin or not hmac.compare_digest(pin, employee.pin):
+        pin = str(credential.get('pin') or '').strip()
+        emp_pin = str(employee.pin or '').strip()
+        if not emp_pin or not hmac.compare_digest(pin, emp_pin):
             raise AccessDenied(_("Wrong PIN."))
 
         return {'uid': self.id, 'auth_method': 'pos_retail_pin', 'mfa': 'skip'}
