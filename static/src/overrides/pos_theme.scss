@@ -298,38 +298,172 @@ $o_retail_blue: #2563eb;
 }
 
 // ============================================================================
-// Product screen: a compact cart action pad.
-//
-// Core sizes this block for a dedicated full-height till monitor -- fs-3 numpad
-// keys, py-3 on Pay and a hard min-height:70px in product_screen.scss. On a
-// laptop that pad swallows the cart list, so the cashier ends up scrolling to
-// see the very lines they are ringing up. Trimmed to roughly two thirds here.
-// The numpad keys still land on Bootstrap's 44px floor (our own .btn-lg rule),
-// which is the accepted minimum touch target, so nothing becomes fiddly.
+// Product screen: ultra-compact cart & action pad for maximum orders visibility.
+// Squeezes Total, Control buttons, Numpad, and Pay button vertically.
 // ============================================================================
 .pos .product-screen {
-    .control-buttons .btn {
-        padding-top: .4rem !important;
-        padding-bottom: .4rem !important;
-    }
+    .leftpane {
+        padding-bottom: 2px !important;
 
-    .numpad .numpad-button {
-        font-size: 1.15rem !important;
-        line-height: 1.3 !important;
-        padding-top: .3rem !important;
-        padding-bottom: .3rem !important;
-    }
+        // Order lines list in cart: clean, compact line spacing so more items fit
+        .order-container {
+            .orderline {
+                padding: 4px 8px !important;
+                min-height: 32px !important;
 
-    // Overrides core's own min-height:70px, not just the py-3 utility.
-    .pay-order-button {
-        min-height: 48px !important;
-        padding-top: .5rem !important;
-        padding-bottom: .5rem !important;
-        font-size: 1.1rem;
-    }
+                .line-details {
+                    line-height: 1.25 !important;
+                }
 
-    .subpads {
-        gap: .4rem !important;
+                .product-name {
+                    font-size: 0.92rem !important;
+                }
+
+                .price {
+                    font-size: 0.92rem !important;
+                }
+
+                .info-list {
+                    font-size: 0.8rem !important;
+                    margin-top: 1px !important;
+                    margin-bottom: 1px !important;
+                }
+            }
+        }
+
+        // 1. Total Bar / Order Summary at bottom of cart
+        .order-summary {
+            padding: 4px 10px !important;
+
+            .tax-info {
+                font-size: 0.76rem !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                line-height: 1.1 !important;
+            }
+
+            > .fs-3 {
+                font-size: 1.15rem !important;
+                line-height: 1.2 !important;
+                padding-top: 3px !important;
+                margin-top: 0 !important;
+                border-top: 1px dashed rgba(0, 0, 0, 0.18) !important;
+            }
+        }
+
+        // 2. Pads outer wrapper
+        .pads {
+            padding-left: 6px !important;
+            padding-right: 6px !important;
+            padding-bottom: 2px !important;
+        }
+
+        // 3. Control Buttons row (Walk-in Customer, Ledger, Note, Upload, More)
+        .control-buttons {
+            padding-top: 3px !important;
+            gap: 4px !important;
+
+            .btn, button {
+                min-height: 32px !important;
+                max-height: 34px !important;
+                height: 32px !important;
+                padding: 2px 8px !important;
+                font-size: 0.85rem !important;
+                line-height: 1.15 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+
+                i, .fa, .oi {
+                    font-size: 0.85rem !important;
+                    margin-right: 3px !important;
+                }
+
+                span, div {
+                    font-size: 0.85rem !important;
+                    line-height: 1.15 !important;
+                }
+            }
+
+            .set-partner {
+                font-size: 0.85rem !important;
+                padding: 2px 8px !important;
+                min-height: 32px !important;
+                height: 32px !important;
+            }
+
+            .pos-retail-profile-btn {
+                margin-left: 0 !important;
+                min-height: 32px !important;
+                max-height: 34px !important;
+                height: 32px !important;
+                padding: 2px 6px !important;
+                font-size: 0.78rem !important;
+                line-height: 1.1 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+
+                i {
+                    font-size: 0.85rem !important;
+                }
+                span {
+                    font-size: 0.75rem !important;
+                }
+            }
+        }
+
+        // 4. Subpads wrapper (Numpad + Actionpad)
+        .subpads {
+            padding-top: 3px !important;
+            gap: 3px !important;
+        }
+
+        // 5. Numpad: compact touch-friendly keys (4 rows)
+        .numpad {
+            gap: 3px !important;
+
+            .numpad-button {
+                min-height: 34px !important;
+                max-height: 36px !important;
+                height: 34px !important;
+                font-size: 1.05rem !important;
+                line-height: 1 !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                border-radius: 4px !important;
+
+                svg, i {
+                    font-size: 0.95rem !important;
+                }
+            }
+        }
+
+        // 6. Actionpad: Payment button
+        .actionpad {
+            gap: 0 !important;
+            margin-top: 2px !important;
+
+            .validation {
+                padding: 0 !important;
+            }
+
+            .pay-order-button {
+                min-height: 38px !important;
+                max-height: 40px !important;
+                height: 38px !important;
+                padding: 4px 12px !important;
+                font-size: 1.05rem !important;
+                font-weight: 700 !important;
+                border-radius: 6px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-shadow: 0 4px 12px -4px rgba($o_retail_green, 0.6) !important;
+            }
+        }
     }
 }
 
