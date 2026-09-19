@@ -184,7 +184,21 @@ class PosRetailBackOfficePin(http.Controller):
         if hasattr(request.session, 'context') and isinstance(request.session.context, dict):
             request.session.context['allowed_company_ids'] = [active_cid]
 
-        redirect_url = f'/odoo?cids={active_cid}'
+        # Determine landing URL cleanly for this specific user
+        redirect_url = None
+        if user.action_id:
+            redirect_url = f'/odoo/action-{user.action_id.id}?cids={active_cid}'
+        else:
+            dashboard = request.env.ref('pos_retail.action_pos_retail_dashboard', raise_if_not_found=False)
+            has_dash = request.env['pos.retail.access.permission'].sudo().search_count([
+                ('category', '=', 'dashboard'),
+                ('group_id', 'in', user.all_group_ids.ids)
+            ])
+            if dashboard and (has_dash or user.has_group('point_of_sale.group_pos_manager') or user.has_group('base.group_system')):
+                redirect_url = f'/odoo/action-{dashboard.id}?cids={active_cid}'
+            else:
+                redirect_url = f'/odoo?cids={active_cid}'
+
         return {'ok': True, 'redirect': redirect_url, 'cids': str(active_cid)}
 
     @http.route('/pos_retail/back_to_till', type='http', auth='user', methods=['GET'])

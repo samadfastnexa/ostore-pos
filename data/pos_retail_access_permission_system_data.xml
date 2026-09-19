@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============ Staff & Access ============ -->
+
+    <record id="perm_staff_view" model="pos.retail.access.permission">
+        <field name="name">View Staff &amp; Employees (Read-Only)</field>
+        <field name="category">staff</field>
+        <field name="sequence">10</field>
+        <field name="description">Read-only access to employee profiles, department lists, and contact info in the Staff &amp; Access app. Does not allow adding staff or setting till PINs.</field>
+    </record>
+    <record id="access_perm_staff_view_employee" model="ir.model.access">
+        <field name="name">Permission View Staff: hr.employee</field>
+        <field name="model_id" ref="hr.model_hr_employee"/>
+        <field name="group_id" ref="perm_staff_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_staff_view_department" model="ir.model.access">
+        <field name="name">Permission View Staff: hr.department</field>
+        <field name="model_id" ref="hr.model_hr_department"/>
+        <field name="group_id" ref="perm_staff_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- Update perm_manage_staff category to staff -->
+    <record id="perm_manage_staff" model="pos.retail.access.permission">
+        <field name="category">staff</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <record id="perm_staff_logins" model="pos.retail.access.permission">
+        <field name="name">Manage User Logins &amp; Passwords</field>
+        <field name="category">staff</field>
+        <field name="sequence">30</field>
+        <field name="implied_ids" eval="[(6, 0, [ref('base.group_erp_manager')])]"/>
+        <field name="description">Create and edit user logins, set passwords, and assign users to branches under Staff &amp; Access &gt; Logins.</field>
+    </record>
+    <record id="access_perm_staff_logins_users" model="ir.model.access">
+        <field name="name">Permission Manage User Logins: res.users</field>
+        <field name="model_id" ref="base.model_res_users"/>
+        <field name="group_id" ref="perm_staff_logins_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_staff_roles" model="pos.retail.access.permission">
+        <field name="name">Manage Roles &amp; Permissions</field>
+        <field name="category">staff</field>
+        <field name="sequence">40</field>
+        <field name="description">Create and modify shop roles, and configure which permissions each role holds under Staff &amp; Access &gt; Roles &amp; Permissions.</field>
+    </record>
+    <record id="access_perm_staff_roles_role" model="ir.model.access">
+        <field name="name">Permission Manage Roles: pos.retail.access.role</field>
+        <field name="model_id" ref="model_pos_retail_access_role"/>
+        <field name="group_id" ref="perm_staff_roles_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    <record id="access_perm_staff_roles_perm" model="ir.model.access">
+        <field name="name">Permission Manage Roles: pos.retail.access.permission</field>
+        <field name="model_id" ref="model_pos_retail_access_permission"/>
+        <field name="group_id" ref="perm_staff_roles_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ============ System Settings & Administration ============ -->
+
+    <record id="perm_settings" model="pos.retail.access.permission">
+        <field name="name">Access System &amp; General Settings</field>
+        <field name="category">administration</field>
+        <field name="sequence">10</field>
+        <field name="implied_ids" eval="[(6, 0, [ref('base.group_system')])]"/>
+        <field name="description">Access to General Settings, technical configurations and system-wide options. Allows modifying core configuration.</field>
+    </record>
+
+    <record id="perm_apps" model="pos.retail.access.permission">
+        <field name="name">Manage Apps &amp; Modules</field>
+        <field name="category">administration</field>
+        <field name="sequence">20</field>
+        <field name="implied_ids" eval="[(6, 0, [ref('base.group_system')])]"/>
+        <field name="description">Access to the Apps module installer to view, install and upgrade Odoo applications and modules.</field>
+    </record>
+
+    <!-- ============ Products (Read-Only) ============ -->
+
+    <record id="perm_products_view" model="pos.retail.access.permission">
+        <field name="name">View Products (Read-Only)</field>
+        <field name="category">products</field>
+        <field name="sequence">5</field>
+        <field name="description">View products, variants, categories and brands in the catalog without permission to add, edit or delete products.</field>
+    </record>
+    <record id="access_perm_products_view_template" model="ir.model.access">
+        <field name="name">Permission View Products: product.template</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="group_id" ref="perm_products_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_products_view_product" model="ir.model.access">
+        <field name="name">Permission View Products: product.product</field>
+        <field name="model_id" ref="product.model_product_product"/>
+        <field name="group_id" ref="perm_products_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_products_view_brand" model="ir.model.access">
+        <field name="name">Permission View Products: product.brand</field>
+        <field name="model_id" ref="model_product_brand"/>
+        <field name="group_id" ref="perm_products_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- ============ Store Expenses (Read-Only) ============ -->
+
+    <record id="perm_expenses_view" model="pos.retail.access.permission">
+        <field name="name">View Store Expenses (Read-Only)</field>
+        <field name="category">expenses</field>
+        <field name="sequence">5</field>
+        <field name="description">Read-only access to store operating expenses and expense analysis reports without permission to record or change expenses.</field>
+    </record>
+    <record id="access_perm_expenses_view_expense" model="ir.model.access">
+        <field name="name">Permission View Store Expenses: pos.retail.expense</field>
+        <field name="model_id" ref="model_pos_retail_expense"/>
+        <field name="group_id" ref="perm_expenses_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+</odoo>

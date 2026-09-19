@@ -72,6 +72,17 @@ patch(Navbar.prototype, {
             document.cookie = `cids=${result.cids}; path=/; max-age=31536000`;
         }
 
+        // Clear sessionStorage so any cached actions from previous admin sessions
+        // (such as res.config.settings action-624) are completely wiped out
+        // and cannot cause Access Error popups upon landing.
+        try {
+            if (window.sessionStorage) {
+                window.sessionStorage.clear();
+            }
+        } catch (_e) {
+            // Ignore if storage access is restricted
+        }
+
         // A full navigation, not a client-side route. The browser now holds a
         // different user's session, and the POS in memory was loaded for the
         // till account; carrying on inside it would mix the two.

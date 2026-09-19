@@ -68,6 +68,8 @@ class PosRetailAccessPermission(models.Model):
             ('reporting', "Reporting"),
             ('dashboard', "Dashboard"),
             ('configuration', "Configuration"),
+            ('staff', "Staff & Access"),
+            ('administration', "System Settings"),
         ],
         required=True, default='products', index=True,
         help="Which part of the business this permission belongs to. It only "

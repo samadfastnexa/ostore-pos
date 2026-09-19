@@ -118,6 +118,16 @@
                                            widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'configuration')]"/>
                                 </group>
+                                <group string="Staff &amp; Access">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="pos_retail_checkboxes_select_all"
+                                           domain="[('category', '=', 'staff')]"/>
+                                </group>
+                                <group string="System Settings &amp; Administration">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="pos_retail_checkboxes_select_all"
+                                           domain="[('category', '=', 'administration')]"/>
+                                </group>
                             </group>
                         </page>
                         <page string="Advanced (technical)" name="access" groups="base.group_no_one">

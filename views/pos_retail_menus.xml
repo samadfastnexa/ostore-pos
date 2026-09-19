@@ -7,9 +7,27 @@
     <record id="contacts.menu_contacts" model="ir.ui.menu">
         <field name="name">Customers &amp; Vendors</field>
         <field name="sequence">30</field>
+        <field name="group_ids" eval="[(6, 0, [
+            ref('base.group_partner_manager'),
+            ref('base.group_system'),
+            ref('pos_retail.perm_partners_manage_res_groups'),
+            ref('pos_retail.perm_customers_view_res_groups'),
+            ref('pos_retail.perm_customers_create_res_groups'),
+            ref('pos_retail.perm_customers_edit_res_groups'),
+            ref('pos_retail.perm_customers_delete_res_groups'),
+            ref('pos_retail.perm_vendors_view_res_groups'),
+            ref('pos_retail.perm_vendors_create_res_groups'),
+            ref('pos_retail.perm_vendors_edit_res_groups'),
+            ref('pos_retail.perm_vendors_delete_res_groups'),
+        ])]"/>
     </record>
     <record id="contacts.res_partner_menu_contacts" model="ir.ui.menu">
         <field name="name">All Contacts</field>
+        <field name="group_ids" eval="[(6, 0, [
+            ref('pos_retail.perm_partners_manage_res_groups'),
+            ref('base.group_partner_manager'),
+            ref('base.group_system'),
+        ])]"/>
     </record>
 
     <!-- Customers and Vendors get their own sidebar entries. res.partner is one
@@ -53,6 +71,10 @@
     </record>
     <record id="contacts.res_partner_menu_config" model="ir.ui.menu">
         <field name="sequence">10</field>
+        <field name="group_ids" eval="[(6, 0, [
+            ref('base.group_system'),
+            ref('pos_retail.perm_partners_manage_res_groups'),
+        ])]"/>
     </record>
 
     <!-- App order: a shop opens the till all day, the books occasionally and
@@ -419,39 +441,47 @@ else:
     <record id="hr.menu_hr_root" model="ir.ui.menu">
         <field name="name">Staff &amp; Access</field>
         <field name="sequence">55</field>
+        <field name="group_ids" eval="[(6, 0, [
+            ref('base.group_system'),
+            ref('hr.group_hr_manager'),
+            ref('hr.group_hr_user'),
+            ref('pos_retail.perm_manage_staff_res_groups'),
+            ref('pos_retail.perm_staff_view_res_groups'),
+            ref('pos_retail.perm_staff_logins_res_groups'),
+            ref('pos_retail.perm_staff_roles_res_groups'),
+        ])]"/>
     </record>
 
-    <!-- Menus that ship open to every internal user, closed to those who
-         actually run the place.
-
-         Measured with a cashier holding only till, product and inventory
-         permissions: their back office still listed Apps — the module
-         installer — and a Staff & Access app of HR screens they could open
-         but had no use for. Core leaves these without a group and relies on
-         the records behind them being unreadable, which keeps the data safe
-         but leaves the menu in front of somebody at a counter who asked for
-         a back office without dashboards and settings.
-
-         Replaced with explicit groups rather than added to, because the whole
-         point is that "internal user" should no longer be enough. -->
+    <!-- Settings and Apps root menus: strictly gated to administrators and
+         holders of the new system configuration permissions. -->
+    <record id="base.menu_administration" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [
+            ref('base.group_system'),
+            ref('pos_retail.perm_settings_res_groups'),
+        ])]"/>
+    </record>
     <record id="base.menu_management" model="ir.ui.menu">
-        <field name="group_ids" eval="[(6, 0, [ref('base.group_system')])]"/>
+        <field name="group_ids" eval="[(6, 0, [
+            ref('base.group_system'),
+            ref('pos_retail.perm_apps_res_groups'),
+        ])]"/>
     </record>
+
     <record id="hr.menu_hr_main" model="ir.ui.menu">
-        <field name="group_ids" eval="[(6, 0, [ref('base.group_system'), ref('hr.group_hr_user'), ref('pos_retail.perm_manage_staff_res_groups')])]"/>
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system'), ref('hr.group_hr_user'), ref('pos_retail.perm_manage_staff_res_groups'), ref('pos_retail.perm_staff_view_res_groups')])]"/>
     </record>
     <record id="hr.menu_hr_employee" model="ir.ui.menu">
-        <field name="group_ids" eval="[(6, 0, [ref('base.group_system'), ref('hr.group_hr_user'), ref('pos_retail.perm_manage_staff_res_groups')])]"/>
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system'), ref('hr.group_hr_user'), ref('pos_retail.perm_manage_staff_res_groups'), ref('pos_retail.perm_staff_view_res_groups')])]"/>
     </record>
     <record id="hr.menu_hr_department_kanban" model="ir.ui.menu">
-        <field name="group_ids" eval="[(6, 0, [ref('base.group_system'), ref('hr.group_hr_user'), ref('pos_retail.perm_manage_staff_res_groups')])]"/>
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system'), ref('hr.group_hr_user'), ref('pos_retail.perm_manage_staff_res_groups'), ref('pos_retail.perm_staff_view_res_groups')])]"/>
     </record>
 
     <menuitem id="menu_pos_retail_people_access"
         name="Access &amp; Logins"
         parent="hr.menu_hr_root"
         sequence="80"
-        groups="base.group_system"/>
+        groups="base.group_system,pos_retail.perm_staff_logins_res_groups,pos_retail.perm_staff_roles_res_groups"/>
 
     <!-- A login is what permissions attach to, so it belongs beside the
          person it belongs to, not in a settings screen next to translations
@@ -460,6 +490,10 @@ else:
         <field name="parent_id" ref="menu_pos_retail_people_access"/>
         <field name="name">Logins</field>
         <field name="sequence">10</field>
+        <field name="group_ids" eval="[(6, 0, [
+            ref('base.group_system'),
+            ref('pos_retail.perm_staff_logins_res_groups'),
+        ])]"/>
     </record>
 
     <!-- "Companies" is Odoo's word. This shop has one company and several
@@ -468,26 +502,30 @@ else:
         <field name="parent_id" ref="menu_pos_retail_people_access"/>
         <field name="name">Branches</field>
         <field name="sequence">30</field>
+        <field name="group_ids" eval="[(6, 0, [
+            ref('base.group_system'),
+            ref('pos_retail.perm_staff_logins_res_groups'),
+        ])]"/>
     </record>
 
     <!-- Roles configure real security, so they stay on base.group_system
-         rather than point_of_sale.group_pos_manager: a branch manager should
-         not be able to widen their own access. Moved here from the POS
-         configuration menu, since a role is a fact about people rather than
-         about a till. -->
+         and perm_staff_roles rather than point_of_sale.group_pos_manager:
+         a branch manager should not be able to widen their own access.
+         Moved here from the POS configuration menu, since a role is a fact
+         about people rather than about a till. -->
     <menuitem id="menu_pos_retail_access_role"
         name="Roles &amp; Permissions"
         parent="menu_pos_retail_people_access"
         action="pos_retail_access_role_action"
         sequence="15"
-        groups="base.group_system"/>
+        groups="base.group_system,pos_retail.perm_staff_roles_res_groups"/>
 
     <menuitem id="menu_pos_retail_access_permission"
         name="Permissions Catalog"
         parent="menu_pos_retail_people_access"
         action="pos_retail_access_permission_action"
         sequence="20"
-        groups="base.group_system"/>
+        groups="base.group_system,pos_retail.perm_staff_roles_res_groups"/>
 
     <!-- Core menu gates opened to catalog permissions. Direct catalog
          permissions (ACL-based ones) do not imply group_pos_user, so the POS
@@ -498,9 +536,11 @@ else:
          need nothing here: the native gates already list their groups. -->
     <record id="point_of_sale.menu_point_root" model="ir.ui.menu">
         <field name="group_ids" eval="[
+            (4, ref('perm_products_view_res_groups')),
             (4, ref('perm_products_create_res_groups')),
             (4, ref('perm_products_edit_res_groups')),
             (4, ref('perm_products_delete_res_groups')),
+            (4, ref('perm_expenses_view_res_groups')),
             (4, ref('perm_expenses_res_groups')),
             (4, ref('perm_expenses_create_res_groups')),
             (4, ref('perm_expenses_edit_res_groups')),
