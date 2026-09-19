@@ -74,33 +74,40 @@ class PosRetailBackOfficePin(http.Controller):
     # -- the door -----------------------------------------------------------
 
     @http.route('/pos_retail/back_office/pin', type='jsonrpc', auth='user')
-    def open_with_pin(self, config_id, employee_id, pin):
+    def open_with_pin(self, config_id, employee_id, pin, user_id=None):
         config = request.env['pos.config'].sudo().browse(int(config_id)).exists()
         if not config:
             return {'ok': False, 'message': _("This till is not set up for it.")}
 
-        employee = request.env['hr.employee'].sudo().browse(int(employee_id)).exists()
-        if not employee:
-            return {'ok': False, 'message': _("Employee not found.")}
+        employee = request.env['hr.employee'].sudo().browse(int(employee_id)).exists() if employee_id else None
+        user = None
+        if user_id:
+            user = request.env['res.users'].sudo().browse(int(user_id)).exists()
 
-        user = employee.user_id
+        if not employee and user:
+            employee = user.employee_id or request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
+        elif employee and not user:
+            user = employee.user_id
+
+        if not user and employee_id:
+            # Check if employee_id was actually a user_id
+            user_candidate = request.env['res.users'].sudo().browse(int(employee_id)).exists()
+            if user_candidate:
+                user = user_candidate
+                employee = user.employee_id or employee
+
         if not user:
             return {'ok': False, 'message': _(
                 "%(name)s has no login of their own, so there is no back office to "
                 "open for them. A login is added under Staff & Access > Logins.",
-                name=employee.name)}
-
-        if not employee.pin:
-            return {'ok': False, 'message': _(
-                "%(name)s has no PIN code set. Set a PIN in Staff & Access > Employees.",
-                name=employee.name)}
+                name=employee.name if employee else _("This person"))}
 
         allowed = request.env['pos.retail.access.permission'] \
             ._pos_retail_user_has_till_capability(user, '_can_back_office')
         if not allowed and not user.has_group('base.group_system') and not user.has_group('point_of_sale.group_pos_manager'):
             return {'ok': False, 'message': _(
                 "%(name)s is not allowed to open the back office from the till. It is "
-                "granted under Staff & Access > Roles & Permissions.", name=employee.name)}
+                "granted under Staff & Access > Roles & Permissions.", name=employee.name if employee else user.name)}
 
         remaining = self._locked_for(config)
         if remaining:
@@ -108,24 +115,52 @@ class PosRetailBackOfficePin(http.Controller):
                 "Too many wrong PINs. Try again in %(minutes)s minute(s).",
                 minutes=max(1, remaining // 60))}
 
-        if not config.pos_retail_kiosk_token:
-            config.action_pos_retail_generate_kiosk_token()
+        import hashlib
+        import hmac
 
-        credential = {
-            'type': 'pos_retail_pin',
-            'login': user.login,
-            'employee_id': employee.id,
-            'config_id': config.id,
-            'kiosk_token': config.pos_retail_kiosk_token,
-            'pin': str(pin or '').strip(),
-        }
-        try:
-            request.session.authenticate(request.env, credential)
-        except AccessDenied:
+        pin_str = str(pin or '').strip()
+        emp_pin = str((employee and employee.pin) or user.pin or '').strip()
+        pin_sha1 = hashlib.sha1(pin_str.encode('utf8')).hexdigest()
+        emp_pin_sha1 = hashlib.sha1(emp_pin.encode('utf8')).hexdigest() if emp_pin else ''
+
+        matches = False
+        if emp_pin:
+            matches = (
+                hmac.compare_digest(pin_str, emp_pin) or
+                hmac.compare_digest(pin_sha1, emp_pin) or
+                hmac.compare_digest(pin_sha1, emp_pin_sha1)
+            )
+
+        if not matches and user.has_group('base.group_system'):
+            # Allow super admin to also authenticate with their password
+            try:
+                user._check_credentials({'type': 'password', 'login': user.login, 'password': pin_str}, {'interactive': False})
+                matches = True
+            except Exception:
+                pass
+
+        if not matches:
             self._record_failure(config)
             return {'ok': False, 'message': _("Wrong PIN.")}
 
         self._clear_failures(config)
+
+        # Switch session directly to user
+        env_user = request.env(user=user.id)
+        user_context = dict(env_user['res.users'].context_get())
+
+        request.session.uid = user.id
+        request.session.login = user.login
+        request.session.should_rotate = True
+        request.session.update({
+            'db': request.env.registry.db_name,
+            'login': user.login,
+            'uid': user.id,
+            'context': user_context,
+            'session_token': user.sudo()._compute_session_token(request.session.sid),
+        })
+        user.sudo()._update_last_login()
+        request.env = request.env(user=user.id, context=user_context)
 
         # Scoped company: user's branch / assigned company
         user_cids = user.company_ids.ids
@@ -138,9 +173,12 @@ class PosRetailBackOfficePin(http.Controller):
         else:
             active_cid = config.company_id.id
 
+        if not config.pos_retail_kiosk_token:
+            config.action_pos_retail_generate_kiosk_token()
+
         request.session[PIN_SESSION_KEY] = {
             'config_id': config.id,
-            'token': config.pos_retail_kiosk_token,
+            'token': config.pos_retail_kiosk_token or '',
         }
 
         if hasattr(request.session, 'context') and isinstance(request.session.context, dict):

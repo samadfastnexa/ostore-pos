@@ -40,11 +40,16 @@ patch(Navbar.prototype, {
             return;
         }
 
+        const cashierUserId =
+            (typeof this.pos.getCashierUserId === "function" ? this.pos.getCashierUserId() : null) ||
+            (cashier.user_id ? (Array.isArray(cashier.user_id) ? cashier.user_id[0] : (cashier.user_id?.id || cashier.user_id)) : null);
+
         let result;
         try {
             result = await rpc("/pos_retail/back_office/pin", {
                 config_id: this.pos.config.id,
                 employee_id: cashier.id,
+                user_id: cashierUserId,
                 pin: String(pin),
             });
         } catch (error) {
