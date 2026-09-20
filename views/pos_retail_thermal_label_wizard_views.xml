@@ -92,7 +92,7 @@
     <!-- Direct Menu in Point of Sale -> Products -->
     <menuitem id="menu_pos_retail_thermal_label_wizard_pos"
               name="Print Thermal Labels"
-              parent="point_of_sale.menu_pos_products"
+              parent="point_of_sale.pos_config_menu_catalog"
               action="action_pos_retail_thermal_label_wizard"
               sequence="25"/>
 

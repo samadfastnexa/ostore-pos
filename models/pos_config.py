@@ -557,6 +557,20 @@ class PosConfig(models.Model):
         # 4. Sync home action for managers and cashiers
         self.env['res.users']._pos_retail_sync_dashboard_home()
 
+        # 5. Restore Products menu as clickable action and reparent Print Thermal Labels
+        thermal_menu = self.env.ref('pos_retail.menu_pos_retail_thermal_label_wizard_pos', raise_if_not_found=False)
+        catalog_menu = self.env.ref('point_of_sale.pos_config_menu_catalog', raise_if_not_found=False)
+        pos_products_menu = self.env.ref('point_of_sale.menu_pos_products', raise_if_not_found=False)
+        product_action = self.env.ref('point_of_sale.product_template_action_pos_product', raise_if_not_found=False)
+        if catalog_menu:
+            if thermal_menu and thermal_menu.parent_id != catalog_menu:
+                thermal_menu.sudo().write({'parent_id': catalog_menu.id, 'sequence': 25})
+            if pos_products_menu:
+                vals = {'parent_id': catalog_menu.id, 'name': 'Products', 'sequence': 5}
+                if product_action:
+                    vals['action'] = f"ir.actions.act_window,{product_action.id}"
+                pos_products_menu.sudo().write(vals)
+
     @api.model
     def _pos_retail_seed_pricelists(self):
         """Offer the shipped customer-type pricelists at every unconfigured register.
