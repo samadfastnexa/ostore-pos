@@ -95,7 +95,12 @@
                                     <div class="pos-retail-side__items">
                                         <t t-foreach="section.childrenTree" t-as="child" t-key="child.id">
                                             <t t-if="hasChildren(child)">
-                                                <div class="pos-retail-side__subgroup" t-esc="child.name"/>
+                                                <button t-if="child.actionID" class="pos-retail-side__item"
+                                                        t-att-class="{ 'is-active': isActive(child) }"
+                                                        t-att-title="child.name"
+                                                        t-on-click="() => this.onClickMenu(child)"
+                                                        t-esc="child.name"/>
+                                                <div t-else="" class="pos-retail-side__subgroup" t-esc="child.name"/>
                                                 <t t-foreach="child.childrenTree" t-as="leaf" t-key="leaf.id">
                                                     <button class="pos-retail-side__item pos-retail-side__item--sub"
                                                             t-att-class="{ 'is-active': isActive(leaf) }"

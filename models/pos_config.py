@@ -31,8 +31,14 @@ class PosConfig(models.Model):
         """Strictly exclude holding company registers from everyone,
         and restrict non-admin cashiers to their single assigned branch."""
         extra = [('company_id.child_ids', '=', False)]
-        if not self.env.user.has_group('base.group_system'):
-            extra.append(('company_id', '=', self.env.user.company_id.id))
+        if not self.env.su and self.env.uid:
+            try:
+                user = self.env.user
+                if user and not user.has_group('base.group_system'):
+                    if user.company_id:
+                        extra.append(('company_id', '=', user.company_id.id))
+            except Exception:
+                pass
         domain = extra + list(domain or [])
         return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
 
@@ -42,10 +48,12 @@ class PosConfig(models.Model):
             raise UserError(_(
                 "The holding company '%(company)s' has no physical till and cannot open a POS session. "
                 "Please select an active branch register.", company=self.company_id.name))
-        if not self.env.user.has_group('base.group_system') and self.company_id != self.env.user.company_id:
-            raise AccessError(_(
-                "You are assigned to '%(my_company)s' and cannot open a register for '%(other_company)s'.",
-                my_company=self.env.user.company_id.name, other_company=self.company_id.name))
+        if not self.env.su and self.env.uid:
+            user = self.env.user
+            if user and not user.has_group('base.group_system') and self.company_id != user.company_id:
+                raise AccessError(_(
+                    "You are assigned to '%(my_company)s' and cannot open a register for '%(other_company)s'.",
+                    my_company=user.company_id.name, other_company=self.company_id.name))
         return super().open_ui()
 
     return_policy = fields.Text(
@@ -566,8 +574,9 @@ class PosConfig(models.Model):
             if thermal_menu and thermal_menu.parent_id != catalog_menu:
                 thermal_menu.sudo().write({'parent_id': catalog_menu.id, 'sequence': 25})
             if pos_products_menu:
-                for child in pos_products_menu.child_id:
-                    child.sudo().write({'parent_id': catalog_menu.id})
+                stray_children = self.env['ir.ui.menu'].sudo().search([('parent_id', '=', pos_products_menu.id)])
+                if stray_children:
+                    stray_children.sudo().write({'parent_id': catalog_menu.id})
                 vals = {'parent_id': catalog_menu.id, 'name': 'Products', 'sequence': 5, 'active': True}
                 if product_action:
                     vals['action'] = f"ir.actions.act_window,{product_action.id}"

@@ -57,9 +57,12 @@ class PosRetailSession(Session):
         # signing out is just a till closing, and locking that helps nobody.
         uid = request.session.uid
         is_till_account = False
-        if uid:
-            is_till_account = bool(request.env['pos.config'].sudo().search_count(
-                [('pos_retail_kiosk_user_id', '=', uid)]))
+        if uid and getattr(request, 'db', None):
+            try:
+                is_till_account = bool(request.env['pos.config'].sudo().search_count(
+                    [('pos_retail_kiosk_user_id', '=', uid)]))
+            except Exception:
+                is_till_account = False
 
         # A cashier who reached the back office from the till with their PIN
         # and now signs out is going back to the counter, not leaving the
@@ -71,20 +74,36 @@ class PosRetailSession(Session):
         if pin_till:
             token = pin_till.get('token')
             config_id = pin_till.get('config_id')
-            config = request.env['pos.config'].sudo().browse(int(config_id or 0)).exists() if config_id else None
-            super().logout(redirect=redirect)
+            config = None
+            if config_id and getattr(request, 'db', None):
+                try:
+                    config = request.env['pos.config'].sudo().browse(int(config_id or 0)).exists()
+                except Exception:
+                    config = None
+            try:
+                super().logout(redirect=redirect)
+            except Exception:
+                request.session.logout(keep_db=True)
             if config and config.pos_retail_kiosk_user_id and token:
                 return request.redirect('/pos_retail/kiosk/%s' % token)
             elif config:
                 return request.redirect('/pos/ui/%s' % config.id)
             return request.redirect('/web/login')
 
-        response = super().logout(redirect=redirect)
-        if not is_till_account:
-            response.set_cookie(
-                KIOSK_BLOCK_COOKIE, '1',
-                max_age=KIOSK_BLOCK_MAX_AGE, samesite='Lax',
-            )
+        try:
+            response = super().logout(redirect=redirect)
+        except Exception:
+            request.session.logout(keep_db=True)
+            response = request.redirect(redirect or '/web/login', 303)
+
+        if not is_till_account and response:
+            try:
+                response.set_cookie(
+                    KIOSK_BLOCK_COOKIE, '1',
+                    max_age=KIOSK_BLOCK_MAX_AGE, samesite='Lax',
+                )
+            except Exception:
+                pass
         return response
 
 
