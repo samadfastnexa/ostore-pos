@@ -566,7 +566,9 @@ class PosConfig(models.Model):
             if thermal_menu and thermal_menu.parent_id != catalog_menu:
                 thermal_menu.sudo().write({'parent_id': catalog_menu.id, 'sequence': 25})
             if pos_products_menu:
-                vals = {'parent_id': catalog_menu.id, 'name': 'Products', 'sequence': 5}
+                for child in pos_products_menu.child_id:
+                    child.sudo().write({'parent_id': catalog_menu.id})
+                vals = {'parent_id': catalog_menu.id, 'name': 'Products', 'sequence': 5, 'active': True}
                 if product_action:
                     vals['action'] = f"ir.actions.act_window,{product_action.id}"
                 pos_products_menu.sudo().write(vals)

@@ -431,6 +431,7 @@
             ref('pos_retail.perm_config_lists_create_res_groups'),
             ref('pos_retail.perm_config_lists_edit_res_groups'),
             ref('pos_retail.perm_config_lists_delete_res_groups'),
+            ref('pos_retail.perm_products_view_res_groups'),
             ref('pos_retail.perm_products_create_res_groups'),
             ref('pos_retail.perm_products_edit_res_groups'),
             ref('pos_retail.perm_products_delete_res_groups'),
