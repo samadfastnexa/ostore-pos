@@ -55,5 +55,6 @@
          discount_product_id was never filled in. Idempotent. -->
     <function model="pos.config" name="_pos_retail_ensure_discount_product"/>
     <function model="pos.config" name="_pos_retail_fix_empty_category_limit"/>
+    <function model="pos.config" name="_pos_retail_ensure_branch_scoping_and_cleanup"/>
 
 </odoo>

@@ -2,7 +2,7 @@ import datetime
 from uuid import uuid4
 
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 DEFAULT_RETURN_POLICY = (
     "Returns accepted within 7 days with the original receipt.\n"
@@ -25,6 +25,28 @@ POS_RETAIL_THEME_COLORS = [
 
 class PosConfig(models.Model):
     _inherit = 'pos.config'
+
+    @api.model
+    def _search(self, domain, offset=0, limit=None, order=None, **kwargs):
+        """Strictly exclude holding company registers from everyone,
+        and restrict non-admin cashiers to their single assigned branch."""
+        extra = [('company_id.child_ids', '=', False)]
+        if not self.env.user.has_group('base.group_system'):
+            extra.append(('company_id', '=', self.env.user.company_id.id))
+        domain = extra + list(domain or [])
+        return super()._search(domain, offset=offset, limit=limit, order=order, **kwargs)
+
+    def open_ui(self):
+        self.ensure_one()
+        if self.company_id.child_ids:
+            raise UserError(_(
+                "The holding company '%(company)s' has no physical till and cannot open a POS session. "
+                "Please select an active branch register.", company=self.company_id.name))
+        if not self.env.user.has_group('base.group_system') and self.company_id != self.env.user.company_id:
+            raise AccessError(_(
+                "You are assigned to '%(my_company)s' and cannot open a register for '%(other_company)s'.",
+                my_company=self.env.user.company_id.name, other_company=self.company_id.name))
+        return super().open_ui()
 
     return_policy = fields.Text(
         string="Return Policy",
@@ -463,6 +485,77 @@ class PosConfig(models.Model):
         # the panel broken on exactly the register someone is standing at.
         for config in self.sudo().search([('discount_product_id', '=', False)]):
             config.discount_product_id = product.id
+
+    @api.model
+    def _pos_retail_ensure_branch_scoping_and_cleanup(self):
+        """System repair pass executed on every module upgrade.
+        1. Neutralizes and hides holding company POS configs.
+        2. Syncs non-admin store users so their company_ids matches their single assigned branch.
+        3. Forces pos_retail branch rules in ir.rule to noupdate=False and refreshes definitions.
+        """
+        # 1. Holding company POS configs: archive or delete
+        holding_configs = self.sudo().with_context(active_test=False).search([
+            ('company_id.child_ids', '!=', False)
+        ])
+        for cfg in holding_configs:
+            sessions = self.env['pos.session'].sudo().search_count([('config_id', '=', cfg.id)])
+            orders = self.env['pos.order'].sudo().search_count([('config_id', '=', cfg.id)])
+            if not sessions and not orders:
+                try:
+                    cfg.unlink()
+                    continue
+                except Exception:
+                    pass
+            cfg.write({
+                'active': False,
+                'name': f"[ARCHIVED] {cfg.name}" if not cfg.name.startswith("[ARCHIVED]") else cfg.name,
+            })
+
+        # 2. Strict company scoping for non-admin users
+        admin_group = self.env.ref('base.group_system', raise_if_not_found=False)
+        trading_shops = self.env['res.company'].sudo().search([('child_ids', '=', False)])
+        for user in self.env['res.users'].sudo().search([('share', '=', False)]):
+            is_admin = bool(admin_group and admin_group in user.all_group_ids)
+            if is_admin:
+                all_companies = self.env['res.company'].sudo().search([])
+                if set(user.company_ids.ids) != set(all_companies.ids):
+                    user.write({'company_ids': [(6, 0, all_companies.ids)]})
+            else:
+                target_company = user.company_id
+                if not target_company or target_company.child_ids:
+                    target_company = trading_shops[:1]
+                    if target_company:
+                        user.write({
+                            'company_id': target_company.id,
+                            'company_ids': [(6, 0, [target_company.id])],
+                        })
+                elif user.company_ids.ids != [target_company.id]:
+                    user.write({'company_ids': [(6, 0, [target_company.id])]})
+
+        # 3. Refresh ir.rule records so pos_retail rules take immediate effect
+        rules = self.env['ir.model.data'].sudo().search([
+            ('module', '=', 'pos_retail'),
+            ('model', '=', 'ir.rule'),
+        ])
+        if rules:
+            rules.write({'noupdate': False})
+
+        pos_rule = self.env.ref('pos_retail.pos_config_branch_rule', raise_if_not_found=False)
+        if pos_rule:
+            pos_rule.sudo().write({
+                'name': 'POS Register: visible to its own trading branch',
+                'domain_force': "['&', ('company_id.child_ids', '=', False), ('company_id', 'in', company_ids)]",
+            })
+
+        journal_rule = self.env.ref('account.journal_comp_rule', raise_if_not_found=False)
+        if journal_rule:
+            journal_rule.sudo().write({
+                'name': 'Journal: visible to branches and parent',
+                'domain_force': "['|', '|', '|', '|', ('company_id', '=', False), ('company_id', 'parent_of', company_ids), ('company_id', 'child_of', company_ids), ('company_id', 'in', company_ids), ('company_id', 'in', user.company_ids.ids)]",
+            })
+
+        # 4. Sync home action for managers and cashiers
+        self.env['res.users']._pos_retail_sync_dashboard_home()
 
     @api.model
     def _pos_retail_seed_pricelists(self):

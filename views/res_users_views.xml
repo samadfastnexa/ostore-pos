@@ -149,14 +149,17 @@
                        options="{'no_create': True, 'no_open': True}"
                        placeholder="e.g. Cashier"/>
                 <field name="pos_retail_assignable_company_ids" invisible="1"/>
+                <field name="pos_retail_is_admin" invisible="1"/>
             </xpath>
 
             <xpath expr="//field[@name='company_ids']" position="attributes">
                 <attribute name="domain">[('id', 'in', pos_retail_assignable_company_ids)]</attribute>
+                <attribute name="invisible">not pos_retail_is_admin</attribute>
             </xpath>
 
             <xpath expr="//field[@name='company_id']" position="attributes">
-                <attribute name="domain">[('id', 'in', company_ids)]</attribute>
+                <attribute name="string">Branch</attribute>
+                <attribute name="domain">[('child_ids', '=', False)]</attribute>
             </xpath>
 
         </field>

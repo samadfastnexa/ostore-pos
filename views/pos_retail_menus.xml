@@ -321,7 +321,7 @@
          Same action core uses, so it lists only the registers the person's own
          record rules allow: one branch, one card. -->
     <menuitem id="pos_retail_menu_open_register" name="Open Register"
-        parent="point_of_sale.menu_point_root" action="point_of_sale.action_pos_config_kanban"
+        parent="point_of_sale.menu_point_root" action="action_pos_retail_open_my_register"
         sequence="1" groups="point_of_sale.group_pos_user"/>
 
     <!-- Straight into the till, no card to click first.

@@ -305,4 +305,14 @@
         </field>
     </record>
 
+    <!-- Hide holding company registers from POS dashboard and list.
+         Holding companies (child_ids != False) have no physical shops/tills. -->
+    <record id="point_of_sale.action_pos_config_kanban" model="ir.actions.act_window">
+        <field name="domain">[('company_id.child_ids', '=', False)]</field>
+    </record>
+
+    <record id="point_of_sale.action_pos_config_tree" model="ir.actions.act_window">
+        <field name="domain">[('company_id.child_ids', '=', False)]</field>
+    </record>
+
 </odoo>
