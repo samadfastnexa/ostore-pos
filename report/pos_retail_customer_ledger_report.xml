@@ -38,7 +38,7 @@
                     </thead>
                     <tbody>
                         <tr t-foreach="rows" t-as="row">
-                            <td><span t-esc="row['date'].strftime('%d/%m/%Y') if (row.get('date') and hasattr(row['date'], 'strftime')) else (row.get('date') or '')"/></td>
+                            <td><span t-esc="row['date'].strftime('%d/%m/%Y') if row.get('date') else ''"/></td>
                             <td><span t-esc="row['name']"/></td>
                             <td class="text-end">
                                 <span t-if="row['debit']" t-esc="row['debit']"
