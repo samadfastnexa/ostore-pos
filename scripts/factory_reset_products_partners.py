@@ -110,6 +110,7 @@ for table, label in [
     ("purchase_order", "Purchase orders"),
     ("account_move", "Invoices / bills / journal entries"),
     ("account_payment", "Payments"),
+    ("account_partial_reconcile", "Payment/invoice reconciliations"),
     ("account_bank_statement_line", "Bank statement lines"),
     ("stock_picking", "Stock transfers"),
     ("stock_move", "Stock moves"),
@@ -170,6 +171,10 @@ else:
             cr.execute("DELETE FROM account_bank_statement")
             cr.execute("DELETE FROM payment_transaction")
             cr.execute("DELETE FROM payment_token")
+            # Payment-to-invoice matchings RESTRICT deletion of the journal
+            # items they link, so they must go before account_move.
+            cr.execute("DELETE FROM account_partial_reconcile")
+            cr.execute("DELETE FROM account_full_reconcile")
             cr.execute("DELETE FROM account_move")   # cascades account_move_line
 
             # 5. Loyalty reward configs that pin a specific product: clear
