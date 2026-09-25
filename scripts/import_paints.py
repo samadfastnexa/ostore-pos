@@ -17,8 +17,8 @@ sed 's/^APPLY = False/APPLY = True/') to write.
 
 What it does:
   * products are shared by every branch (no company, no "Sell in Branches"),
-    named "<name> (<size>) - <brand>" because the sheet repeats the same
-    colour and size under different brands
+    named exactly as the sheet's Name column; name + size + brand identify a
+    row, so the same colour under several brands stays separate products
   * categories Paints > Distemper/Oil Paint > Drum/Gallon/Quarter, one POS
     category "Paints", brands merged across case and spelling variants
   * rows without a sales price import at 0, still sellable at the till
@@ -123,7 +123,9 @@ for rownum, row in enumerate(rows[1:], start=2):
     if minimum and mrp and minimum > mrp:
         notes.append(f"row {rownum}: {name} min {minimum:g} above MRP {mrp:g}: range dropped")
         minimum = mrp = 0.0
-    display = name + (f" ({size})" if size else '') + (f" - {brand}" if brand else '')
+    # Name exactly as the sheet has it (the owner's wording). Size and brand
+    # still tell same-named rows apart in the external id and brand field.
+    display = str(get('name')).strip() if isinstance(get('name'), str) else name
     key = slug(name, size, brand)
     if key in products:
         notes.append(f"row {rownum}: same name/size/brand as row {products[key]['row']}, merged into it")
