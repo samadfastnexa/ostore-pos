@@ -34,6 +34,7 @@ What it does:
 import io
 import os
 import re
+import time
 import urllib.request
 
 import openpyxl
@@ -190,10 +191,37 @@ else:
             brands[name] = found or Brand.create({'name': name})
         return brands[name].id
 
+    def changes(template, vals):
+        """Only the fields that actually differ.
+
+        Products and variants carry full-mode audit rules, which read every
+        field before and after each write; rewriting an unchanged product
+        costs the same as a real edit and fills the audit log with noise.
+        """
+        diff = {}
+        for field, value in vals.items():
+            current = template[field]
+            if field == 'pos_categ_ids':
+                if set(current.ids) != set(value[0][2]):
+                    diff[field] = value
+            elif hasattr(current, '_name'):
+                if current.id != (value or False):
+                    diff[field] = value
+            elif isinstance(value, float):
+                if abs((current or 0.0) - value) > 0.001:
+                    diff[field] = value
+            elif current != value:
+                diff[field] = value
+        return diff
+
     companies = env['res.company'].sudo().search([])
     pos_paints = PosCategory.search([('name', '=', 'Paints')], limit=1) or PosCategory.create({'name': 'Paints'})
-    created = updated = 0
+    started = time.monotonic()
+    existing = {imd.name: imd.res_id for imd in IMD.search([
+        ('module', '=', XMLID_MODULE), ('model', '=', 'product.template'), ('name', '=like', 'paint\\_%')])}
+    print("importing... (nothing is saved until the end; don't interrupt)", flush=True)
     with env.cr.savepoint():
+        to_create, costs, updated, unchanged = [], [], 0, 0
         for key, p in products.items():
             vals = {
                 'name': p['name'], 'list_price': p['price'],
@@ -204,25 +232,45 @@ else:
                 'available_in_pos': True, 'sale_ok': True, 'purchase_ok': True,
                 'company_id': False,
             }
-            xmlid = f"paint_{key}"
-            existing = IMD.search([('module', '=', XMLID_MODULE), ('name', '=', xmlid),
-                                   ('model', '=', 'product.template')], limit=1)
-            template = Template.browse(existing.res_id).exists() if existing else Template
+            template = Template.browse(existing.get(f"paint_{key}")).exists()
             if template:
-                template.write(vals)
-                updated += 1
+                diff = changes(template, vals)
+                if diff:
+                    template.write(diff)
+                    updated += 1
+                else:
+                    unchanged += 1
+                costs.append((template, p['cost']))
             else:
-                template = Template.create(vals)
-                IMD.create({'module': XMLID_MODULE, 'name': xmlid, 'model': 'product.template',
-                            'res_id': template.id, 'noupdate': True})
-                created += 1
-            # Cost is company-dependent in Odoo 19: written once, it would exist
-            # only for whichever company ran the script and read 0 in every
-            # branch. Shared products need it in each company.
-            for company in companies:
-                template.with_company(company).standard_price = p['cost']
+                to_create.append((key, vals, p['cost']))
+        print(f"  checked existing products ({time.monotonic() - started:.0f}s)", flush=True)
+
+        if to_create:
+            new_templates = Template.create([vals for _key, vals, _cost in to_create])
+            IMD.create([{'module': XMLID_MODULE, 'name': f"paint_{key}", 'model': 'product.template',
+                         'res_id': tmpl.id, 'noupdate': True}
+                        for (key, _vals, _cost), tmpl in zip(to_create, new_templates)])
+            costs += [(tmpl, cost) for (_key, _vals, cost), tmpl in zip(to_create, new_templates)]
+            print(f"  created {len(new_templates)} ({time.monotonic() - started:.0f}s)", flush=True)
+
+        # Cost is company-dependent in Odoo 19: set once it would exist only
+        # for the company running the script and read 0 in every branch.
+        # Grouped by value so each company takes one write per distinct cost.
+        cost_writes = 0
+        for company in companies:
+            groups = {}
+            for tmpl, cost in costs:
+                if abs(tmpl.with_company(company).standard_price - cost) > 0.001:
+                    groups.setdefault(cost, Template.browse())
+                    groups[cost] |= tmpl
+            for cost, tmpls in groups.items():
+                tmpls.with_company(company).write({'standard_price': cost})
+                cost_writes += len(tmpls)
+        print(f"  costs set ({time.monotonic() - started:.0f}s)", flush=True)
     env.cr.commit()
     no_barcode = Template.search_count([('id', 'in', IMD.search([('module', '=', XMLID_MODULE), ('name', '=like', 'paint\\_%')]).mapped('res_id')),
                                         ('barcode', '=', False)])
-    print(f"created {created}, updated {updated}; products still without a barcode: {no_barcode}")
+    print(f"created {len(to_create)}, updated {updated}, unchanged {unchanged}, "
+          f"cost changes {cost_writes}; products still without a barcode: {no_barcode}  "
+          f"[{time.monotonic() - started:.0f}s]")
     print("=" * 78)
