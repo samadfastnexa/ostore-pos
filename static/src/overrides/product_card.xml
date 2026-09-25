@@ -30,6 +30,10 @@
                       t-attf-title="{{posRetailInfo.campaignBadge}} right now">
                     <t t-esc="posRetailInfo.campaignBadge"/>
                 </span>
+                <!-- Right under the name: many items share a name and differ
+                     only by size ("white" by the drum, gallon or quarter). -->
+                <div t-if="props.product.pos_retail_size" class="pos-retail-card-size"
+                     t-esc="props.product.pos_retail_size"/>
                 <div class="pos-retail-card-price">
                     <t t-esc="posRetailInfo.price"/><small t-if="posRetailInfo.priceSuffix"
                         class="pos-retail-card-uom" t-esc="posRetailInfo.priceSuffix"/>

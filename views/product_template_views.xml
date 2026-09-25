@@ -8,6 +8,18 @@
         <field name="arch" type="xml">
             <field name="categ_id" position="after">
                 <field name="brand_id"/>
+                <field name="pos_retail_size" placeholder="e.g. Drum, Gallon, Quarter"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="product_template_tree_view_size" model="ir.ui.view">
+        <field name="name">product.template.list.size</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="arch" type="xml">
+            <field name="name" position="after">
+                <field name="pos_retail_size" optional="show"/>
             </field>
         </field>
     </record>
@@ -225,6 +237,7 @@
         <field name="arch" type="xml">
             <field name="categ_id" position="after">
                 <field name="brand_id"/>
+                <field name="pos_retail_size"/>
             </field>
             <filter name="group_by_categ_id" position="after">
                 <filter string="Brand" name="group_by_brand_id"

@@ -32,6 +32,12 @@ class ProductTemplate(models.Model):
              "Used to group and filter products in the catalogue and reports; "
              "leave empty for loose or unbranded goods.",
     )
+    pos_retail_size = fields.Char(
+        string="Size",
+        help="Pack or item size as the shop calls it, e.g. Drum, Gallon, Quarter "
+             "or 4 inch. Shown under the name on the till's product card, so "
+             "items that share a name can be told apart.",
+    )
     wholesale_price = fields.Float(
         string="Wholesale Price", min_display_digits='Product Price',
         help="Price offered to wholesale/bulk buyers. Informational only — "
@@ -337,7 +343,7 @@ class ProductTemplate(models.Model):
         # catalogue slows session start. The variants already carry it (see
         # product_product._load_pos_data_fields), so the card sums those.
         result = super()._load_pos_data_fields(config)
-        for field in ('minimum_selling_price', 'mrp', 'wholesale_price'):
+        for field in ('minimum_selling_price', 'mrp', 'wholesale_price', 'pos_retail_size'):
             if field not in result:
                 result.append(field)
         return result

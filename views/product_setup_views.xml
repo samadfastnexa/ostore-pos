@@ -36,6 +36,7 @@
             <list string="Finish Product Setup" editable="bottom" multi_edit="1"
                   default_order="create_date desc, name">
                 <field name="name" required="1"/>
+                <field name="pos_retail_size" optional="show"/>
                 <field name="default_code" string="Product Code (SKU)" optional="show"/>
                 <field name="barcode" optional="show"/>
                 <field name="categ_id" string="Product Category"
