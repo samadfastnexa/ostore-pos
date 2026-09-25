@@ -3,11 +3,14 @@
     venv/Scripts/python.exe odoo/odoo-bin shell -c odoo.conf -d <db> --no-http \
         < custom_addons/pos_retail/scripts/import_paints.py
 
-On the server (copy the workbook to /tmp first so the odoo user can read it):
-    sudo -u odoo env PAINTS_XLSX="/tmp/Murshid Store.xlsx" \
-        /opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin shell \
+On the server:
+    sudo -u odoo /opt/odoo/venv/bin/python3 /opt/odoo/odoo/odoo-bin shell \
         -c /etc/odoo/odoo.conf -d ostore_live --no-http \
         < /opt/odoo/custom_addons/pos_retail/scripts/import_paints.py
+
+The source is the live Google Sheet (shared "anyone with the link can
+view"), downloaded fresh on every run. To use a local file instead, pass
+PAINTS_XLSX=<path> (with sudo: sudo -u odoo env PAINTS_XLSX=<path> ...).
 
 DRY RUN by default. Set APPLY = True (or pipe through
 sed 's/^APPLY = False/APPLY = True/') to write.
@@ -28,13 +31,17 @@ What it does:
     are generated on first create and never overwritten.
 """
 
+import io
 import os
 import re
+import urllib.request
 
 import openpyxl
 
 APPLY = False
-XLSX = os.environ.get('PAINTS_XLSX', r'C:\Users\THINKBOOK\Downloads\Murshid Store.xlsx')
+SHEET_URL = ('https://docs.google.com/spreadsheets/d/'
+             '1wyP6KnQO5LowvsHZoHM4rntFwyJA8Wc5Kc652SXJDtI/export?format=xlsx')
+XLSX = os.environ.get('PAINTS_XLSX', SHEET_URL)
 SHEET = 'Paints'
 XMLID_MODULE = '__import__'
 
@@ -46,7 +53,7 @@ SIZES = {
 BRANDS = {
     'advacne': 'Advance', 'advance series': 'Advance',
     'black and white': 'Black and White', 'captain': 'Captain', 'commander': 'Commander',
-    'elite': 'Elite', 'exclusive nelson': 'Exclusive Nelson',
+    'elite': 'Elite', 'exclusive nelson': 'Exclusive Nelson', 'nelson exclusive': 'Exclusive Nelson',
     'fine coat': 'Finecoat', 'finecoat': 'Finecoat',
     'finecoat/ makro': 'Makro / Finecoat', 'makro/fincoat': 'Makro / Finecoat',
     'marko/fincoat': 'Makro / Finecoat',
@@ -82,7 +89,16 @@ def slug(*parts):
 
 
 # ---------- read ----------
-wb = openpyxl.load_workbook(XLSX, read_only=True, data_only=True)
+if XLSX.startswith('http'):
+    with urllib.request.urlopen(XLSX, timeout=60) as response:
+        payload = response.read()
+    if not payload.startswith(b'PK'):
+        raise SystemExit("The sheet did not download as a spreadsheet -- is it still shared "
+                         "'Anyone with the link can view'?")
+    source = io.BytesIO(payload)
+else:
+    source = XLSX
+wb = openpyxl.load_workbook(source, read_only=True, data_only=True)
 rows = list(wb[SHEET].iter_rows(values_only=True))
 header = [clean(h).lower() for h in rows[0]]
 col = {name: header.index(name) for name in header if name}
@@ -126,6 +142,23 @@ print(f"brands: {sorted({p['brand'] for p in products.values() if p['brand']})}"
 print(f"categories: {sorted({' / '.join(p['categ']) for p in products.values()})}")
 for n in notes:
     print("  note:", n)
+
+previous = {
+    imd.name[len('paint_'):]: imd.res_id
+    for imd in env['ir.model.data'].sudo().search([
+        ('module', '=', XMLID_MODULE), ('model', '=', 'product.template'), ('name', '=like', 'paint\\_%')])
+}
+new_keys = [k for k in products if k not in previous]
+gone = env['product.template'].sudo().with_context(active_test=False).browse(
+    [res_id for key, res_id in previous.items() if key not in products]).exists()
+print(f"{len(new_keys)} new, {len(products) - len(new_keys)} already imported (will be updated)")
+if gone:
+    # Not deleted: a product may already be on receipts or in stock. A renamed
+    # row in the sheet shows up here as one "gone" plus one "new".
+    print(f"{len(gone)} previously imported paint(s) are no longer in the sheet "
+          f"(renamed or removed); left untouched, archive them by hand if unwanted:")
+    for t in gone.sorted('name'):
+        print(f"    - {t.name}  [{t.barcode or 'no barcode'}]")
 
 if not APPLY:
     for p in list(products.values())[:8]:
