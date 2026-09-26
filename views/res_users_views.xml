@@ -161,7 +161,7 @@
                 <attribute name="string">Branch</attribute>
                 <attribute name="domain">[('child_ids', '=', False)]</attribute>
             </xpath>
-
+        </field>
     </record>
 
     <!-- POS Direct Login Tab on User Form -->
