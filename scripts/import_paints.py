@@ -38,6 +38,7 @@ What it does:
     the sheet's own BARCODE column is ignored on purpose.
 """
 
+import datetime
 import io
 import os
 import re
@@ -80,13 +81,30 @@ CATEGORY_WORDS = {'distamber': 'Distemper', 'oilpant': 'Oil Paint', 'oilpaint': 
 def clean(value):
     if value is None:
         return ''
+    if isinstance(value, datetime.datetime):
+        # Sheets turns a typed size like 1/2 into 2 January; read it back.
+        return f"{value.month}/{value.day}"
     if isinstance(value, float) and value.is_integer():
         value = int(value)
     return re.sub(r'\s+', ' ', str(value)).strip()
 
 
+UNIT_WORDS = {'ft': 'ft', 'feet': 'ft', 'foot': 'ft', 'm': 'm', 'meter': 'm', 'metre': 'm',
+              'kg': 'kg', 'kgs': 'kg'}
+
+
+def quantity(value):
+    """A number, optionally carrying a unit: 21, '21 ft', '160 rs/ft' -> (value, unit)."""
+    if isinstance(value, (int, float)):
+        return float(value), ''
+    match = re.match(r'^\s*([\d.]+)\s*(?:rs)?\s*/?\s*([a-z]*)\s*$', clean(value).lower())
+    if not match:
+        return None, ''
+    return float(match.group(1)), UNIT_WORDS.get(match.group(2), '')
+
+
 def number(value):
-    return float(value) if isinstance(value, (int, float)) else 0.0
+    return quantity(value)[0] or 0.0
 
 
 def category_path(raw):
@@ -138,20 +156,29 @@ for rownum, row in enumerate(rows[1:], start=2):
         notes.append(f"row {rownum}: {name} min {minimum:g} above MRP {mrp:g}: range dropped")
         minimum = mrp = 0.0
     raw_pieces = get('pieces')
-    pieces = None
-    if isinstance(raw_pieces, (int, float)):
-        pieces = float(raw_pieces)
-        if pieces < 0:
-            notes.append(f"row {rownum}: {name} Pieces is negative ({pieces:g}): no stock loaded")
-            pieces = None
-    elif clean(raw_pieces):
+    pieces, pieces_unit = quantity(raw_pieces)
+    if pieces is not None and pieces < 0:
+        notes.append(f"row {rownum}: {name} Pieces is negative ({pieces:g}): no stock loaded")
+        pieces = None
+    elif pieces is None and clean(raw_pieces):
         notes.append(f"row {rownum}: {name} Pieces is {clean(raw_pieces)!r}, not a number: no stock loaded")
-    else:
+    elif pieces is None:
         notes.append(f"row {rownum}: {name} Pieces is empty: no stock loaded")
-    # Name exactly as the sheet has it (the owner's wording). Size and brand
-    # still tell same-named rows apart in the external id.
+    # Sold by length or weight when a quantity or price says so ("21 ft",
+    # "160 rs/ft"); otherwise by the piece.
+    units = {u for u in (pieces_unit,) + tuple(quantity(get(c))[1] for c in (
+        'sales price', 'cost', 'minimum selling price', 'maximum retail price (mrp)')) if u}
+    if len(units) > 1:
+        notes.append(f"row {rownum}: {name} mixes units {sorted(units)}: sold per piece")
+    unit = units.pop() if len(units) == 1 else ''
+    # Name exactly as the sheet has it (the owner's wording).
     display = str(get('name')).strip() if isinstance(get('name'), str) else name
-    key = slug(name, size, brand)
+    # The sheet's own code (MBAHRIA0001...) identifies a row for good: names,
+    # sizes and brands get corrected over time, the code does not. Kept in the
+    # product's Internal Reference; the Odoo barcode stays the generated one.
+    code = clean(get('barcode')).upper()
+    legacy = slug(name, size, brand)
+    key = code or legacy
     if key in products:
         # Same item counted on two lines of the stock sheet: the shelf holds both.
         first = products[key]
@@ -164,7 +191,8 @@ for rownum, row in enumerate(rows[1:], start=2):
         continue
     products[key] = {
         'row': rownum, 'name': display, 'size': size, 'brand': brand, 'price': price, 'cost': cost,
-        'minimum': minimum, 'mrp': mrp, 'pieces': pieces, 'categ': category_path(get('product category')),
+        'minimum': minimum, 'mrp': mrp, 'pieces': pieces, 'unit': unit,
+        'categ': category_path(get('product category')), 'code': code, 'legacy': legacy,
     }
 
 # ---------- branch and warehouse ----------
@@ -176,11 +204,53 @@ warehouse = env['stock.warehouse'].sudo().search([('company_id', '=', branch.id)
 if not warehouse:
     raise SystemExit(f"{branch.name} has no warehouse to hold the opening stock.")
 
-previous = {
-    imd.name[len('paint_'):]: imd.res_id
-    for imd in env['ir.model.data'].sudo().search([
-        ('module', '=', XMLID_MODULE), ('model', '=', 'product.template'), ('name', '=like', 'paint\\_%')])
-}
+imds = env['ir.model.data'].sudo().search([
+    ('module', '=', XMLID_MODULE), ('model', '=', 'product.template'), ('name', '=like', 'paint\\_%')])
+imported = env['product.template'].sudo().with_context(active_test=False).browse(imds.mapped('res_id')).exists()
+legacy_ids = {imd.name[len('paint_'):]: imd.res_id for imd in imds}
+
+
+def norm(value):
+    return slug(value or '')
+
+
+# ---------- which existing product is each row? ----------
+# 1. its sheet code (every run after the first)
+# 2. the old name+size+brand key, for products imported before codes existed
+# 3. a looser match for those same pre-code products whose name, size or brand
+#    was edited since: unique name+size, then name+brand, then name alone
+matched, how, relinked, renamed = {}, {}, [], []
+by_code = {t.default_code.upper(): t for t in imported if t.default_code}
+for key, p in products.items():
+    if p['code'] and p['code'] in by_code:
+        t = by_code[p['code']]
+        matched[key], how[key] = t, 'code'
+        if norm(t.name) != norm(p['name']):
+            renamed.append((p, t.name))
+claimed = {t.id for t in matched.values()}
+for key, p in products.items():
+    t = env['product.template'].sudo().browse(legacy_ids.get(p['legacy'])).exists()
+    if key not in matched and t and t.id not in claimed and (not t.default_code or t.default_code.upper() == p['code']):
+        matched[key], how[key] = t, 'name/size/brand'
+        claimed.add(t.id)
+pool = imported.filtered(lambda t: not t.default_code)
+for label, fits in (
+        ('name+size', lambda t, p: norm(t.name) == norm(p['name']) and norm(t.pos_retail_size) == norm(p['size'])),
+        ('name+brand', lambda t, p: norm(t.name) == norm(p['name']) and norm(t.brand_id.name) == norm(p['brand'])),
+        ('name', lambda t, p: norm(t.name) == norm(p['name'])),
+        # words added to a name ("4 INCHI DOUBLE" -> "4 INCHI DOUBLE brush")
+        ('name extended+brand', lambda t, p: norm(t.brand_id.name) == norm(p['brand'])
+         and (norm(p['name']).startswith(norm(t.name) + '_') or norm(t.name).startswith(norm(p['name']) + '_')))):
+    for key, p in products.items():
+        if key in matched:
+            continue
+        candidates = [t for t in pool if t.id not in claimed and fits(t, p)]
+        if len(candidates) == 1:
+            t = candidates[0]
+            matched[key], how[key] = t, label
+            claimed.add(t.id)
+            relinked.append((p, t, label))
+gone = imported.filtered(lambda t: t.id not in claimed)
 
 
 def has_stock_history(templates):
@@ -194,12 +264,35 @@ def has_stock_history(templates):
     return env['product.template'].browse({product.product_tmpl_id.id for (product,) in moved})
 
 
-existing_templates = env['product.template'].sudo().browse(
-    [previous[k] for k in products if k in previous]).exists()
-live = has_stock_history(existing_templates)
+live = has_stock_history(env['product.template'].sudo().browse([t.id for t in matched.values()]))
+# A repeated row (same name/size/brand as an imported product) was merged into
+# that product before rows had codes, pieces added together. Now it has its own
+# code and becomes its own product -- but its pieces are already on the first
+# one, so loading them again would count that stock twice.
+by_legacy = {}
+for k, p in products.items():
+    by_legacy.setdefault(p['legacy'], []).append(k)
+already_counted = set()
+for k, p in products.items():
+    if not p['pieces'] or (k in matched and matched[k].id in live.ids):
+        continue  # nothing to load, or its own stock is already live
+    siblings = [k2 for k2 in by_legacy[p['legacy']] if k2 != k]
+    if any(k2 in matched and matched[k2].id in live.ids for k2 in siblings):
+        already_counted.add(k)
+for k in already_counted:
+    p = products[k]
+    notes.append(f"row {p['row']} {p['code']}: {p['name']} / {p['size'] or '-'} / {p['brand'] or '-'} is a repeat of "
+                 f"an already-stocked product whose count included this row's pieces; no stock loaded for it, "
+                 f"move stock between the two by hand if needed")
 stock_rows = [p for k, p in products.items() if p['pieces']]
 stock_todo = [p for k, p in products.items()
-              if p['pieces'] and not (k in previous and previous[k] in live.ids)]
+              if p['pieces'] and k not in already_counted and not (k in matched and matched[k].id in live.ids)]
+
+# A few renames per run are normal corrections. Many at once means codes were
+# shifted (a row inserted and the series renumbered), which would move every
+# price and stock count onto the wrong product.
+code_matched = sum(1 for k in matched if how[k] == 'code')
+codes_shifted = code_matched >= 10 and len(renamed) > 0.3 * code_matched
 
 print()
 print("=" * 78)
@@ -217,17 +310,35 @@ print(f"opening stock: {len(stock_todo)} products, {sum(p['pieces'] for p in sto
 for n in notes:
     print("  note:", n)
 
-new_keys = [k for k in products if k not in previous]
-gone = env['product.template'].sudo().with_context(active_test=False).browse(
-    [res_id for key, res_id in previous.items() if key not in products]).exists()
-print(f"{len(new_keys)} new, {len(products) - len(new_keys)} already imported (will be updated)")
+new_keys = [k for k in products if k not in matched]
+counts = {}
+for k in matched:
+    counts[how[k]] = counts.get(how[k], 0) + 1
+print(f"{len(new_keys)} new, {len(matched)} already imported (will be updated)  "
+      f"matched by: {', '.join(f'{label} {n}' for label, n in counts.items())}")
+if relinked:
+    print(f"{len(relinked)} product(s) matched although name/size/brand changed in the sheet -- check these:")
+    for p, t, label in relinked:
+        print(f"    row {p['row']} {p['code']}: {p['name']} / {p['size'] or '-'} / {p['brand'] or '-'}"
+              f"   <=  {t.name} / {t.pos_retail_size or '-'} / {t.brand_id.name or '-'}   [{label}]")
+if renamed:
+    print(f"{len(renamed)} product(s) renamed in the sheet (matched by code):")
+    for p, old in renamed:
+        print(f"    row {p['row']} {p['code']}: {old}  ->  {p['name']}")
+if codes_shifted:
+    print(f"!! {len(renamed)} of {code_matched} codes now sit on a differently named product. That looks like "
+          f"the codes were renumbered; the import will REFUSE to run until each code is back on its product.")
+if new_keys:
+    print(f"{len(new_keys)} new product(s):")
+    for k in new_keys:
+        p = products[k]
+        print(f"    row {p['row']} {p['code']}: {p['name']} / {p['size'] or '-'} / {p['brand'] or '-'}")
 if gone:
-    # Not deleted: a product may already be on receipts or in stock. A renamed
-    # row in the sheet shows up here as one "gone" plus one "new".
-    print(f"{len(gone)} previously imported paint(s) are no longer in the sheet "
-          f"(renamed or removed); left untouched, archive them by hand if unwanted:")
+    # Not deleted: a product may already be on receipts or in stock.
+    print(f"{len(gone)} previously imported paint(s) match no row in the sheet (renamed beyond "
+          f"recognition or removed); left untouched, archive them by hand if unwanted:")
     for t in gone.sorted('name'):
-        print(f"    - {t.name} {t.pos_retail_size or ''}  [{t.barcode or 'no barcode'}]")
+        print(f"    - {t.name} / {t.pos_retail_size or '-'} / {t.brand_id.name or '-'}  [{t.barcode or 'no barcode'}]")
 
 if not APPLY:
     for p in list(products.values())[:8]:
@@ -237,6 +348,9 @@ if not APPLY:
     print("Nothing was written. Set APPLY = True to import.")
     print("=" * 78)
 else:
+    if codes_shifted:
+        raise SystemExit("Refusing to import: the sheet's codes look renumbered (see the list above). "
+                         "Put each code back on its own product, then run again.")
     Category = env['product.category'].sudo()
     PosCategory = env['pos.category'].sudo()
     Brand = env['product.brand'].sudo()
@@ -283,6 +397,14 @@ else:
                 diff[field] = value
         return diff
 
+    uoms = {}
+
+    def uom_for(unit):
+        if unit not in uoms:
+            found = env['uom.uom'].sudo().search([('name', '=', unit)], limit=1) if unit else None
+            uoms[unit] = found or env.ref('uom.product_uom_unit')
+        return uoms[unit]
+
     companies = env['res.company'].sudo().search([])
     pos_paints = PosCategory.search([('name', '=', 'Paints')], limit=1) or PosCategory.create({'name': 'Paints'})
     started = time.monotonic()
@@ -300,7 +422,16 @@ else:
                 'available_in_pos': True, 'sale_ok': True, 'purchase_ok': True,
                 'company_id': False,
             }
-            template = Template.browse(previous.get(key)).exists()
+            if p['code']:
+                vals['default_code'] = p['code']
+            template = Template.browse(matched[key].id) if key in matched else Template
+            wanted_uom = uom_for(p['unit'])
+            if template and template.uom_id != wanted_uom:
+                # Odoo refuses to change the unit once stock has moved.
+                print(f"  note: {p['name']} is sold per {template.uom_id.name} in Odoo but per "
+                      f"{wanted_uom.name} in the sheet; unit left unchanged", flush=True)
+            elif not template:
+                vals['uom_id'] = wanted_uom.id
             if template:
                 diff = changes(template, vals)
                 if diff:
@@ -316,9 +447,18 @@ else:
 
         if to_create:
             new_templates = Template.create([vals for _key, vals, _cost in to_create])
-            IMD.create([{'module': XMLID_MODULE, 'name': f"paint_{key}", 'model': 'product.template',
-                         'res_id': tmpl.id, 'noupdate': True}
-                        for (key, _vals, _cost), tmpl in zip(to_create, new_templates)])
+            taken = set(legacy_ids)
+            xmlids = []
+            for (key, _vals, _cost), tmpl in zip(to_create, new_templates):
+                # The external id only marks "imported from this sheet"; the
+                # code is what identifies the product from now on.
+                name = slug(products[key]['code']) or products[key]['legacy']
+                while name in taken:
+                    name += '_x'
+                taken.add(name)
+                xmlids.append({'module': XMLID_MODULE, 'name': f"paint_{name}", 'model': 'product.template',
+                               'res_id': tmpl.id, 'noupdate': True})
+            IMD.create(xmlids)
             costs += [(tmpl, cost) for (_key, _vals, cost), tmpl in zip(to_create, new_templates)]
             templates_by_key.update({key: tmpl for (key, _v, _c), tmpl in zip(to_create, new_templates)})
             print(f"  created {len(new_templates)} ({time.monotonic() - started:.0f}s)", flush=True)
@@ -340,7 +480,8 @@ else:
 
         # Opening stock, re-checked against live history inside the
         # transaction rather than trusting the report computed above.
-        wanted = {templates_by_key[k]: p['pieces'] for k, p in products.items() if p['pieces']}
+        wanted = {templates_by_key[k]: p['pieces'] for k, p in products.items()
+                  if p['pieces'] and k not in already_counted}
         live = has_stock_history(Template.browse([t.id for t in wanted]))
         counted = {t: qty for t, qty in wanted.items() if t not in live}
         if counted:
