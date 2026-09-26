@@ -504,7 +504,9 @@ export class PosRetailCustomerProfile extends Component {
             }
 
             // Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
-            const shared = await openWhatsAppChoice(this.dialog, phone, { blob: pdfBlob, filename });
+            const shared = await openWhatsAppChoice(this.dialog, phone, {
+                blob: pdfBlob, filename, text: this.whatsappShareText,
+            });
             if (shared) {
                 this.notification.add(
                     _t("Ledger PDF processed for WhatsApp sharing."),

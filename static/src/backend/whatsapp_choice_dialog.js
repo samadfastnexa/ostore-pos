@@ -30,10 +30,25 @@ export class WhatsAppChoiceDialog extends Component {
 }
 
 /**
- * Helper function to clear any saved preferences and prompt choice modal every time.
- * Handles automatic PDF download and launches either WhatsApp Web or WhatsApp App.
+ * Ask Web or App (every time, nothing remembered), then send the document.
+ *
+ * WhatsApp's own links (wa.me, web.whatsapp.com/send, whatsapp://send) carry
+ * TEXT only -- no website can attach a file through them. So:
+ *
+ *   App  -> the operating system's share sheet with the real PDF file: pick
+ *           WhatsApp, pick the person, the PDF is attached. Chrome/Edge on
+ *           Windows (with WhatsApp Desktop installed), Android and iPhone all
+ *           do this. Where the browser cannot share files (Firefox), falls
+ *           back to opening the chat in the app with the message.
+ *   Web  -> WhatsApp Web can never receive a file from another tab, so it
+ *           opens the person's chat with the message already typed -- the
+ *           callers put a download link to the PDF in it -- and downloads the
+ *           PDF as well, for dragging into the chat if preferred.
+ *
+ * `text` is the message; `phone` international digits, or "" to let the user
+ * pick the chat.
  */
-export async function openWhatsAppChoice(dialogService, phone = "", { blob = null, filename = "document.pdf" } = {}) {
+export async function openWhatsAppChoice(dialogService, phone = "", { blob = null, filename = "document.pdf", text = "" } = {}) {
     // 1. Actively clear any past saved preference from all storage
     try {
         localStorage.removeItem("pos_retail_whatsapp_choice");
@@ -82,46 +97,45 @@ export async function openWhatsAppChoice(dialogService, phone = "", { blob = nul
         }
     };
 
+    const query = (params) => Object.entries(params)
+        .filter(([, value]) => value)
+        .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+        .join("&");
+
     // 3. Execute chosen target without storing preference
     if (chosen === "web") {
         downloadBlob();
-        const url = phone
-            ? `https://web.whatsapp.com/send?phone=${encodeURIComponent(phone)}`
-            : `https://web.whatsapp.com/`;
-        window.open(url, "_blank", "noopener,noreferrer");
+        const params = query({ phone, text });
+        window.open(`https://web.whatsapp.com/send${params ? "?" + params : ""}`, "_blank", "noopener,noreferrer");
     } else if (chosen === "app") {
-        const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        let sharedDirectly = false;
-
-        // On mobile, if native share is supported, share the PDF file directly into WhatsApp app
-        if (isMobile && blob && typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        // Any platform whose browser can share files -- not just phones:
+        // Chrome and Edge on Windows hand the PDF to the Windows share sheet,
+        // where WhatsApp Desktop is listed.
+        if (blob && typeof navigator !== "undefined" && typeof navigator.share === "function") {
             try {
                 const file = new File([blob], filename, { type: "application/pdf" });
                 if (navigator.canShare?.({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: filename,
-                    });
-                    sharedDirectly = true;
+                    const data = { files: [file], title: filename };
+                    if (text && navigator.canShare({ files: [file], text })) {
+                        data.text = text;
+                    }
+                    await navigator.share(data);
+                    return true;
                 }
             } catch (err) {
                 if (err && err.name === "AbortError") {
-                    return true;
+                    return true; // the user closed the share sheet
                 }
+                console.warn("pos_retail: file share failed, opening the chat instead", err);
             }
         }
-
-        if (!sharedDirectly) {
-            downloadBlob();
-            const appUrl = phone
-                ? `whatsapp://send?phone=${encodeURIComponent(phone)}`
-                : `whatsapp://`;
-            const a = document.createElement("a");
-            a.href = appUrl;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
+        downloadBlob();
+        const params = query({ phone, text });
+        const a = document.createElement("a");
+        a.href = `whatsapp://send${params ? "?" + params : ""}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
     return true;
 }

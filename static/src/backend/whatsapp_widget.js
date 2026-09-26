@@ -2,6 +2,7 @@
 
 import { Component, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
+import { rpc } from "@web/core/network/rpc";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 import { standardWidgetProps } from "@web/views/widgets/standard_widget_props";
@@ -18,11 +19,10 @@ import { openWhatsAppChoice } from "./whatsapp_choice_dialog";
 // A plain <button type="object"> will not do: it calls Python, and the share
 // sheet (navigator.share) only exists in the browser.
 //
-// Sharing itself mirrors the POS receipt button. The wa.me URL scheme carries
-// text and nothing else, so the actual PDF can only travel through the OS
-// share sheet -- and that needs a secure context, which localhost is and the
-// production bare-IP http server is not. There the fallback runs: WhatsApp
-// opens with a text summary, and the cashier is told why there is no file.
+// Sharing itself mirrors the POS receipt button (see openWhatsAppChoice). The
+// wa.me URL scheme carries text and nothing else, so the actual PDF travels
+// through the OS share sheet (HTTPS or localhost only), and the message always
+// carries a download link to the same PDF for WhatsApp Web.
 export class PosRetailWhatsappWidget extends Component {
     static template = "pos_retail.WhatsappWidget";
     static props = {
@@ -169,13 +169,21 @@ export class PosRetailWhatsappWidget extends Component {
         try {
             const filename = `${this.shareTitle.replace(/[\\/]/g, "-")}.pdf`;
 
-            // Run phone lookup and PDF generation concurrently to preserve browser user activation
-            const [shareData, res] = await Promise.all([
+            // Run phone lookup, link and PDF generation concurrently to preserve browser user activation
+            const [shareData, res, link] = await Promise.all([
                 this.fetchShareData().catch((err) => {
                     console.warn("pos_retail: could not fetch share data", err);
                     return { phone: "", phoneCode: "" };
                 }),
                 fetch(`/report/pdf/${this.props.report}/${rec.resId}`, { credentials: "same-origin" }),
+                // A download link for the same PDF, so the message carries the
+                // document even where WhatsApp cannot take the file itself.
+                rpc("/pos_retail/portal/get_doc_share_info", {
+                    model_name: rec.resModel, res_id: rec.resId, report: this.props.report,
+                }).catch((err) => {
+                    console.warn("pos_retail: could not build the PDF link", err);
+                    return {};
+                }),
             ]);
 
             if (!res.ok) {
@@ -189,7 +197,9 @@ export class PosRetailWhatsappWidget extends Component {
             const number = this.normalize(shareData.phone, shareData.phoneCode);
 
             // Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
-            const shared = await openWhatsAppChoice(this.dialog, number, { blob, filename });
+            const shared = await openWhatsAppChoice(this.dialog, number, {
+                blob, filename, text: this.buildShareText(link?.pdf_url || ""),
+            });
             if (shared) {
                 this.notification.add(
                     _t("Document PDF processed for WhatsApp sharing."),

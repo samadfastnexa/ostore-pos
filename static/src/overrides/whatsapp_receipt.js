@@ -198,6 +198,7 @@ patch(ReceiptScreen.prototype, {
             const shared = await openWhatsAppChoice(this.dialog || this.env.services.dialog, number, {
                 blob: pdfBlob,
                 filename: filename,
+                text: this.posRetailWhatsappText,
             });
             if (shared) {
                 this.notification.add(

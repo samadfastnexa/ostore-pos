@@ -17,7 +17,7 @@
                         <i class="fa fa-globe fa-2x me-3 text-success"/>
                         <div>
                             <div class="fw-bold fs-6 text-dark">WhatsApp Web</div>
-                            <div class="small text-muted">Open in browser tab</div>
+                            <div class="small text-muted">Opens the chat with the message and a PDF download link</div>
                         </div>
                     </button>
                     <button type="button" class="btn btn-success btn-lg d-flex align-items-center justify-content-start p-3 text-start shadow-sm text-white"
@@ -25,7 +25,7 @@
                         <i class="fa fa-mobile fa-2x me-3 text-white"/>
                         <div>
                             <div class="fw-bold fs-6 text-white">WhatsApp App</div>
-                            <div class="small text-white-50">Open WhatsApp Desktop / Mobile App</div>
+                            <div class="small text-white-50">Share the PDF file: choose WhatsApp, then the person</div>
                         </div>
                     </button>
                 </div>

@@ -150,7 +150,9 @@ export class PaymentReceiptPopup extends Component {
             }
 
             // Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
-            const shared = await openWhatsAppChoice(this.dialog, phone, { blob, filename });
+            const shared = await openWhatsAppChoice(this.dialog, phone, {
+                blob, filename, text: this.whatsappShareText,
+            });
             if (shared) {
                 this.notification.add(
                     _t("Payment receipt processed for WhatsApp sharing."),

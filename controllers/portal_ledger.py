@@ -183,6 +183,13 @@ class PosRetailPortalLedger(http.Controller):
         report_name = report or MODEL_REPORT_MAP.get(model_name)
         if not report_name:
             return request.make_response(f'No report configured for {model_name}', status=400)
+        # The token covers a record, not a report: only that record's own kind
+        # of report may be rendered through it.
+        report_record = env['ir.actions.report'].sudo()._get_report_from_name(report_name)
+        if not report_record and '.' in report_name:
+            report_record = env.ref(report_name, raise_if_not_found=False)
+        if not report_record or report_record._name != 'ir.actions.report' or report_record.model != model_name:
+            return request.make_response('Unknown report for this document', status=400)
 
         try:
             pdf = env['ir.actions.report'].sudo()._render_qweb_pdf(report_name, [record.id])[0]
@@ -198,13 +205,20 @@ class PosRetailPortalLedger(http.Controller):
             return request.make_response(f'Error generating document PDF: {str(e)}', status=500)
 
     @http.route('/pos_retail/portal/get_doc_share_info', type='jsonrpc', auth='user')
-    def get_doc_share_info(self, model_name, res_id, **kwargs):
+    def get_doc_share_info(self, model_name, res_id, report=None, **kwargs):
         env = request.env
+        # Only hand out a link to someone who can read the document now.
+        env[model_name].browse(res_id).check_access('read')
         token = get_security_token(env, model_name, res_id)
         base_url = request.httprequest.url_root.rstrip('/')
         if base_url.startswith('http://') and not ('localhost' in base_url or '127.0.0.1' in base_url):
             base_url = 'https://' + base_url[7:]
-        if model_name == 'pos.order':
+        if report:
+            # The exact report the button shares (e.g. the invoice "with
+            # payments" variant, or the vendor statement of a partner who is
+            # also a customer), through the generic route.
+            pdf_url = f"{base_url}/pos_retail/portal/doc/pdf/{model_name}/{res_id}?token={token}&report={report}"
+        elif model_name == 'pos.order':
             order = env['pos.order'].sudo().browse(res_id)
             if order.exists() and order.access_token:
                 pdf_url = f"{base_url}/pos_retail/portal/receipt/pdf/{order.access_token}"
