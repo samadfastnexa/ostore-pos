@@ -29,10 +29,11 @@ What it does:
   * rows without a sales price import at 0, still sellable at the till
   * a min/MRP that contradicts the sales price is dropped for that row and
     reported, since pos_retail rejects min > price or MRP < price
-  * "Pieces" becomes OPENING stock in the branch's warehouse, only for a
-    product with no stock movement there yet. Once a product has been
-    counted, sold or received, re-runs never touch its stock again -- the
-    sheet is a price list after that, not a stock count.
+  * "Pieces" (quantity in hand) becomes the OPENING count in the branch's
+    warehouse: on-hand is set to it for every paint not yet counted there --
+    including one already sold before the count arrived. Once a paint has
+    been counted (by this import or by hand), re-runs never touch its stock
+    again: the sheet is a price list after that, not a stock count.
   * safe to re-run: each product carries an external id, so a re-run
     updates in place. Barcodes are generated on first create, never changed;
     the sheet's own BARCODE column is ignored on purpose.
@@ -254,14 +255,18 @@ gone = imported.filtered(lambda t: t.id not in claimed)
 
 
 def has_stock_history(templates):
-    """Templates with any stock movement in the branch -- their stock is live."""
+    """Templates already COUNTED in the branch (any inventory adjustment: this
+    import's opening count, or one done by hand). Those are never touched
+    again. Sales alone do not count: a paint sold before its opening count was
+    loaded (so its stock went negative) still gets set to the sheet's Pieces."""
     variants = templates.product_variant_ids
     if not variants:
         return env['product.template']
-    moved = env['stock.move'].sudo()._read_group(
-        [('product_id', 'in', variants.ids), ('company_id', '=', branch.id), ('state', '!=', 'cancel')],
+    counted = env['stock.move'].sudo()._read_group(
+        [('product_id', 'in', variants.ids), ('company_id', '=', branch.id),
+         ('is_inventory', '=', True), ('state', '=', 'done')],
         ['product_id'])
-    return env['product.template'].browse({product.product_tmpl_id.id for (product,) in moved})
+    return env['product.template'].browse({product.product_tmpl_id.id for (product,) in counted})
 
 
 live = has_stock_history(env['product.template'].sudo().browse([t.id for t in matched.values()]))
@@ -305,10 +310,19 @@ print(f"sizes: {sorted({p['size'] for p in products.values() if p['size']})}")
 print(f"brands: {sorted({p['brand'] for p in products.values() if p['brand']})}")
 print(f"categories: {sorted({' / '.join(p['categ']) for p in products.values()})}")
 print(f"opening stock: {len(stock_todo)} products, {sum(p['pieces'] for p in stock_todo):g} pieces"
-      + (f"  ({len(stock_rows) - len(stock_todo)} skipped: already have stock history in {branch.name})"
+      + (f"  ({len(stock_rows) - len(stock_todo)} skipped: already counted in {branch.name})"
          if len(stock_rows) != len(stock_todo) else ""))
 for n in notes:
     print("  note:", n)
+# Paints sold before their opening count arrived: on-hand is not zero (often
+# negative). The count sets them to the sheet's Pieces.
+for k, p in products.items():
+    if k in matched and p in stock_todo:
+        on_hand = matched[k].product_variant_id.with_company(branch).with_context(
+            warehouse_id=warehouse.id).qty_available
+        if on_hand:
+            print(f"  note: row {p['row']} {p['name']}: on hand now {on_hand:g} (sold before any count), "
+                  f"will be set to the sheet's {p['pieces']:g}")
 
 new_keys = [k for k in products if k not in matched]
 counts = {}
@@ -501,6 +515,6 @@ else:
                                         ('barcode', '=', False)])
     print(f"created {len(to_create)}, updated {updated}, unchanged {unchanged}, "
           f"cost changes {cost_writes}, opening stock for {len(counted)} products "
-          f"({sum(counted.values()):g} pieces, {len(wanted) - len(counted)} skipped: stock already live); "
+          f"({sum(counted.values()):g} pieces, {len(wanted) - len(counted)} skipped: already counted); "
           f"products without a barcode: {no_barcode}  [{time.monotonic() - started:.0f}s]")
     print("=" * 78)
