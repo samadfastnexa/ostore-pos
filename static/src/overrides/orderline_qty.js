@@ -1,7 +1,9 @@
 /** @odoo-module **/
 
 import { patch } from "@web/core/utils/patch";
+import { _t } from "@web/core/l10n/translation";
 import { Orderline } from "@point_of_sale/app/components/orderline/orderline";
+import { PosOrderline } from "@point_of_sale/app/models/pos_order_line";
 import { OrderSummary } from "@point_of_sale/app/screens/product_screen/order_summary/order_summary";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 
@@ -49,6 +51,21 @@ patch(OrderSummary.prototype, {
         if (newQty <= 0) {
             this.currentOrder.removeOrderline(target);
             return;
+        }
+        if (delta > 0 && !this.currentOrder?.preset_id?.is_return) {
+            const product = target.product_id;
+            const isStorable = Boolean(product?.product_tmpl_id?.is_storable ?? product?.is_storable);
+            if (isStorable) {
+                const inHand = product?.qty_available ?? 0;
+                const currentQty = target.getQuantity();
+                if (newQty > inHand) {
+                    this.dialog.add(AlertDialog, {
+                        title: _t("Insufficient Stock"),
+                        body: _t('Cannot add "%s": Only %s available in hand (%s already in cart).', product.display_name, inHand, currentQty),
+                    });
+                    return;
+                }
+            }
         }
         const result = target.setQuantity(newQty, Boolean(target.combo_line_ids?.length));
         if (result !== true) {
@@ -103,9 +120,46 @@ patch(OrderSummary.prototype, {
     // as "sell 2 metres", not "add 2 more metres".
     posRetailSetQty(line, qty) {
         const target = line.combo_parent_id || line;
+        if (qty > 0 && !this.currentOrder?.preset_id?.is_return) {
+            const product = target.product_id;
+            const isStorable = Boolean(product?.product_tmpl_id?.is_storable ?? product?.is_storable);
+            if (isStorable) {
+                const inHand = product?.qty_available ?? 0;
+                const currentQty = target.getQuantity();
+                if (qty > inHand) {
+                    this.dialog.add(AlertDialog, {
+                        title: _t("Insufficient Stock"),
+                        body: _t('Cannot add "%s": Only %s available in hand (%s already in cart).', product.display_name, inHand, currentQty),
+                    });
+                    return;
+                }
+            }
+        }
         const result = target.setQuantity(qty, Boolean(target.combo_line_ids?.length));
         if (result !== true) {
             this.dialog.add(AlertDialog, result);
         }
+    },
+});
+
+// Guard Numpad and programmatic quantity changes against selling beyond in-hand stock
+patch(PosOrderline.prototype, {
+    setQuantity(quantity, keep_price) {
+        const quant = typeof quantity === "number" ? quantity : parseFloat("" + (quantity || 0));
+        if (quant > 0 && !this.order_id?.preset_id?.is_return && !this.refunded_orderline_id) {
+            const product = this.product_id;
+            const isStorable = Boolean(product?.product_tmpl_id?.is_storable ?? product?.is_storable);
+            if (isStorable) {
+                const inHand = product?.qty_available ?? 0;
+                const currentQty = this.qty || 0;
+                if (quant > inHand) {
+                    return {
+                        title: _t("Insufficient Stock"),
+                        body: _t('Cannot add "%s": Only %s available in hand (%s already in cart).', product.display_name, inHand, currentQty),
+                    };
+                }
+            }
+        }
+        return super.setQuantity(...arguments);
     },
 });

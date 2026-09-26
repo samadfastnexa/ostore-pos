@@ -234,6 +234,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/round_off.js',
             'pos_retail/static/src/overrides/round_off.xml',
             'pos_retail/static/src/overrides/opening_control.js',
+            'pos_retail/static/src/overrides/pos_direct_login.js',
             'pos_retail/static/src/overrides/opening_control.xml',
             'pos_retail/static/src/overrides/pos_theme.scss',
             'pos_retail/static/src/overrides/color_list_pos.scss',

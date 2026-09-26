@@ -162,6 +162,53 @@
                 <attribute name="domain">[('child_ids', '=', False)]</attribute>
             </xpath>
 
+    </record>
+
+    <!-- POS Direct Login Tab on User Form -->
+    <record id="view_users_form_pos_retail_direct_login" model="ir.ui.view">
+        <field name="name">res.users.form.pos.retail.direct.login</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="POS Direct Login" name="pos_direct_login_page">
+                    <group string="Cashier Direct POS Configuration">
+                        <group>
+                            <field name="pos_direct_login" widget="boolean_toggle"/>
+                            <field name="pos_config_id" invisible="not pos_direct_login" required="pos_direct_login" options="{'no_create': True, 'no_open': True}"/>
+                        </group>
+                        <group invisible="not pos_direct_login">
+                            <field name="pos_auto_open_session"/>
+                            <field name="pos_restrict_backend"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info mt-3" role="alert" invisible="not pos_direct_login">
+                        <h5 class="alert-heading mb-1"><i class="fa fa-info-circle me-1"/> Cashier Direct Login Active</h5>
+                        <p class="mb-1">
+                            When this user logs in at <code>/web/login</code>, they will <strong>immediately bypass the backend</strong> and enter their assigned register interface.
+                        </p>
+                        <p class="mb-0">
+                            <strong>Auto-Open Session:</strong> If checked, Odoo automatically creates and opens a new POS session if none is active — <em>eliminating the requirement for an administrator to log in first!</em>
+                        </p>
+                    </div>
+                    <div class="mt-3" invisible="not pos_direct_login">
+                        <button name="action_open_assigned_pos" type="object" string="Open Assigned POS Register" class="btn btn-outline-primary" icon="fa-shopping-cart"/>
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Inherit User List View -->
+    <record id="view_users_tree_pos_retail_direct_login" model="ir.ui.view">
+        <field name="name">res.users.list.pos.retail.direct.login</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list/field[@name='role']" position="before">
+                <field name="pos_direct_login" optional="show" string="POS Direct" widget="boolean_toggle"/>
+                <field name="pos_config_id" optional="show" string="Assigned Till"/>
+            </xpath>
         </field>
     </record>
 

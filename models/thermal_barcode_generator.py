@@ -390,3 +390,19 @@ def build_zpl_document(items, preset, currency_symbol, company_name):
         build_zpl_label(item, preset, currency_symbol, company_name, dpi=dpi)
         for item in items
     )
+
+
+def _encode_upca(text):
+    raw_text = (text or "").strip()
+    return _encode_ean13('0' + raw_text if len(raw_text) == 11 else raw_text)
+
+
+# Public aliases for testing and external callers
+encode_code128 = _encode_code128
+encode_ean13 = _encode_ean13
+encode_ean8 = _encode_ean8
+encode_upca = _encode_upca
+encode_code39 = _encode_code39
+
+
+

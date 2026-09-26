@@ -156,7 +156,7 @@
                 <field name="location_id" readonly="id"
                        domain="[('usage', 'in', ('internal', 'transit'))]"
                        options="{'no_create': True}"
-                       groups="stock.group_stock_multi_locations" optional="show"/>
+                       optional="show"/>
                 <field name="lot_id" readonly="1"
                        groups="stock.group_production_lot" optional="hide"/>
                 <field name="quantity" string="In System" readonly="1"/>

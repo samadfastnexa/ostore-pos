@@ -1,7 +1,7 @@
 import re
 
 from odoo import api, fields, models, tools
-from odoo.exceptions import AccessDenied, AccessError, UserError
+from odoo.exceptions import AccessDenied, AccessError, UserError, ValidationError
 from odoo.tools.translate import _
 
 from .res_company import TRADING_COMPANY_DOMAIN, pos_retail_trading_company
@@ -546,3 +546,113 @@ class ResUsers(models.Model):
             raise AccessDenied(_("Wrong PIN."))
 
         return {'uid': self.id, 'auth_method': 'pos_retail_pin', 'mfa': 'skip'}
+
+    # -------------------------------------------------------------------------
+    # POS Direct Login & Zero-Admin Morning Session Opening
+    # -------------------------------------------------------------------------
+    pos_direct_login = fields.Boolean(
+        string="Direct Login to POS",
+        default=False,
+        help="If enabled, this cashier will automatically bypass the Odoo backend upon login "
+             "and jump directly into their assigned Point of Sale interface.",
+    )
+    pos_config_id = fields.Many2one(
+        "pos.config",
+        string="Default POS Register",
+        help="Select the specific Point of Sale register assigned to this cashier.",
+    )
+    pos_auto_open_session = fields.Boolean(
+        string="Auto-Open Session if Closed",
+        default=True,
+        help="If enabled, a new POS session will automatically be created and opened if no active "
+             "session exists, allowing the cashier to start without needing an admin to log in first.",
+    )
+    pos_restrict_backend = fields.Boolean(
+        string="Restrict Backend Access",
+        default=True,
+        help="If enabled, the user cannot navigate to backend views (/odoo or /web) and will "
+             "be kept inside the Point of Sale interface.",
+    )
+
+    @api.model
+    def _load_pos_data_fields(self, config):
+        fields_list = super()._load_pos_data_fields(config)
+        if "pos_direct_login" not in fields_list:
+            fields_list.append("pos_direct_login")
+        return fields_list
+
+    @api.constrains("pos_direct_login", "pos_config_id")
+    def _check_pos_direct_login_config(self):
+        for user in self:
+            if user.pos_direct_login and not user.pos_config_id:
+                raise ValidationError(
+                    _("Please assign a Default POS Register for user '%(name)s' when Direct Login to POS is enabled.",
+                      name=user.name)
+                )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        users = super().create(vals_list)
+        for user in users:
+            if user.pos_direct_login:
+                user._ensure_pos_access_and_company()
+        return users
+
+    def write(self, vals):
+        res = super().write(vals)
+        if vals.get("pos_direct_login") or vals.get("pos_config_id"):
+            for user in self:
+                if user.pos_direct_login:
+                    user._ensure_pos_access_and_company()
+        return res
+
+    def _ensure_pos_access_and_company(self):
+        """Ensure the direct login cashier has required POS group, company access, and linked employee."""
+        self.ensure_one()
+        pos_user_group = self.env.ref("point_of_sale.group_pos_user", raise_if_not_found=False)
+        updates = {}
+        if pos_user_group and pos_user_group not in self.group_ids:
+            updates["group_ids"] = [(4, pos_user_group.id)]
+
+        if self.pos_config_id and self.pos_config_id.company_id:
+            cfg_company = self.pos_config_id.company_id
+            if cfg_company not in self.company_ids:
+                updates["company_ids"] = [(4, cfg_company.id)]
+            if self.company_id != cfg_company:
+                updates["company_id"] = cfg_company.id
+
+        if updates:
+            super(ResUsers, self.sudo()).write(updates)
+
+        if "hr.employee" in self.env and self.pos_config_id:
+            emp = self.env["hr.employee"].sudo().search([("user_id", "=", self.id)], limit=1)
+            target_company = self.pos_config_id.company_id or self.company_id
+            if not emp:
+                emp = self.env["hr.employee"].sudo().create({
+                    "name": self.name,
+                    "user_id": self.id,
+                    "company_id": target_company.id,
+                    "pin": False,
+                })
+            else:
+                emp_vals = {}
+                if emp.company_id != target_company:
+                    emp_vals["company_id"] = target_company.id
+                if emp_vals:
+                    emp.sudo().write(emp_vals)
+
+            if self.pos_config_id.module_pos_hr and emp:
+                cfg = self.pos_config_id.sudo()
+                if emp not in cfg.basic_employee_ids and emp not in cfg.advanced_employee_ids:
+                    cfg.write({"basic_employee_ids": [(4, emp.id)]})
+
+    def action_open_assigned_pos(self):
+        """Test-launch the assigned POS interface for this user."""
+        self.ensure_one()
+        if not self.pos_config_id:
+            raise ValidationError(_("No POS Register assigned to this user."))
+        return {
+            "type": "ir.actions.act_url",
+            "url": f"/pos/ui/{self.pos_config_id.id}?from_backend=True",
+            "target": "self",
+        }

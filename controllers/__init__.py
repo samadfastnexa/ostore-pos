@@ -4,3 +4,4 @@ from . import kiosk
 from . import back_office_pin
 from . import portal_ledger
 from . import thermal_label_controller
+from . import direct_login

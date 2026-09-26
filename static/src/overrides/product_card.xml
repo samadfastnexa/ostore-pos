@@ -34,11 +34,14 @@
                      only by size ("white" by the drum, gallon or quarter). -->
                 <div t-if="props.product.pos_retail_size" class="pos-retail-card-size"
                      t-esc="props.product.pos_retail_size"/>
-                <div class="pos-retail-card-price">
+                <div t-if="posRetailInfo.isPriceZero" class="pos-retail-card-price text-danger fw-bold">
+                    <span class="badge bg-danger text-white py-1 px-2"><i class="fa fa-ban me-1"/>Price 0 (Unsellable)</span>
+                </div>
+                <div t-else="" class="pos-retail-card-price">
                     <t t-esc="posRetailInfo.price"/><small t-if="posRetailInfo.priceSuffix"
                         class="pos-retail-card-uom" t-esc="posRetailInfo.priceSuffix"/>
                 </div>
-                <div t-if="posRetailInfo.hasRange"
+                <div t-if="posRetailInfo.hasRange and !posRetailInfo.isPriceZero"
                      class="pos-retail-card-range"
                      title="Allowed selling range">
                     <i class="fa fa-arrows-h me-1"/><t t-esc="posRetailInfo.range"/>
@@ -49,7 +52,7 @@
                     <t t-if="posRetailInfo.qty &gt; 0">
                         <t t-esc="posRetailInfo.qtyLabel"/> in stock
                     </t>
-                    <t t-else="">Out of stock</t>
+                    <t t-else="">Out of stock (0 in hand)</t>
                 </div>
             </t>
         </xpath>

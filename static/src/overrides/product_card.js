@@ -18,20 +18,13 @@ patch(ProductCard.prototype, {
     // getTaxDetails does the whole job -- pricelist, fiscal position, then the
     // tax engine -- but only if the pricelist is handed to it. Core's own
     // displayPriceUnit getter leaves it at false, so it cannot be reused here.
-    posRetailCardPrice(product, format) {
-        const fallback = () => format(product.list_price || 0);
+    posRetailNumericPrice(product) {
         const pos = this.env.services?.pos;
         if (!pos || typeof product.getTaxDetails !== "function") {
-            return fallback();
+            return product.list_price || 0;
         }
         try {
             const order = pos.getOrder?.();
-            // Both values must sit under overridedValues: getBaseLine reads
-            // `opts.overridedValues` (product_template_accounting.js:178-180)
-            // and ignores anything passed at the top level -- so the earlier
-            // top-level form silently fell back to the default pricelist and
-            // no fiscal position, which is the very bug this getter exists to
-            // avoid.
             const details = product.getTaxDetails({
                 overridedValues: {
                     pricelist: order?.pricelist_id || pos.config?.pricelist_id || false,
@@ -41,11 +34,16 @@ patch(ProductCard.prototype, {
             const amount = pos.config?.iface_tax_included === "total"
                 ? details.total_included
                 : details.total_excluded;
-            return Number.isFinite(amount) ? format(amount) : fallback();
+            return Number.isFinite(amount) ? amount : (product.list_price || 0);
         } catch {
-            // A price the cashier can read beats a card that fails to render.
-            return fallback();
+            return product.list_price || 0;
         }
+    },
+
+    posRetailCardPrice(product, format) {
+        const fallback = () => format(product.list_price || 0);
+        const amount = this.posRetailNumericPrice(product);
+        return Number.isFinite(amount) ? format(amount) : fallback();
     },
 
     get posRetailPriceInfo() {
@@ -97,6 +95,12 @@ patch(ProductCard.prototype, {
         // wins for this product.
         const campaignBadge = this.env.services?.pos?.posRetailCampaignBadge?.(product) || "";
 
+        const numericPrice = this.posRetailNumericPrice(product);
+        const isStorable = Boolean(product.is_storable);
+        const isOutOfStock = isStorable && qty <= 0;
+        const isPriceZero = !product.isCombo?.() && (numericPrice <= 0 || (product.list_price || 0) <= 0);
+        const isNotSellable = isOutOfStock || isPriceZero;
+
         return {
             price: this.posRetailCardPrice(product, format),
             uom,
@@ -104,10 +108,13 @@ patch(ProductCard.prototype, {
             campaignBadge,
             hasRange,
             range,
-            isStorable: Boolean(product.is_storable),
+            isStorable,
             qty,
             // Stock in the unit it is actually counted in: "125 m", not "125".
             qtyLabel: uom ? `${qty} ${uom}` : String(qty),
+            isOutOfStock,
+            isPriceZero,
+            isNotSellable,
         };
     },
 });

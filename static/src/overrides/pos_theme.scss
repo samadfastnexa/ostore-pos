@@ -844,6 +844,16 @@ $o_retail_blue: #2563eb;
         &.pos-retail-card-stock--out {
             color: $o_retail_red;
             opacity: 1;
+            font-weight: 700;
+        }
+    }
+
+    .pos-retail-card-price {
+        .badge.bg-danger {
+            font-size: .62rem;
+            font-weight: 700;
+            letter-spacing: .02em;
+            vertical-align: middle;
         }
     }
 
