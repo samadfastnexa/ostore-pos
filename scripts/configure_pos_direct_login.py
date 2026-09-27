@@ -37,27 +37,40 @@ def configure_pos_users(env):
         print(f"  * Config #{cfg.id}: '{cfg.name}' | Company: '{cfg.company_id.name}' (ID {cfg.company_id.id}) | Employees: {len(cfg.basic_employee_ids)}")
     print("================================================================================")
 
-    # Find all users with POS access (excluding OdooBot)
-    users = env['res.users'].search([
-        ('group_ids', 'in', [pos_user_group.id]),
-        ('id', '!=', 1),
-        ('share', '=', False),
-    ])
+    # Find all users with POS access (checking all_group_ids for implied groups/roles as well)
+    try:
+        users = env['res.users'].search([
+            ('all_group_ids', 'in', [pos_user_group.id]),
+            ('id', '!=', 1),
+            ('share', '=', False),
+        ])
+    except Exception:
+        users = env['res.users'].search([
+            ('group_ids', 'in', [pos_user_group.id]),
+            ('id', '!=', 1),
+            ('share', '=', False),
+        ])
 
     print(f"\nProcessing {len(users)} POS users...\n")
     configured_cashiers = []
     admins = []
 
     for user in users:
-        is_admin = bool(admin_group and admin_group in user.group_ids)
+        is_manager_or_admin = (
+            user.id == 2
+            or (user.login or '').lower() in ('admin', 'administrator', 'root')
+            or user.has_group('base.group_system')
+            or user.has_group('base.group_erp_manager')
+            or user.has_group('point_of_sale.group_pos_manager')
+        )
 
-        if is_admin:
-            # Super Administrators: keep backend access safe, do NOT restrict backend!
+        if is_manager_or_admin:
+            # Administrators and Managers need unrestricted access to backend (/odoo)
             admins.append(user)
             user.sudo().write({
                 'pos_restrict_backend': False,
             })
-            print(f"[ADMIN SAFE] User #{user.id} '{user.login}' ({user.name}): Kept unrestricted backend access (/odoo).")
+            print(f"[ADMIN/MANAGER SAFE] User #{user.id} '{user.login}' ({user.name}): Protected unrestricted backend access (/odoo).")
             continue
 
         # Cashier User: Find best-matching POS Config
@@ -94,6 +107,10 @@ def configure_pos_users(env):
         configured_cashiers.append((user, target_config, emp))
         print(f"[CASHIER CONFIGURED] User #{user.id} '{user.login}' ({user.name}) -> Register: '{target_config.name}' (ID {target_config.id}) | Direct: Yes | AutoOpen: Yes | RestrictBackend: Yes | Employee: '{emp.name if emp else 'N/A'}' (PIN bypassed)")
 
+    # Check for registers without cashiers
+    assigned_config_ids = {cfg.id for _, cfg, _ in configured_cashiers}
+    unassigned = [c for c in configs if c.id not in assigned_config_ids]
+
     print("\n================================================================================")
     print(f"CONFIGURATION SUMMARY:")
     print(f"  * {len(configured_cashiers)} Cashier(s) configured for Direct POS Login:")
@@ -102,6 +119,12 @@ def configure_pos_users(env):
     print(f"  * {len(admins)} Admin(s) protected (Backend Restricted: NO):")
     for a in admins:
         print(f"    - {a.login} ({a.name})")
+
+    if unassigned:
+        print(f"\n  * {len(unassigned)} Register(s) without dedicated cashier assigned:")
+        for uc in unassigned:
+            print(f"    - Register #{uc.id}: '{uc.name}' (Company: '{uc.company_id.name}')")
+            print(f"      -> In Settings -> Users, assign a cashier user to '{uc.name}' with Direct Login enabled.")
     print("================================================================================")
     print("Success! All cashiers are now set to jump directly into the sales register upon login.")
 

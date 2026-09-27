@@ -118,6 +118,10 @@ class PosDirectLoginHome(Home):
         """Restrict backend access for direct-login cashiers and redirect appropriately."""
         if request.session.uid:
             user = request.env["res.users"].sudo().browse(request.session.uid)
+            # Super-administrators must NEVER be restricted from backend access
+            if user.exists() and (user.has_group("base.group_system") or user.has_group("base.group_erp_manager")):
+                return super().web_client(s_action=s_action, **kw)
+
             if user.exists() and user.pos_direct_login and user.pos_restrict_backend and user.pos_config_id:
                 pos_config = user.sudo().pos_config_id
                 active_session = request.env["pos.session"].sudo().search([
