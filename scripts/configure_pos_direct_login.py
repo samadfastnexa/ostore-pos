@@ -100,8 +100,12 @@ def configure_pos_users(env):
         if emp:
             # Clear PIN so cashier jumps straight into sales register without lock screen
             emp.sudo().write({'pin': False})
-            # Ensure employee is enrolled in the POS register
-            if emp not in target_config.basic_employee_ids and emp not in target_config.advanced_employee_ids:
+            # Enrol the employee only where the register already names its
+            # cashiers: an empty list means every branch employee may use it,
+            # and adding one person would lock all the others out.
+            if target_config.basic_employee_ids and emp not in (
+                    target_config.basic_employee_ids | target_config.advanced_employee_ids
+                    | target_config.minimal_employee_ids):
                 target_config.sudo().write({'basic_employee_ids': [(4, emp.id)]})
 
         configured_cashiers.append((user, target_config, emp))

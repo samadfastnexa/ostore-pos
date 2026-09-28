@@ -647,7 +647,12 @@ class ResUsers(models.Model):
 
             if self.pos_config_id.module_pos_hr and emp:
                 cfg = self.pos_config_id.sudo()
-                if emp not in cfg.basic_employee_ids and emp not in cfg.advanced_employee_ids:
+                # Only a register that already names its cashiers needs this one
+                # added. An empty list means "every employee of the branch" --
+                # adding one person to it would lock every other cashier out
+                # (pos_hr pos_config._employee_domain).
+                if cfg.basic_employee_ids and emp not in (
+                        cfg.basic_employee_ids | cfg.advanced_employee_ids | cfg.minimal_employee_ids):
                     cfg.write({"basic_employee_ids": [(4, emp.id)]})
 
     def action_open_assigned_pos(self):
