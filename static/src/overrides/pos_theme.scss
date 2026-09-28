@@ -761,6 +761,24 @@ $o_retail_blue: #2563eb;
     }
 }
 
+// ---- Product cards take their till category's colour -----------------------
+// Core already tags every card with a colour class (product.color, else the
+// colour of its last pos_categ_ids entry -- product_screen.xml) but only spends
+// it on a 6px bottom stripe, and the transparent border above erased even that.
+// Tint the whole card, so a Paints item reads pink and an Electric one green,
+// the same as their category buttons. Mixed toward white rather than painted
+// with the raw --bg: at the button's full strength the bold accent-coloured
+// price loses too much contrast to read at arm's length. The stripe comes back
+// at full strength, which is where the darker extra colours (color_list_pos.scss)
+// actually read as themselves. Cards with no colour (category colour 0, or no
+// category) never get the class, so they keep the plain white card.
+.pos .rightpane .product[class*="o_colorlist_item_color_transparent_"] {
+    --btn-bg: color-mix(in srgb, var(--bg) 65%, #fff);
+    --btn-hover-bg: var(--bg);
+    --btn-active-bg: var(--hover-bg);
+    border-bottom-color: var(--border-color);
+}
+
 // ---- Selected cart line gets the accent ------------------------------------
 .pos .orderline.selected {
     background-color: color-mix(in srgb, var(--pos-retail-accent) 10%, transparent);
