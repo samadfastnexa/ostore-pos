@@ -75,9 +75,22 @@ patch(Navbar.prototype, {
         // Clear sessionStorage so any cached actions from previous admin sessions
         // (such as res.config.settings action-624) are completely wiped out
         // and cannot cause Access Error popups upon landing.
+        //
+        // Except which cashier is signed in at each till. "Back to Till"
+        // reopens the till in this same tab, and without that entry it came
+        // back signed in as the till's own employee instead of the person
+        // who left -- usually someone without Back Office, so the entry had
+        // vanished from the menu. The lock button still clears it as usual.
         try {
-            if (window.sessionStorage) {
-                window.sessionStorage.clear();
+            const storage = window.sessionStorage;
+            if (storage) {
+                const cashiers = Object.keys(storage)
+                    .filter((key) => key.startsWith("connected_cashier_"))
+                    .map((key) => [key, storage.getItem(key)]);
+                storage.clear();
+                for (const [key, value] of cashiers) {
+                    storage.setItem(key, value);
+                }
             }
         } catch (_e) {
             // Ignore if storage access is restricted

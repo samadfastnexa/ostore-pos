@@ -26,6 +26,21 @@ patch(PosStore.prototype, {
         }
 
         if (this.config.module_pos_hr) {
+            // Somebody already signed in on this tab with their PIN stays
+            // signed in: a reload, or coming back through "Back to Till",
+            // used to swap them for the till's own employee. Core pos_hr
+            // restores the same entry; this only stops the override below
+            // from undoing it. Locking the till removes the entry, so the
+            // PIN screen still guards whoever comes next.
+            const signedIn = this._getConnectedCashier?.();
+            if (signedIn) {
+                if (this.getCashier()?.id !== signedIn.id) {
+                    this.setCashier(signedIn);
+                }
+                this.hasLoggedIn = true;
+                return;
+            }
+
             const userId = this.user.id;
             let cashierEmp = this.models["hr.employee"]?.find(
                 (emp) => emp.user_id?.id === userId || emp.user_id === userId

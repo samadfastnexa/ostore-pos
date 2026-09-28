@@ -75,6 +75,9 @@ class PosRetailBackOfficePin(http.Controller):
 
     @http.route('/pos_retail/back_office/pin', type='jsonrpc', auth='user')
     def open_with_pin(self, config_id, employee_id, pin, user_id=None):
+        # Who the till was running as, before the switch below. Back to Till
+        # needs it to put the device back the way it found it.
+        till_uid = request.session.uid
         config = request.env['pos.config'].sudo().browse(int(config_id)).exists()
         if not config:
             return {'ok': False, 'message': _("This till is not set up for it.")}
@@ -179,6 +182,7 @@ class PosRetailBackOfficePin(http.Controller):
         request.session[PIN_SESSION_KEY] = {
             'config_id': config.id,
             'token': config.pos_retail_kiosk_token or '',
+            'till_uid': till_uid,
         }
 
         if hasattr(request.session, 'context') and isinstance(request.session.context, dict):
@@ -219,6 +223,18 @@ class PosRetailBackOfficePin(http.Controller):
         config = request.env['pos.config'].sudo().browse(int(config_id or 0)).exists() if config_id else None
 
         request.session.pop(PIN_SESSION_KEY, None)
+
+        # The PIN did not change who is signed in -- the till was already
+        # running as this login, typically opened with Open Register from the
+        # person's own back office. Handing the device to the kiosk account
+        # here signed them out of their own till: it came back as the till
+        # account's cashier with the till account's rights, and Back Office,
+        # Khata, New Product, Correct Stock, Today's Sales and Quotation all
+        # vanished from the screen. Markers from before this change carry no
+        # till_uid and keep the old behaviour.
+        if config and marker.get('till_uid') == request.session.uid:
+            return request.redirect('/pos/ui/%s' % config.id)
+
         if config and config.pos_retail_kiosk_user_id and token:
             request.session.logout(keep_db=True)
             return request.redirect('/pos_retail/kiosk/%s' % token)
