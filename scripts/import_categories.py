@@ -322,17 +322,47 @@ def get_category(path_list):
     return parent
 
 
-pos_categ_cache = {}
-def get_pos_category(name):
-    if not name:
-        return PosCategory.browse()
-    key = clean(name).title()
-    if key not in pos_categ_cache:
-        found = PosCategory.search([('name', '=ilike', name)], limit=1)
-        if not found and APPLY:
-            found = PosCategory.create({'name': key})
-        pos_categ_cache[key] = found or PosCategory.browse()
-    return pos_categ_cache[key]
+# Till sections (POS categories): a top section per department with
+# sub-sections, taken from the product category -- the sheet's own "Point of
+# Sale Category" column only ever says the department. Tapping a top section
+# at the till shows everything in its sub-sections too (pos_category.js).
+# Same rules as import_paints.py.
+SECTION_NAMES = {'handbrush': 'Brushes', 'spraypaints': 'Spray Paint', 'spray paints': 'Spray Paint',
+                 'paint tube': 'Paint Tubes', 'regmal': 'Sandpaper'}
+DEEP_SECTIONS = {'chemicals', 'brackets'}  # third-level categories that are sections of their own
+SECTION_ORDER = ['Distemper', 'Oil Paint', 'Putty', 'Brushes', 'Spray Paint', 'Paint Tubes', 'Sandpaper',
+                 'Polish', 'Chemicals', 'Electric Items', 'Brackets']
+
+
+def till_section(categ, fallback_top):
+    """Paints/Polish -> ('Paints', 'Polish'); Paints/Polish/Chemicals -> ('Paints', 'Chemicals');
+    Electric/Electric Items/Brackets -> ('Electric', 'Brackets')."""
+    if not categ:
+        return clean(fallback_top).title(), None
+    if len(categ) >= 3 and categ[2].lower() in DEEP_SECTIONS:
+        section = categ[2]
+    elif len(categ) >= 2:
+        section = categ[1]
+    else:
+        return categ[0], None
+    return categ[0], SECTION_NAMES.get(section.lower(), section)
+
+
+pos_section_cache = {}
+def get_pos_section(categ, fallback_top):
+    top, sub = till_section(categ, fallback_top)
+    if (top, sub) not in pos_section_cache:
+        parent = PosCategory.search([('name', '=ilike', top), ('parent_id', '=', False)], limit=1)
+        if not parent and APPLY:
+            parent = PosCategory.create({'name': top})
+        record = parent
+        if sub and parent:
+            record = PosCategory.search([('name', '=ilike', sub), ('parent_id', '=', parent.id)], limit=1)
+            if not record and APPLY:
+                record = PosCategory.create({'name': sub, 'parent_id': parent.id,
+                                             'sequence': SECTION_ORDER.index(sub) if sub in SECTION_ORDER else 99})
+        pos_section_cache[(top, sub)] = record or PosCategory.browse()
+    return pos_section_cache[(top, sub)]
 
 
 uom_cache = {}
@@ -538,8 +568,9 @@ for tab_name, cfg in TABS.items():
     print(f"  Parsed {len(products)} products from tab.", flush=True)
     all_categories_str = sorted({' / '.join(p['categ']) for p in products.values()})
     print(f"  Product Categories ({len(all_categories_str)}): {all_categories_str}", flush=True)
-    all_pos_cats_str = sorted({p['pos_categ'] for p in products.values()})
-    print(f"  POS Categories: {all_pos_cats_str}", flush=True)
+    all_sections = sorted({' > '.join(s for s in till_section(p['categ'], p['pos_categ']) if s)
+                           for p in products.values()})
+    print(f"  Till sections: {all_sections}", flush=True)
     stock_items = [p for p in products.values() if p['pieces'] > 0]
     total_pieces = sum(p['pieces'] for p in stock_items)
     print(f"  Opening Stock: {len(stock_items)} products with {total_pieces:g} total pieces", flush=True)
@@ -611,7 +642,7 @@ for tab_name, cfg in TABS.items():
         templates_by_key = {}
 
         for key, p in products.items():
-            pos_cat = get_pos_category(p['pos_categ'])
+            pos_cat = get_pos_section(p['categ'], p['pos_categ'])
             cat_rec = get_category(p['categ'])
             brand_id = get_brand(p['brand'])
             uom_rec = get_uom(p['unit'])

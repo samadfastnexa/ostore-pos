@@ -118,6 +118,28 @@ def category_path(raw):
             for part in str(raw).split('/') if part.strip()]
 
 
+# Till sections (POS categories): a top section per department with
+# sub-sections, taken from the product category. Tapping a top section at the
+# till shows everything in its sub-sections too (pos_category.js).
+SECTION_NAMES = {'handbrush': 'Brushes', 'spraypaints': 'Spray Paint', 'spray paints': 'Spray Paint',
+                 'paint tube': 'Paint Tubes', 'regmal': 'Sandpaper'}
+DEEP_SECTIONS = {'chemicals', 'brackets'}  # third-level categories that are sections of their own
+SECTION_ORDER = ['Distemper', 'Oil Paint', 'Putty', 'Brushes', 'Spray Paint', 'Paint Tubes', 'Sandpaper',
+                 'Polish', 'Chemicals', 'Electric Items', 'Brackets']
+
+
+def till_section(categ):
+    """Paints/Distemper/Drum -> ('Paints', 'Distemper'); Paints/Polish/Chemicals -> ('Paints',
+    'Chemicals'); a bare top category -> (top, None)."""
+    if len(categ) >= 3 and categ[2].lower() in DEEP_SECTIONS:
+        section = categ[2]
+    elif len(categ) >= 2:
+        section = categ[1]
+    else:
+        return categ[0], None
+    return categ[0], SECTION_NAMES.get(section.lower(), section)
+
+
 def slug(*parts):
     return re.sub(r'[^a-z0-9]+', '_', ' '.join(parts).lower()).strip('_')
 
@@ -313,6 +335,7 @@ print(f"{len(products)} products  |  {sum(1 for p in products.values() if not p[
 print(f"sizes: {sorted({p['size'] for p in products.values() if p['size']})}")
 print(f"brands: {sorted({p['brand'] for p in products.values() if p['brand']})}")
 print(f"categories: {sorted({' / '.join(p['categ']) for p in products.values()})}")
+print(f"till sections: {sorted({' > '.join(s for s in till_section(p['categ']) if s) for p in products.values()})}")
 print(f"opening stock: {len(stock_todo)} products, {sum(p['pieces'] for p in stock_todo):g} pieces"
       + (f"  ({len(stock_rows) - len(stock_todo)} skipped: already counted in {branch.name})"
          if len(stock_rows) != len(stock_todo) else ""))
@@ -424,7 +447,21 @@ else:
         return uoms[unit]
 
     companies = env['res.company'].sudo().search([])
-    pos_paints = PosCategory.search([('name', '=', 'Paints')], limit=1) or PosCategory.create({'name': 'Paints'})
+    sections = {}
+
+    def pos_section(categ):
+        """The till section record for a product category, created on first use."""
+        top, sub = till_section(categ)
+        if (top, sub) not in sections:
+            parent = PosCategory.search([('name', '=ilike', top), ('parent_id', '=', False)], limit=1) \
+                or PosCategory.create({'name': top})
+            record = parent
+            if sub:
+                record = PosCategory.search([('name', '=ilike', sub), ('parent_id', '=', parent.id)], limit=1) \
+                    or PosCategory.create({'name': sub, 'parent_id': parent.id,
+                                           'sequence': SECTION_ORDER.index(sub) if sub in SECTION_ORDER else 99})
+            sections[(top, sub)] = record
+        return sections[(top, sub)]
     started = time.monotonic()
     print("importing... (nothing is saved until the end; don't interrupt)", flush=True)
     with env.cr.savepoint():
@@ -433,7 +470,7 @@ else:
             vals = {
                 'name': p['name'], 'pos_retail_size': p['size'] or False, 'list_price': p['price'],
                 'minimum_selling_price': p['minimum'], 'mrp': p['mrp'],
-                'categ_id': category(p['categ']).id, 'pos_categ_ids': [(6, 0, pos_paints.ids)],
+                'categ_id': category(p['categ']).id, 'pos_categ_ids': [(6, 0, pos_section(p['categ']).ids)],
                 'pos_retail_branch_ids': [(6, 0, branch.ids)],
                 'brand_id': brand(p['brand']),
                 'type': 'consu', 'is_storable': True,
