@@ -15,8 +15,9 @@ pass them as: sudo -u odoo env NAME=value ...):
     PAINTS_TAB     sheet tab to read            (default "Bahria Paints")
     PAINTS_BRANCH  branch that sells and stocks them (default "Bahria")
 
-DRY RUN by default. Set APPLY = True (or pipe through
-sed 's/^APPLY = False/APPLY = True/') to write.
+DRY RUN by default. To write: APPLY=1 in the environment (as
+run_import_on_server.sh does), or pipe through
+sed 's/^APPLY = False/APPLY = True/'.
 
 What it does:
   * products named exactly as the sheet's Name column; name + size + brand
@@ -49,6 +50,8 @@ import urllib.request
 import openpyxl
 
 APPLY = False
+if os.environ.get('APPLY', '').strip().lower() in ('1', 'true', 'yes'):
+    APPLY = True  # run_import_on_server.sh passes APPLY=1
 SHEET_URL = ('https://docs.google.com/spreadsheets/d/'
              '1wyP6KnQO5LowvsHZoHM4rntFwyJA8Wc5Kc652SXJDtI/export?format=xlsx')
 XLSX = os.environ.get('PAINTS_XLSX', SHEET_URL)
@@ -156,7 +159,8 @@ for rownum, row in enumerate(rows[1:], start=2):
     if minimum and mrp and minimum > mrp:
         notes.append(f"row {rownum}: {name} min {minimum:g} above MRP {mrp:g}: range dropped")
         minimum = mrp = 0.0
-    raw_pieces = get('pieces')
+    # The quantity-in-hand column has been called both "Pieces" and "QUANTITY".
+    raw_pieces = get('pieces') if 'pieces' in col else get('quantity')
     pieces, pieces_unit = quantity(raw_pieces)
     if pieces is not None and pieces < 0:
         notes.append(f"row {rownum}: {name} Pieces is negative ({pieces:g}): no stock loaded")
