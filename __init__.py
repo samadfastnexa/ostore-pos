@@ -1,78 +1,75 @@
-import base64
-
-from odoo.tools import file_open
-
 from . import models
 from . import controllers
 
-# name, journal code (account.journal.code is capped at 5 chars), icon file.
-# Codes match the journals already provisioned in existing databases (JAZZ /
-# EASY) so a re-run reuses them instead of creating near-duplicates.
-POS_RETAIL_WALLETS = [
-    ('JazzCash', 'JAZZ', 'payment_jazzcash.png'),
-    ('EasyPaisa', 'EASY', 'payment_easypaisa.png'),
-]
+# The one electronic way to pay at the till. The shop asked for a single
+# "Online Payment" instead of separate Card, JazzCash and EasyPaisa buttons:
+# the cashier confirms the money arrived, whichever app or bank it came
+# through, and it all settles to one bank journal. Cash and Customer Account
+# (khata) are separate methods and are not affected.
+ONLINE_PAYMENT_NAME = 'Online Payment'
+ONLINE_PAYMENT_JOURNAL_CODE = 'ONLN'  # account.journal.code is capped at 5 chars
 
 
-def _pos_retail_wallet_icon(filename):
-    try:
-        with file_open('pos_retail/static/img/%s' % filename, 'rb') as fh:
-            return base64.b64encode(fh.read())
-    except (IOError, OSError):
-        return False
+def _pos_retail_online_payment_method(env, company):
+    """This company's Online Payment method, created with its journal if missing.
 
+    It needs a BANK journal. A payment method without one is what Odoo calls
+    "Customer Account": the sale is booked as the customer's debt instead of
+    as paid, which is the khata button, not an online payment.
 
-def _pos_retail_setup_wallet_methods(env):
-    """Create the Pakistani mobile-wallet payment methods (JazzCash, EasyPaisa)
-    for every company that has a chart of accounts, and attach them to that
-    company's POS registers.
-
-    Manual (non-terminal) methods: the customer pays in their wallet app, the
-    cashier confirms. Each wallet gets its own bank journal so settlements
-    reconcile per provider. Idempotent -- existing journals/methods are reused,
-    only missing pieces (e.g. the icon) are filled in.
+    Returns None while the company has no chart of accounts, because a bank
+    journal cannot be created without one. Branches share their parent's
+    chart, so the root company is what gets checked.
     """
-    Journal = env['account.journal']
-    Method = env['pos.payment.method']
-    ChartTemplate = env['account.chart.template']
+    Method = env['pos.payment.method'].sudo().with_context(active_test=False)
+    method = Method.search([('name', '=', ONLINE_PAYMENT_NAME),
+                            ('company_id', '=', company.id)], limit=1)
+    if method:
+        if not method.active:
+            method.active = True
+        return method
 
-    for company in env['res.company'].search([]):
-        # No chart of accounts (e.g. a bare branch company): journal creation
-        # could not build its default account -- skip until accounting is set up.
-        if not env['account.account'].sudo().search_count([('company_ids', 'in', company.id)]):
+    Account = env['account.account'].sudo()
+    if not Account.search_count([('company_ids', 'in', company.root_id.id)]):
+        return None
+
+    Journal = env['account.journal'].sudo()
+    journal = Journal.search([('code', '=', ONLINE_PAYMENT_JOURNAL_CODE),
+                              ('company_id', '=', company.id)], limit=1)
+    if not journal:
+        journal = Journal.create({
+            'name': ONLINE_PAYMENT_NAME,
+            'code': ONLINE_PAYMENT_JOURNAL_CODE,
+            'type': 'bank',
+            'company_id': company.id,
+        })
+    # The outstanding account normally comes from the journal onchange, which
+    # does not fire on a programmatic create; same lookup as core's
+    # _onchange_journal_id (pos_payment_method.py).
+    chart = env['account.chart.template'].with_context(allowed_company_ids=company.root_id.ids)
+    outstanding = chart.ref('account_journal_payment_debit_account_id', raise_if_not_found=False)
+    return Method.create({
+        'name': ONLINE_PAYMENT_NAME,
+        'journal_id': journal.id,
+        'company_id': company.id,
+        'outstanding_account_id': (outstanding or company.transfer_account_id).id or False,
+    })
+
+
+def _pos_retail_setup_online_payment(env):
+    """Give every register on a fresh install the Online Payment method.
+
+    Databases that already trade are converted by
+    scripts/setup_online_payment.py instead, which can wait for a register's
+    session to be closed -- Odoo refuses payment-method changes on a register
+    while its session is open.
+    """
+    for config in env['pos.config'].sudo().search([]):
+        if config.has_active_session:
             continue
-
-        for name, code, icon_file in POS_RETAIL_WALLETS:
-            method = Method.search([('name', '=', name), ('company_id', '=', company.id)], limit=1)
-            if not method:
-                journal = Journal.search([('code', '=', code), ('company_id', '=', company.id)], limit=1)
-                if not journal:
-                    journal = Journal.create({
-                        'name': name,
-                        'code': code,
-                        'type': 'bank',
-                        'company_id': company.id,
-                    })
-                # Mirror core's default-Card-method pattern (pos_config.py):
-                # the outstanding account normally comes from the journal
-                # onchange, which does not fire on programmatic create.
-                outstanding = ChartTemplate.with_company(company).ref(
-                    'account_journal_payment_debit_account_id', raise_if_not_found=False)
-                method = Method.create({
-                    'name': name,
-                    'journal_id': journal.id,
-                    'company_id': company.id,
-                    'outstanding_account_id': outstanding.id if outstanding else False,
-                    'image': _pos_retail_wallet_icon(icon_file),
-                })
-            elif not method.image:
-                method.image = _pos_retail_wallet_icon(icon_file)
-
-            configs = env['pos.config'].search([
-                ('company_id', '=', company.id), ('payment_method_ids', 'not in', method.id),
-            ])
-            if configs:
-                configs.write({'payment_method_ids': [(4, method.id)]})
+        method = _pos_retail_online_payment_method(env, config.company_id)
+        if method and method not in config.payment_method_ids:
+            config.write({'payment_method_ids': [(4, method.id)]})
 
 
 def _pos_retail_post_init(env):
@@ -89,7 +86,7 @@ def _pos_retail_post_init(env):
         if template:
             LoyaltyProgram.create({'name': 'Store Credit', 'program_type': 'ewallet', **template})
 
-    _pos_retail_setup_wallet_methods(env)
+    _pos_retail_setup_online_payment(env)
     _pos_retail_seed_till_capabilities(env)
     _pos_retail_seed_dashboard_permissions(env)
     _pos_retail_refresh_branch_rules(env)
