@@ -25,8 +25,9 @@ Environment overrides:
 
 Rules:
   * a row is a product only if its BARCODE is a sheet code (MBAHRIA0296...).
-    Codes run on across tabs and identify a product for good; uncoded rows
-    (e.g. paint rows pasted at the bottom of a tab) are skipped and listed.
+    Codes run on across tabs and identify a product for good; the code is
+    also the product's barcode and Internal Reference. Uncoded rows (e.g.
+    paint rows pasted at the bottom of a tab) are skipped and listed.
   * product name exactly as in the sheet; size into the Size field
   * sold at the branch only; cost set for every company (company-dependent)
   * a price, cost or quantity carrying a unit ("750/kg", "480/lts", "115meter")
@@ -665,7 +666,10 @@ for tab_name, cfg in TABS.items():
                 'company_id': False,
             }
             if p['code']:
+                # The sheet's code is the barcode printed and scanned in the
+                # shop, and also the Internal Reference this import matches on.
                 vals['default_code'] = p['code']
+                vals['barcode'] = p['code']
 
             template = Template.browse(matched[key].id) if key in matched else Template
 

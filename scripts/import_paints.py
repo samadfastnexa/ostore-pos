@@ -35,9 +35,8 @@ What it does:
     including one already sold before the count arrived. Once a paint has
     been counted (by this import or by hand), re-runs never touch its stock
     again: the sheet is a price list after that, not a stock count.
-  * safe to re-run: each product carries an external id, so a re-run
-    updates in place. Barcodes are generated on first create, never changed;
-    the sheet's own BARCODE column is ignored on purpose.
+  * safe to re-run: products are matched by the sheet's code (MBAHRIA...),
+    which is also set as the product's barcode and Internal Reference.
 """
 
 import datetime
@@ -478,7 +477,10 @@ else:
                 'company_id': False,
             }
             if p['code']:
+                # The sheet's code is the barcode printed and scanned in the
+                # shop, and also the Internal Reference this import matches on.
                 vals['default_code'] = p['code']
+                vals['barcode'] = p['code']
             template = Template.browse(matched[key].id) if key in matched else Template
             wanted_uom = uom_for(p['unit'])
             if template and template.uom_id != wanted_uom:
