@@ -456,3 +456,18 @@ class ProductTemplate(models.Model):
                     "Maximum Retail Price (%(maximum).2f).",
                     price=tmpl.list_price, maximum=maximum, product=tmpl.display_name,
                 ))
+
+    # Same switch as on product.product (see _compute_display_name there): the
+    # back-office screens drop the "[MBAHRIA0001] " prefix from the plain label
+    # and show the barcode in its own column. The grey code in the dropdown
+    # (formatted_display_name) is kept.
+    @api.depends_context('pos_retail_hide_product_code')
+    def _compute_display_name(self):
+        super()._compute_display_name()
+        context = self.env.context
+        if not context.get('pos_retail_hide_product_code') or context.get('formatted_display_name'):
+            return
+        for template in self:
+            prefix = f"[{template.default_code}] " if template.default_code else ""
+            if prefix and (template.display_name or "").startswith(prefix):
+                template.display_name = template.display_name[len(prefix):]

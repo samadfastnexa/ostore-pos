@@ -9,6 +9,7 @@
                 <field name="date"/>
                 <field name="pos_order_ref"/>
                 <field name="product_id"/>
+                <field name="pos_retail_product_barcode" optional="show"/>
                 <field name="original_price"/>
                 <field name="discount_percentage" string="Discount %"/>
                 <field name="discount_amount"/>
@@ -125,7 +126,7 @@
         <field name="res_model">pos.retail.line.discount.log</field>
         <field name="view_mode">list,form,pivot,graph</field>
         <field name="search_view_id" ref="pos_retail_line_discount_log_view_search"/>
-        <field name="context">{'search_default_filter_this_month': 1}</field>
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_filter_this_month': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No product-line discounts recorded yet

@@ -28,7 +28,21 @@
                         report="pos_retail.report_pos_receipt_a4"
                         title="Receipt"/>
             </xpath>
+            <!-- The code in its own column; the product column shows the name
+                 alone wherever the action carries pos_retail_hide_product_code
+                 (see product_product.py). -->
+            <xpath expr="//field[@name='lines']/list/field[@name='product_id']" position="after">
+                <field name="pos_retail_product_barcode" optional="show"/>
+            </xpath>
         </field>
+    </record>
+
+    <!-- Native Orders menu: product by name alone on the order lines, as on
+         every other back-office screen. Only the context is replaced; the rest
+         of the action stays core's. An update of point_of_sale on its own
+         would put core's (empty) context back until pos_retail is updated. -->
+    <record id="point_of_sale.action_pos_pos_form" model="ir.actions.act_window">
+        <field name="context">{'pos_retail_hide_product_code': True}</field>
     </record>
 
     <record id="view_pos_order_list_receipt_history" model="ir.ui.view">
@@ -82,6 +96,7 @@
     <record id="action_pos_retail_receipt_history" model="ir.actions.act_window">
         <field name="name">Receipt History</field>
         <field name="res_model">pos.order</field>
+        <field name="context">{'pos_retail_hide_product_code': True}</field>
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="view_pos_order_list_receipt_history"/>
         <field name="search_view_id" ref="view_pos_order_search_receipt_history"/>
@@ -140,6 +155,7 @@
     <record id="action_pos_retail_credit_overrides" model="ir.actions.act_window">
         <field name="name">Credit Approvals</field>
         <field name="res_model">pos.order</field>
+        <field name="context">{'pos_retail_hide_product_code': True}</field>
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="view_pos_order_list_credit_overrides"/>
         <field name="search_view_id" ref="view_pos_order_search_credit_overrides"/>

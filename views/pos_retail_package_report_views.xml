@@ -36,6 +36,7 @@
                 <field name="create_date" string="Date"/>
                 <field name="order_id" string="Order"/>
                 <field name="product_id"/>
+                <field name="pos_retail_product_barcode" optional="show"/>
                 <field name="pos_retail_package_id" string="Package"/>
                 <field name="qty" string="Base Quantity" sum="Total Base Quantity"/>
                 <field name="price_unit" string="Unit Price" optional="hide"/>
@@ -73,7 +74,7 @@
         <field name="view_mode">pivot,graph,list</field>
         <field name="search_view_id" ref="pos_retail_package_sales_view_search"/>
         <field name="domain">[('pos_retail_package_id', '!=', False)]</field>
-        <field name="context">{'search_default_group_package': 1}</field>
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_group_package': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">No package sales yet</p>
             <p>Once cashiers scan package barcodes at the till, this shows which
@@ -87,7 +88,7 @@
         <field name="view_mode">graph,pivot,list</field>
         <field name="search_view_id" ref="pos_retail_package_sales_view_search"/>
         <field name="domain">[('pos_retail_package_id', '!=', False)]</field>
-        <field name="context">{'search_default_group_package': 1}</field>
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_group_package': 1}</field>
     </record>
 
     <!-- Package master data as a report in its own right: prices, margin and
@@ -115,6 +116,7 @@
     <record id="action_pos_retail_package_inventory" model="ir.actions.act_window">
         <field name="name">Package Inventory &amp; Profitability</field>
         <field name="res_model">product.uom</field>
+        <field name="context">{'pos_retail_hide_product_code': True}</field>
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="pos_retail_package_stock_view_list"/>
         <field name="search_view_id" ref="product_uom_view_search_package"/>

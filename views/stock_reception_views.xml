@@ -72,6 +72,7 @@
                            readonly="state in ('done', 'cancel')">
                         <list editable="bottom" create="false">
                             <field name="product_id" readonly="1"/>
+                            <field name="pos_retail_product_barcode" optional="show"/>
                             <field name="product_uom_qty" string="Ordered" readonly="1"/>
                             <field name="quantity" string="Actually Arrived"/>
                             <field name="product_uom" string="Unit" readonly="1"
@@ -153,7 +154,7 @@
         <field name="view_id" ref="view_picking_list_pos_retail_reception"/>
         <field name="search_view_id" ref="view_picking_search_pos_retail_reception"/>
         <field name="domain">[('picking_type_code', '=', 'incoming')]</field>
-        <field name="context">{'search_default_to_receive': 1}</field>
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_to_receive': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Nothing on its way in</p>
             <p>Deliveries appear here once you confirm a purchase order with a vendor.

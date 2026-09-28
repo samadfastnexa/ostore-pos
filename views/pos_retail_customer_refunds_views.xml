@@ -56,6 +56,7 @@
                 <field name="partner_id"/>
                 <field name="original_reference"/>
                 <field name="product_id"/>
+                <field name="pos_retail_product_barcode" optional="show"/>
                 <field name="quantity" sum="Total quantity"/>
                 <field name="amount" sum="Total refunded"/>
                 <field name="currency_id" column_invisible="True"/>
@@ -103,7 +104,7 @@
         <field name="res_model">pos.retail.customer.refund.line</field>
         <field name="view_mode">list,pivot,graph</field>
         <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
-        <field name="context">{'search_default_not_cancelled': 1}</field>
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_not_cancelled': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">No customer refunds yet</p>
             <p>Every product a customer brings back appears here, whether it was
@@ -116,7 +117,7 @@
         <field name="res_model">pos.retail.customer.refund.line</field>
         <field name="view_mode">pivot,graph,list</field>
         <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
-        <field name="context">{'search_default_not_cancelled': 1,
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_not_cancelled': 1,
                                'pivot_row_groupby': ['date:month'],
                                'pivot_column_groupby': ['source'],
                                'pivot_measures': ['amount', 'quantity', '__count']}</field>
@@ -127,7 +128,7 @@
         <field name="res_model">pos.retail.customer.refund.line</field>
         <field name="view_mode">list,pivot,graph</field>
         <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
-        <field name="context">{'search_default_not_cancelled': 1, 'search_default_group_partner': 1}</field>
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_not_cancelled': 1, 'search_default_group_partner': 1}</field>
     </record>
 
     <record id="action_pos_retail_customer_refunds_by_product" model="ir.actions.act_window">
@@ -135,7 +136,7 @@
         <field name="res_model">pos.retail.customer.refund.line</field>
         <field name="view_mode">list,pivot,graph</field>
         <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
-        <field name="context">{'search_default_not_cancelled': 1, 'search_default_group_product': 1}</field>
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_not_cancelled': 1, 'search_default_group_product': 1}</field>
     </record>
 
     <record id="action_pos_retail_customer_refund_reasons" model="ir.actions.act_window">
@@ -143,7 +144,7 @@
         <field name="res_model">pos.retail.customer.refund.line</field>
         <field name="view_mode">graph,pivot,list</field>
         <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
-        <field name="context">{'search_default_not_cancelled': 1,
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_not_cancelled': 1,
                                'graph_groupbys': ['return_reason_id'],
                                'graph_mode': 'pie', 'graph_measure': 'amount',
                                'pivot_row_groupby': ['return_reason_id'],
@@ -155,7 +156,7 @@
         <field name="res_model">pos.retail.customer.refund.line</field>
         <field name="view_mode">graph,pivot,list</field>
         <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
-        <field name="context">{'search_default_not_cancelled': 1,
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_not_cancelled': 1,
                                'graph_groupbys': ['date:day'], 'graph_measure': 'amount',
                                'pivot_row_groupby': ['date:day'],
                                'pivot_measures': ['amount', 'quantity', '__count']}</field>
@@ -166,7 +167,7 @@
         <field name="res_model">pos.retail.customer.refund.line</field>
         <field name="view_mode">graph,pivot,list</field>
         <field name="search_view_id" ref="pos_retail_customer_refund_line_search"/>
-        <field name="context">{'search_default_not_cancelled': 1,
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_not_cancelled': 1,
                                'graph_groupbys': ['date:month'], 'graph_measure': 'amount',
                                'pivot_row_groupby': ['date:month'],
                                'pivot_measures': ['amount', 'quantity', '__count']}</field>

@@ -21,6 +21,7 @@ from . import res_country
 from . import res_company
 from . import res_partner
 from . import sale_order
+from . import sale_order_line
 from . import purchase_order
 from . import account_move
 from . import hr_employee
@@ -51,3 +52,4 @@ from . import pos_retail_vendor_return
 from . import thermal_barcode_generator
 from . import pos_retail_thermal_label_preset
 from . import pos_retail_thermal_label_wizard
+from . import product_barcode_columns

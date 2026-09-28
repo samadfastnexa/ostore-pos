@@ -59,6 +59,7 @@
     <record id="action_products_by_vendor" model="ir.actions.act_window">
         <field name="name">Products by Vendor</field>
         <field name="res_model">product.supplierinfo</field>
+        <field name="context">{'pos_retail_hide_product_code': True}</field>
         <field name="view_mode">pivot,list</field>
         <field name="search_view_id" ref="product.product_supplierinfo_search_view"/>
     </record>

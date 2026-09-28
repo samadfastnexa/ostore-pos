@@ -76,6 +76,7 @@
                             <field name="line_ids">
                                 <list editable="bottom">
                                     <field name="product_id"/>
+                                    <field name="pos_retail_product_barcode" optional="show"/>
                                     <field name="product_condition"/>
                                     <field name="return_reason_id"/>
                                     <field name="reason_note" placeholder="Details (mandatory if Other)"/>
@@ -132,7 +133,7 @@
         <field name="res_model">pos.retail.customer.refund</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="pos_retail_customer_refund_view_search"/>
-        <field name="context">{'search_default_filter_processed': 0}</field>
+        <field name="context">{'pos_retail_hide_product_code': True, 'search_default_filter_processed': 0}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Create a customer refund</p>
             <p>Process a return with or without an original receipt, route items by condition (sellable or damaged to scrap), and settle in cash or customer ledger credit.</p>

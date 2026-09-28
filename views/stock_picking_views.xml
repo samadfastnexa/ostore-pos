@@ -69,6 +69,7 @@
     <record id="action_pos_retail_goods_receipts" model="ir.actions.act_window">
         <field name="name">Goods Receipts</field>
         <field name="res_model">stock.picking</field>
+        <field name="context">{'pos_retail_hide_product_code': True}</field>
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="view_picking_list_goods_receipt"/>
         <field name="search_view_id" ref="view_picking_search_goods_receipt"/>
@@ -130,6 +131,7 @@
     <record id="action_pos_retail_vendor_returns" model="ir.actions.act_window">
         <field name="name">Vendor Returns</field>
         <field name="res_model">stock.picking</field>
+        <field name="context">{'pos_retail_hide_product_code': True}</field>
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="view_picking_list_vendor_return"/>
         <field name="search_view_id" ref="view_picking_search_vendor_return"/>

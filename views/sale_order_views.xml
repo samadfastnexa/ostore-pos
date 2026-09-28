@@ -26,12 +26,19 @@
 
     <!-- Quick access to quotations from within Point of Sale. Uses the native
          sale.order views; gated to the sales group so only users who can read
-         sale.order see it (avoids access errors for pure POS managers). -->
+         sale.order see it (avoids access errors for pure POS managers).
+         pos_retail_hide_product_code shows each line's product by name alone,
+         matching the line descriptions (models/sale_order_line.py), while the
+         product dropdown keeps the code as its grey suffix. Set here rather
+         than on the form's product fields because those already carry a
+         context of their own, which an inherited view can only replace
+         whole. -->
     <record id="action_pos_retail_quotations" model="ir.actions.act_window">
         <field name="name">Quotations</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">list,form</field>
         <field name="domain">[('state', 'in', ['draft', 'sent'])]</field>
+        <field name="context">{'pos_retail_hide_product_code': True}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">No quotations yet</p>
             <p>Quotations (including those saved from the POS with "Save as Quotation")

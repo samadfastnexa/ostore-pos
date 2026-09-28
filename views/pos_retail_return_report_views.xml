@@ -67,6 +67,7 @@
     <record id="action_pos_retail_returns" model="ir.actions.act_window">
         <field name="name">Returns and Refunds</field>
         <field name="res_model">pos.order</field>
+        <field name="context">{'pos_retail_hide_product_code': True}</field>
         <field name="view_mode">list,pivot,graph,form</field>
         <field name="search_view_id" ref="pos_retail_return_report_search"/>
         <field name="domain">[('is_refund', '=', True)]</field>

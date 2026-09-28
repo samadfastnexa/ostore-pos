@@ -6,6 +6,30 @@ from odoo.tools import groupby
 class ProductProduct(models.Model):
     _inherit = 'product.product'
 
+    # ------------------------------------------------------------------
+    # Product label without the code
+    #
+    # Odoo labels a product "[MBAHRIA0001] PUTTY" wherever it appears as a
+    # link: list columns, pivot rows, form fields. The back-office screens
+    # show the barcode in a column of its own instead, and drop the prefix by
+    # carrying this key in their action or field context.
+    #
+    # Not core's display_default_code=False: that also strips the code out of
+    # the product dropdown, where Odoo 19 shows it as a grey suffix
+    # (web_name_search asks for formatted_display_name). That suffix is what
+    # tells two paints both named "10394" apart when picking one, so it stays;
+    # only the plain label loses its prefix.
+    @api.depends_context('pos_retail_hide_product_code')
+    def _compute_display_name(self):
+        super()._compute_display_name()
+        context = self.env.context
+        if not context.get('pos_retail_hide_product_code') or context.get('formatted_display_name'):
+            return
+        for product in self:
+            prefix = f"[{product.default_code}] " if product.default_code else ""
+            if prefix and (product.display_name or "").startswith(prefix):
+                product.display_name = product.display_name[len(prefix):]
+
     def write(self, vals):
         # standard_price is the real, stored, company-dependent field here;
         # product.template's own standard_price is only compute+inverse, and
