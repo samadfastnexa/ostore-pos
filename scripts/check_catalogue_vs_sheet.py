@@ -14,6 +14,8 @@ prices, cost, category, till section, branch and stock match the sheet?
 Brand, size and category are checked for presence (the importers tidy their
 spelling). A price range the importers dropped because it contradicts the
 sales price is counted separately, as is stock that moved since the count.
+Every product with nothing in hand is listed with the reason (quantity empty
+in the sheet, 0 in the sheet, not loaded yet, or sold since the count).
 
 Optional: IMPORT_XLSX (local file instead of the Google Sheet), IMPORT_BRANCH.
 """
@@ -91,6 +93,7 @@ for tab in TABS:
             entry[1].append(detail)
 
     coded = 0
+    out_of_stock = []
     for rownum, row in enumerate(rows[1:], start=2):
         get = lambda key: row[idx[key]] if idx[key] is not None and idx[key] < len(row) else None
         code = clean(get('code')).upper()
@@ -126,10 +129,22 @@ for tab in TABS:
         check('sold at branch only', t.pos_retail_branch_ids == branch,
               f"{where}: {t.pos_retail_branch_ids.mapped('name') or 'every branch'}")
         qty = number(get('qty'))
+        on_hand = product.with_company(branch).with_context(warehouse_id=warehouse.id).qty_available
         if qty is not None:
-            on_hand = product.with_company(branch).with_context(warehouse_id=warehouse.id).qty_available
             check('stock = sheet quantity', abs(on_hand - qty) < 0.001,
                   f"{where}: sheet {qty:g}, on hand {on_hand:g}")
+        if on_hand <= 0:
+            if qty is None:
+                reason = "QUANTITY is empty in the sheet -> fill it in, then re-run the import"
+            elif qty <= 0:
+                reason = f"the sheet says {qty:g}"
+            elif not env['stock.move'].sudo().search_count([
+                    ('product_id', '=', product.id), ('company_id', '=', branch.id),
+                    ('is_inventory', '=', True), ('state', '=', 'done')]):
+                reason = f"sheet says {qty:g} but it was never loaded -> re-run the import"
+            else:
+                reason = f"sheet says {qty:g}; loaded, then sold or adjusted down since"
+            out_of_stock.append(f"row {rownum} {code} {name} (on hand {on_hand:g}): {reason}")
 
     print(f"\n{tab}: {coded} products in the sheet")
     for label, (ok, problems) in checks.items():
@@ -139,6 +154,10 @@ for tab in TABS:
             print(f"      - {detail}")
         if len(problems) > 5:
             print(f"      ... and {len(problems) - 5} more")
+    # Every one, not just five: this is the list someone works through.
+    print(f"  out of stock at the till: {len(out_of_stock)}")
+    for line in out_of_stock:
+        print(f"      - {line}")
 print()
 print("Stock can differ once the till has sold or received something since the count.")
 print("=" * 78)
