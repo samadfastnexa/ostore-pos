@@ -2,11 +2,11 @@
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.StockModal">
-        <Dialog size="'xl'" title="'Store Inventory &amp; Stock Adjustment'" bodyClass="'pos-retail-stock-modal p-0'">
-            <div class="pos-retail-stock-container d-flex flex-column" style="max-height: 80vh;">
+        <Dialog size="'xl'" title="'Store Inventory &amp; Stock Adjustment'" contentClass="'pos-retail-stock-modal-content'" bodyClass="'pos-retail-stock-modal p-0'">
+            <div class="pos-retail-stock-container d-flex flex-column h-100">
 
                 <!-- Header Bar with Location & Search -->
-                <div class="p-3 bg-light border-bottom">
+                <div class="pos-retail-modal-header-bar p-3 bg-light border-bottom flex-shrink-0">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-primary px-3 py-2 fs-6">
@@ -27,7 +27,7 @@
                             <div class="input-group">
                                 <span class="input-group-text bg-white"><i class="fa fa-search text-muted"/></span>
                                 <input type="text"
-                                       class="form-control form-control-lg"
+                                       class="form-control"
                                        placeholder="Search product by name, barcode, or SKU..."
                                        t-att-value="state.searchQuery"
                                        t-on-input="onSearchInput"
@@ -69,12 +69,12 @@
                 </div>
 
                 <!-- Error Alert if any -->
-                <div t-if="state.errorMessage" class="alert alert-danger m-3 mb-0 py-2 px-3">
+                <div t-if="state.errorMessage" class="alert alert-danger m-3 mb-0 py-2 px-3 flex-shrink-0">
                     <i class="fa fa-exclamation-triangle me-1"/> <t t-esc="state.errorMessage"/>
                 </div>
 
                 <!-- Inline Adjust Sub-panel (if active) -->
-                <div t-if="state.adjustingProduct" class="p-3 bg-warning-subtle border-bottom border-warning">
+                <div t-if="state.adjustingProduct" class="p-3 bg-warning-subtle border-bottom border-warning flex-shrink-0">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="fw-bold fs-6 text-dark">
                             <i class="fa fa-sliders me-1 text-primary"/>
@@ -112,8 +112,8 @@
                                 Cancel
                             </button>
                             <button type="button" class="btn btn-success btn-sm flex-fill fw-bold"
-                                    t-att-disabled="state.isSavingAdjust"
-                                    t-on-click="submitAdjust">
+                                     t-att-disabled="state.isSavingAdjust"
+                                     t-on-click="submitAdjust">
                                 <i t-if="state.isSavingAdjust" class="fa fa-spinner fa-spin me-1"/>
                                 <i t-else="" class="fa fa-check me-1"/> Apply
                             </button>
@@ -122,7 +122,7 @@
                 </div>
 
                 <!-- Products Table Area -->
-                <div class="flex-grow-1 overflow-auto p-0" style="min-height: 350px;">
+                <div class="pos-retail-table-wrapper flex-grow-1 overflow-auto p-0">
                     <div t-if="state.loading" class="text-center p-5 text-muted">
                         <i class="fa fa-circle-o-notch fa-spin fa-2x mb-2 text-primary"/>
                         <div>Loading store stock figures...</div>
@@ -133,8 +133,8 @@
                         <div class="fs-6">No products found matching your search.</div>
                     </div>
 
-                    <table t-else="" class="table table-hover table-striped align-middle mb-0" style="font-size: 0.92rem;">
-                        <thead class="table-light sticky-top" style="z-index: 2;">
+                    <table t-else="" class="table table-hover align-middle mb-0" style="font-size: 0.92rem;">
+                        <thead>
                             <tr>
                                 <th style="width: 40%;">Product</th>
                                 <th style="width: 15%;">SKU / Barcode</th>
@@ -192,7 +192,7 @@
                 </div>
 
                 <!-- Footer -->
-                <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center">
+                <div class="pos-retail-modal-footer p-3 bg-light border-top d-flex justify-content-between align-items-center flex-shrink-0">
                     <div class="text-muted small">
                         <i class="fa fa-info-circle me-1"/> All stock corrections are recorded with your cashier signature in the inventory audit log.
                     </div>

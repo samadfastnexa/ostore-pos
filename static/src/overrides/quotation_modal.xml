@@ -2,11 +2,11 @@
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.QuotationModal">
-        <Dialog size="'xl'" title="'Quotations History &amp; Settle'" bodyClass="'pos-retail-quote-modal p-0'">
-            <div class="pos-retail-quote-container d-flex flex-column" style="max-height: 80vh;">
+        <Dialog size="'xl'" title="'Quotations History &amp; Settle'" contentClass="'pos-retail-quote-modal-content'" bodyClass="'pos-retail-quote-modal p-0'">
+            <div class="pos-retail-quote-container d-flex flex-column h-100">
 
                 <!-- Header Bar -->
-                <div class="p-3 bg-light border-bottom">
+                <div class="pos-retail-modal-header-bar p-3 bg-light border-bottom flex-shrink-0">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge text-white px-3 py-2 fs-6" style="background-color: #6f42c1;">
@@ -27,7 +27,7 @@
                             <div class="input-group">
                                 <span class="input-group-text bg-white"><i class="fa fa-search text-muted"/></span>
                                 <input type="text"
-                                       class="form-control form-control-lg"
+                                       class="form-control"
                                        placeholder="Search by quote number (e.g. SO001) or customer name..."
                                        t-att-value="state.searchQuery"
                                        t-on-input="onSearchInput"
@@ -72,12 +72,12 @@
                 </div>
 
                 <!-- Error Alert if any -->
-                <div t-if="state.errorMessage" class="alert alert-danger m-3 mb-0 py-2 px-3">
+                <div t-if="state.errorMessage" class="alert alert-danger m-3 mb-0 py-2 px-3 flex-shrink-0">
                     <i class="fa fa-exclamation-triangle me-1"/> <t t-esc="state.errorMessage"/>
                 </div>
 
                 <!-- Quotations Table Area -->
-                <div class="flex-grow-1 overflow-auto p-0" style="min-height: 350px;">
+                <div class="pos-retail-table-wrapper flex-grow-1 overflow-auto p-0">
                     <div t-if="state.loading" class="text-center p-5 text-muted">
                         <i class="fa fa-circle-o-notch fa-spin fa-2x mb-2 text-primary"/>
                         <div>Loading quotations from server...</div>
@@ -89,8 +89,8 @@
                         <div class="small text-muted mt-1">Open quotations (Draft or Sent) will appear here.</div>
                     </div>
 
-                    <table t-else="" class="table table-hover table-striped align-middle mb-0" style="font-size: 0.92rem;">
-                        <thead class="table-light sticky-top" style="z-index: 2;">
+                    <table t-else="" class="table table-hover align-middle mb-0" style="font-size: 0.92rem;">
+                        <thead>
                             <tr>
                                 <th style="width: 15%;">Quote #</th>
                                 <th style="width: 20%;">Date &amp; Time</th>
@@ -160,7 +160,7 @@
                 </div>
 
                 <!-- Footer -->
-                <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center">
+                <div class="pos-retail-modal-footer p-3 bg-light border-top d-flex justify-content-between align-items-center flex-shrink-0">
                     <div class="text-muted small">
                         <i class="fa fa-info-circle me-1"/> Click <strong>Load</strong> to import all items into your current POS order.
                     </div>
