@@ -96,7 +96,7 @@ patch(ListController.prototype, {
 
             // Prompt every time: WhatsApp Web vs WhatsApp App (zero saved selection)
             const shared = await openWhatsAppChoice(this._posRetailDialog, "", { blob, filename });
-            if (shared) {
+            if (shared === "file") {
                 this.notification.add(
                     _t("Bulk PDF processed for WhatsApp sharing."),
                     { type: "info" }

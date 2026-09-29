@@ -200,7 +200,7 @@ export class PosRetailWhatsappWidget extends Component {
             const shared = await openWhatsAppChoice(this.dialog, number, {
                 blob, filename, text: this.buildShareText(link?.pdf_url || ""),
             });
-            if (shared) {
+            if (shared === "file") {
                 this.notification.add(
                     _t("Document PDF processed for WhatsApp sharing."),
                     { type: "info" }

@@ -153,7 +153,7 @@ export class PaymentReceiptPopup extends Component {
             const shared = await openWhatsAppChoice(this.dialog, phone, {
                 blob, filename, text: this.whatsappShareText,
             });
-            if (shared) {
+            if (shared === "file") {
                 this.notification.add(
                     _t("Payment receipt processed for WhatsApp sharing."),
                     { type: "info" }

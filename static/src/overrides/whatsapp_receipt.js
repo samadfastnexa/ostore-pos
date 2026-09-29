@@ -200,7 +200,7 @@ patch(ReceiptScreen.prototype, {
                 filename: filename,
                 text: this.posRetailWhatsappText,
             });
-            if (shared) {
+            if (shared === "file") {
                 this.notification.add(
                     _t("Receipt PDF processed for WhatsApp sharing."),
                     { type: "info" }

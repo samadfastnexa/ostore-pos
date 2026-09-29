@@ -507,7 +507,7 @@ export class PosRetailCustomerProfile extends Component {
             const shared = await openWhatsAppChoice(this.dialog, phone, {
                 blob: pdfBlob, filename, text: this.whatsappShareText,
             });
-            if (shared) {
+            if (shared === "file") {
                 this.notification.add(
                     _t("Ledger PDF processed for WhatsApp sharing."),
                     { type: "info" }

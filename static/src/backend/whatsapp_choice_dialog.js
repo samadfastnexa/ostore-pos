@@ -1,6 +1,7 @@
 /** @odoo-module **/
 
 import { Component } from "@odoo/owl";
+import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { Dialog } from "@web/core/dialog/dialog";
 import { _t } from "@web/core/l10n/translation";
 
@@ -45,8 +46,13 @@ export class WhatsAppChoiceDialog extends Component {
  *           callers put a download link to the PDF in it -- and downloads the
  *           PDF as well, for dragging into the chat if preferred.
  *
+ * Whenever only the message could go out, the cashier is told so and shown
+ * how to attach the downloaded PDF, instead of the chat quietly receiving
+ * text and nobody noticing the statement never arrived.
+ *
  * `text` is the message; `phone` international digits, or "" to let the user
- * pick the chat.
+ * pick the chat. Returns "file" when the PDF itself was handed to WhatsApp,
+ * "text" when only the message was, false when the user backed out.
  */
 export async function openWhatsAppChoice(dialogService, phone = "", { blob = null, filename = "document.pdf", text = "" } = {}) {
     // 1. Actively clear any past saved preference from all storage
@@ -102,40 +108,64 @@ export async function openWhatsAppChoice(dialogService, phone = "", { blob = nul
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
         .join("&");
 
+    // Only the message went out: say so, and how to add the PDF by hand.
+    const explainTextOnly = (why) => {
+        if (!blob || typeof dialogService?.add !== "function") {
+            return;
+        }
+        dialogService.add(AlertDialog, {
+            title: _t("Attach the PDF in WhatsApp"),
+            body: _t(
+                "%(why)s The PDF \"%(file)s\" has been downloaded to this computer. In the chat, press the paperclip (+), choose Document, and pick it from Downloads.",
+                { why, file: filename }
+            ),
+        });
+    };
+
     // 3. Execute chosen target without storing preference
     if (chosen === "web") {
         downloadBlob();
         const params = query({ phone, text });
         window.open(`https://web.whatsapp.com/send${params ? "?" + params : ""}`, "_blank", "noopener,noreferrer");
-    } else if (chosen === "app") {
-        // Any platform whose browser can share files -- not just phones:
-        // Chrome and Edge on Windows hand the PDF to the Windows share sheet,
-        // where WhatsApp Desktop is listed.
-        if (blob && typeof navigator !== "undefined" && typeof navigator.share === "function") {
-            try {
-                const file = new File([blob], filename, { type: "application/pdf" });
-                if (navigator.canShare?.({ files: [file] })) {
-                    const data = { files: [file], title: filename };
-                    if (text && navigator.canShare({ files: [file], text })) {
-                        data.text = text;
-                    }
-                    await navigator.share(data);
-                    return true;
+        explainTextOnly(_t("WhatsApp Web only accepts a message from a link, never a file."));
+        return "text";
+    }
+
+    // App: any platform whose browser can share files -- not just phones.
+    // Chrome and Edge on Windows hand the PDF to the Windows share sheet,
+    // where WhatsApp Desktop is listed.
+    if (blob && typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        const file = new File([blob], filename, { type: "application/pdf" });
+        if (navigator.canShare?.({ files: [file] })) {
+            // The PDF on its own, never together with the message. Handed
+            // both, WhatsApp keeps the text and drops the file -- which is how
+            // statements kept arriving as text only. The message goes to the
+            // clipboard instead, to paste as the document's caption.
+            if (text && navigator.clipboard?.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                } catch (_) {
+                    // No clipboard access: the PDF still goes, just without it.
                 }
+            }
+            try {
+                await navigator.share({ files: [file], title: filename });
+                return "file";
             } catch (err) {
                 if (err && err.name === "AbortError") {
-                    return true; // the user closed the share sheet
+                    return false; // the share sheet was closed without sending
                 }
                 console.warn("pos_retail: file share failed, opening the chat instead", err);
             }
         }
-        downloadBlob();
-        const params = query({ phone, text });
-        const a = document.createElement("a");
-        a.href = `whatsapp://send${params ? "?" + params : ""}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
     }
-    return true;
+    downloadBlob();
+    const params = query({ phone, text });
+    const a = document.createElement("a");
+    a.href = `whatsapp://send${params ? "?" + params : ""}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    explainTextOnly(_t("This browser cannot hand a file to WhatsApp, so only the message was sent."));
+    return "text";
 }
