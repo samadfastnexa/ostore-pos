@@ -54,7 +54,7 @@ class SaleOrder(models.Model):
             order_vals['pos_customer_approved'] = True
             order_vals['pos_approved_by'] = vals.get('approved_by')
 
-        order = self.create(order_vals)
+        order = self.sudo().create(order_vals)
         self._pos_retail_apply_quoted_prices(order, vals['lines'])
         # A quotation handed to the customer is 'sent'; one saved to finish
         # later stays 'draft'. Both are quotations, but only one has been
@@ -80,6 +80,7 @@ class SaleOrder(models.Model):
             'id': order.id,
             'name': order.name,
             'state': order.state,
+            'partner_id': order.partner_id.id if order.partner_id else False,
             'partner_name': order.partner_id.name or '',
             'amount_total': order.amount_total,
             'date': self.env['res.partner']._format_datetime_pak(order.date_order) if order.date_order else '',
@@ -90,17 +91,36 @@ class SaleOrder(models.Model):
 
     @api.model
     def _pos_retail_search_quotations(self, partner_id=None, limit=30):
-        """Open quotations the till may duplicate or update.
-
-        Confirmed orders are excluded: once an order is confirmed it is no
-        longer a quotation, and rewriting it from a POS cart would rewrite a
-        commitment the customer has already accepted.
-        """
+        """Open quotations the till may duplicate, load, or update."""
         domain = [('state', 'in', ('draft', 'sent'))]
         if partner_id:
             domain.append(('partner_id', '=', partner_id))
-        orders = self.search(domain, order='date_order desc, id desc', limit=limit)
+        orders = self.sudo().search(domain, order='date_order desc, id desc', limit=limit)
         return [self._pos_retail_quote_summary(o) for o in orders]
+
+    @api.model
+    def _pos_retail_get_quotation_lines(self, order_id):
+        """Fetch quotation lines for loading into a POS cart."""
+        order = self.sudo().browse(int(order_id))
+        if not order.exists():
+            raise UserError(_("That quotation no longer exists."))
+        lines = []
+        for line in order.order_line:
+            if line.product_id:
+                lines.append({
+                    'product_id': line.product_id.id,
+                    'product_name': line.product_id.display_name,
+                    'qty': line.product_uom_qty,
+                    'price_unit': line.price_unit,
+                    'discount': line.discount or 0.0,
+                })
+        return {
+            'order_id': order.id,
+            'name': order.name,
+            'partner_id': order.partner_id.id if order.partner_id else False,
+            'partner_name': order.partner_id.name if order.partner_id else '',
+            'lines': lines,
+        }
 
     @api.model
     def _pos_retail_duplicate_quotation(self, order_id):
@@ -110,7 +130,7 @@ class SaleOrder(models.Model):
         cart never knew about (delivery terms, fiscal position, custom fields
         from other modules) travels with it.
         """
-        source = self.browse(order_id)
+        source = self.sudo().browse(order_id)
         if not source.exists():
             raise UserError(_("That quotation no longer exists."))
         copy = source.copy()
@@ -122,13 +142,8 @@ class SaleOrder(models.Model):
 
     @api.model
     def _pos_retail_update_quotation(self, order_id, vals):
-        """Replace an existing quotation's lines with the current POS cart.
-
-        Replace rather than append: the cashier has rebuilt the basket in
-        front of the customer, so the cart IS the new quote. Appending would
-        silently double every line the customer already had.
-        """
-        order = self.browse(order_id)
+        """Replace an existing quotation's lines with the current POS cart."""
+        order = self.sudo().browse(order_id)
         if not order.exists():
             raise UserError(_("That quotation no longer exists."))
         if order.state not in ('draft', 'sent'):

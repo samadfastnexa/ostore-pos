@@ -7,14 +7,9 @@ import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { ThermalLabelPopup } from "@pos_retail/overrides/thermal_label_popup";
+import { PosRetailStockModal } from "@pos_retail/overrides/stock_modal";
+import { PosRetailQuotationModal } from "@pos_retail/overrides/quotation_modal";
 
-// Two more jobs a cashier does at a busy counter, put where they do them.
-//
-// Both read the capability the shop wired to a permission, so the Roles &
-// Permissions screen decides who sees them. Hiding a button is a courtesy:
-// the server re-checks the same permission against the EMPLOYEE, because a
-// till is one shared login and anything decided in the browser is decided
-// identically for everyone who ever stands at it.
 patch(ControlButtons.prototype, {
     get posRetailCanAdjustStock() {
         return Boolean(this.pos.getCashier()?._can_stock_adjust);
@@ -24,26 +19,86 @@ patch(ControlButtons.prototype, {
         return Boolean(this.pos.getCashier()?._can_daily_sales);
     },
 
-    // The product to correct: whatever line is selected in the cart. Chosen
-    // over a product picker because the case this exists for is a sale that
-    // has just stopped -- the item is already in the cart and already the
-    // thing being argued about.
     get posRetailStockTarget() {
         return this.pos.getOrder()?.getSelectedOrderline()?.product_id;
+    },
+
+    /** Open the comprehensive Store Stock Browser & Adjustment Modal */
+    async onClickStockInventory() {
+        this.props.close?.();
+        this.dialog.add(PosRetailStockModal, {});
+    },
+
+    /** Turn the current POS cart directly into an official Sales Quotation */
+    async onClickMakeQuotation() {
+        const order = this.pos.getOrder();
+        const lines = (order?.getOrderlines() || []).filter(
+            (l) => !l.isDiscountLine && l.getQuantity() > 0
+        );
+        if (!lines.length) {
+            this.dialog.add(AlertDialog, {
+                title: _t("Cart is Empty"),
+                body: _t(
+                    "Please add at least one product to the order first, then click Make Quotation."
+                ),
+            });
+            return;
+        }
+
+        let partner = order.getPartner();
+        if (!partner) {
+            partner = await this.pos.selectPartner();
+            if (!partner) {
+                return;
+            }
+        }
+
+        try {
+            const payload = {
+                partner_id: partner.id,
+                approved_by: this.pos.getCashier()?.id || false,
+                lines: lines.map((l) => ({
+                    product_id: l.product_id.id,
+                    qty: l.getQuantity(),
+                    price_unit: l.price_unit,
+                    discount: l.discount || 0,
+                    tax_ids: (l.tax_ids || []).map((t) => t.id),
+                })),
+            };
+            const res = await this.pos.data.call("sale.order", "_pos_retail_create_quotation", [
+                payload,
+            ]);
+
+            this.pos.addNewOrder();
+            this.pos.removeOrder(order, false);
+            this.props.close?.();
+
+            this.notification.add(
+                _t("Quotation %(name)s created successfully for %(partner)s!", {
+                    name: res.name,
+                    partner: res.partner_name,
+                }),
+                { type: "success" }
+            );
+        } catch (err) {
+            this.dialog.add(AlertDialog, {
+                title: _t("Could not save quotation"),
+                body: err?.data?.message || err?.message || _t("An error occurred."),
+            });
+        }
+    },
+
+    /** Open the Quotations History & Settle modal to view, settle, or duplicate quotes */
+    async onClickQuotationHistory() {
+        this.props.close?.();
+        this.dialog.add(PosRetailQuotationModal, {});
     },
 
     async onClickAdjustStock() {
         const product = this.posRetailStockTarget;
         if (!product) {
-            this.dialog.add(AlertDialog, {
-                title: _t("Which product?"),
-                body: _t(
-                    "Add the product to the order and select its line first, then " +
-                        "correct the stock. Correcting the wrong product's count is " +
-                        "harder to notice than it is to avoid."
-                ),
-            });
-            return;
+            // If no product is selected in cart, open the full stock browser instead!
+            return this.onClickStockInventory();
         }
 
         try {
@@ -70,9 +125,7 @@ patch(ControlButtons.prototype, {
                 parseFloat(counted),
                 this.pos.getCashier().id,
             ]);
-            // Refreshed from the server rather than assumed: the correction is
-            // a real inventory adjustment, and other tills may have sold the
-            // same item in the meantime.
+
             await this.pos.data.read("product.product", [product.id]);
             this.notification.add(
                 _t("%(name)s is now %(qty)s %(uom)s.", {
@@ -153,5 +206,3 @@ patch(ControlButtons.prototype, {
         });
     },
 });
-
-

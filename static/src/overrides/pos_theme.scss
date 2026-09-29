@@ -1256,3 +1256,50 @@ $o_retail_blue: #2563eb;
     .tag { color: $o_retail_orange_dark; opacity: 1; }
     .amount { color: $o_retail_orange_dark; }
 }
+
+// ---- Enhanced POS Actions Popup Buttons -------------------------------------
+.control-buttons-modal {
+    .pos-retail-action-btn {
+        background-color: #fff !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 0.6rem !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transition: all 0.15s ease-in-out;
+        color: #212529 !important;
+
+        &:hover, &:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important;
+            border-color: #adb5bd !important;
+        }
+
+        &.pos-retail-action-stock:hover {
+            border-color: #0d6efd !important;
+            background-color: rgba(13, 110, 253, 0.03) !important;
+        }
+
+        &.pos-retail-action-make-quote:hover {
+            border-color: #198754 !important;
+            background-color: rgba(25, 135, 84, 0.03) !important;
+        }
+
+        &.pos-retail-action-quote-history:hover {
+            border-color: #0dcaf0 !important;
+            background-color: rgba(13, 202, 240, 0.03) !important;
+        }
+    }
+}
+
+// ---- Stock & Inventory Modal Styling ----------------------------------------
+.pos-retail-stock-modal {
+    .table > :not(caption) > * > * {
+        padding: 0.75rem 1rem;
+    }
+}
+
+// ---- Quotation Modal Styling ------------------------------------------------
+.pos-retail-quote-modal {
+    .table > :not(caption) > * > * {
+        padding: 0.75rem 1rem;
+    }
+}

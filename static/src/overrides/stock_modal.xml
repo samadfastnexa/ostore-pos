@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.StockModal">
+        <Dialog size="'xl'" title="'Store Inventory &amp; Stock Adjustment'" bodyClass="'pos-retail-stock-modal p-0'">
+            <div class="pos-retail-stock-container d-flex flex-column" style="max-height: 80vh;">
+
+                <!-- Header Bar with Location & Search -->
+                <div class="p-3 bg-light border-bottom">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary px-3 py-2 fs-6">
+                                <i class="fa fa-map-marker me-1"/> <t t-esc="state.locationName || 'Current Warehouse'"/>
+                            </span>
+                            <span class="text-muted small">
+                                Showing <strong t-esc="filteredProducts.length"/> products
+                            </span>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.fetchStock(state.searchQuery)">
+                            <i class="fa fa-refresh me-1"/> Refresh Stock
+                        </button>
+                    </div>
+
+                    <!-- Search input and filters -->
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-7">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fa fa-search text-muted"/></span>
+                                <input type="text"
+                                       class="form-control form-control-lg"
+                                       placeholder="Search product by name, barcode, or SKU..."
+                                       t-att-value="state.searchQuery"
+                                       t-on-input="onSearchInput"
+                                       autofocus="autofocus"/>
+                                <button t-if="state.searchQuery" class="btn btn-outline-secondary" t-on-click="clearSearch">
+                                    <i class="fa fa-times"/>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="btn-group w-100" role="group">
+                                <button type="button"
+                                        class="btn btn-sm"
+                                        t-att-class="state.filter === 'all' ? 'btn-dark' : 'btn-outline-secondary'"
+                                        t-on-click="() => this.setFilter('all')">
+                                    All
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm"
+                                        t-att-class="state.filter === 'in_stock' ? 'btn-success' : 'btn-outline-success'"
+                                        t-on-click="() => this.setFilter('in_stock')">
+                                    In Stock (>5)
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm"
+                                        t-att-class="state.filter === 'low_stock' ? 'btn-warning text-dark' : 'btn-outline-warning'"
+                                        t-on-click="() => this.setFilter('low_stock')">
+                                    Low Stock (1-5)
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm"
+                                        t-att-class="state.filter === 'out_of_stock' ? 'btn-danger' : 'btn-outline-danger'"
+                                        t-on-click="() => this.setFilter('out_of_stock')">
+                                    Out/Negative (&lt;=0)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Alert if any -->
+                <div t-if="state.errorMessage" class="alert alert-danger m-3 mb-0 py-2 px-3">
+                    <i class="fa fa-exclamation-triangle me-1"/> <t t-esc="state.errorMessage"/>
+                </div>
+
+                <!-- Inline Adjust Sub-panel (if active) -->
+                <div t-if="state.adjustingProduct" class="p-3 bg-warning-subtle border-bottom border-warning">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="fw-bold fs-6 text-dark">
+                            <i class="fa fa-sliders me-1 text-primary"/>
+                            Adjust Stock for: <span class="text-primary" t-esc="state.adjustingProduct.name"/>
+                        </div>
+                        <button type="button" class="btn-close" aria-label="Close" t-on-click="closeAdjust"/>
+                    </div>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">System Count</label>
+                            <input type="text" class="form-control form-control-sm bg-light" disabled="disabled"
+                                   t-att-value="state.adjustingProduct.on_hand + ' ' + (state.adjustingProduct.uom || 'Units')"/>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-dark mb-1">
+                                New Physical Count <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" step="any"
+                                       class="form-control form-control-sm fw-bold text-primary"
+                                       placeholder="e.g. 10"
+                                       t-model="state.adjustCount"
+                                       autofocus="autofocus"/>
+                                <span class="input-group-text bg-white" t-esc="state.adjustingProduct.uom || 'Units'"/>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">Reason / Note (Optional)</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   placeholder="e.g. Shelf audit, damaged"
+                                   t-model="state.adjustNote"/>
+                        </div>
+                        <div class="col-md-2 d-flex gap-1">
+                            <button type="button" class="btn btn-secondary btn-sm flex-fill" t-on-click="closeAdjust">
+                                Cancel
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm flex-fill fw-bold"
+                                    t-att-disabled="state.isSavingAdjust"
+                                    t-on-click="submitAdjust">
+                                <i t-if="state.isSavingAdjust" class="fa fa-spinner fa-spin me-1"/>
+                                <i t-else="" class="fa fa-check me-1"/> Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products Table Area -->
+                <div class="flex-grow-1 overflow-auto p-0" style="min-height: 350px;">
+                    <div t-if="state.loading" class="text-center p-5 text-muted">
+                        <i class="fa fa-circle-o-notch fa-spin fa-2x mb-2 text-primary"/>
+                        <div>Loading store stock figures...</div>
+                    </div>
+
+                    <div t-elif="!filteredProducts.length" class="text-center p-5 text-muted">
+                        <i class="fa fa-cubes fa-3x mb-2 text-black-50"/>
+                        <div class="fs-6">No products found matching your search.</div>
+                    </div>
+
+                    <table t-else="" class="table table-hover table-striped align-middle mb-0" style="font-size: 0.92rem;">
+                        <thead class="table-light sticky-top" style="z-index: 2;">
+                            <tr>
+                                <th style="width: 40%;">Product</th>
+                                <th style="width: 15%;">SKU / Barcode</th>
+                                <th class="text-end" style="width: 15%;">Sales Price</th>
+                                <th class="text-center" style="width: 15%;">Stock On Hand</th>
+                                <th class="text-center" style="width: 15%;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="filteredProducts" t-as="p" t-key="p.id">
+                                <td>
+                                    <div class="fw-bold text-dark" t-esc="p.name"/>
+                                    <div t-if="p.uom" class="small text-muted">UoM: <t t-esc="p.uom"/></div>
+                                </td>
+                                <td>
+                                    <div t-if="p.barcode" class="small font-monospace text-secondary">
+                                        <i class="fa fa-barcode me-1"/> <t t-esc="p.barcode"/>
+                                    </div>
+                                    <div t-if="p.default_code" class="small text-muted font-monospace" t-esc="p.default_code"/>
+                                    <div t-if="!p.barcode and !p.default_code" class="small text-muted">-</div>
+                                </td>
+                                <td class="text-end fw-semibold text-dark">
+                                    <t t-esc="formatMoney(p.list_price)"/>
+                                </td>
+                                <td class="text-center">
+                                    <span t-if="p.on_hand &gt; 5" class="badge bg-success-subtle text-success border border-success px-2 py-1 fs-6">
+                                        <i class="fa fa-check-circle me-1"/> <t t-esc="p.on_hand"/> <t t-esc="p.uom || ''"/>
+                                    </span>
+                                    <span t-elif="p.on_hand &gt; 0" class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1 fs-6">
+                                        <i class="fa fa-exclamation-triangle me-1"/> <t t-esc="p.on_hand"/> <t t-esc="p.uom || ''"/> (Low)
+                                    </span>
+                                    <span t-else="" class="badge bg-danger-subtle text-danger border border-danger px-2 py-1 fs-6">
+                                        <i class="fa fa-times-circle me-1"/> <t t-esc="p.on_hand"/> <t t-esc="p.uom || ''"/> (Out)
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-primary"
+                                                title="Correct / Adjust count on shelf"
+                                                t-on-click="() => this.openAdjust(p)">
+                                            <i class="fa fa-pencil me-1"/> Adjust
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-success"
+                                                title="Add to Current POS Order"
+                                                t-on-click="() => this.addToCart(p)">
+                                            <i class="fa fa-cart-plus me-1"/> Sell
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        <i class="fa fa-info-circle me-1"/> All stock corrections are recorded with your cashier signature in the inventory audit log.
+                    </div>
+                    <button class="btn btn-secondary px-4" t-on-click="() => this.props.close()">
+                        Close
+                    </button>
+                </div>
+
+            </div>
+        </Dialog>
+    </t>
+
+</templates>

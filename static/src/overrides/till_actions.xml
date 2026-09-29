@@ -1,36 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Correct Stock and Today's Sales, in the Actions dialog.
-
-         Both belong at the counter for the same reason the shop gave for the
-         khata payment: the queue does not pause while a cashier opens another
-         browser and signs in. A stock figure that is wrong stops a sale with
-         the customer standing there, which is the worst possible moment to
-         send somebody to the back office.
-
-         Each is shown only to a cashier whose own login carries the matching
-         permission, and the server checks the same permission again when the
-         action runs. -->
+    <!-- Counter Actions in POS Actions Dialog:
+         - Stock & Inventory (Show all stocks & adjust on the spot)
+         - Make Quotation (Save current cart as a quotation)
+         - Quotation History (View, load to cart, print quotes)
+         - Today's Sales (Register summary)
+         - Print Label (Thermal barcode shelf tag) -->
     <t t-name="pos_retail.TillActions" t-inherit="point_of_sale.ControlButtons"
        t-inherit-mode="extension">
         <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <!-- 1. Stock & Inventory: Show all stock & adjust -->
             <button t-if="posRetailCanAdjustStock"
-                    class="btn btn-secondary btn-lg py-5 pos-retail-stock-btn"
-                    t-on-click="() => this.onClickAdjustStock()">
-                <i class="fa fa-cubes me-1"/>Correct Stock
+                    class="btn btn-secondary btn-lg py-4 pos-retail-action-btn pos-retail-action-stock"
+                    t-on-click="() => this.onClickStockInventory()">
+                <div class="d-flex flex-column align-items-center justify-content-center text-center">
+                    <i class="fa fa-cubes fa-2x mb-1 text-primary"/>
+                    <span class="fw-bold fs-6">Stock &amp; Inventory</span>
+                    <span class="small text-muted" style="font-size: 0.72rem;">Show All &amp; Adjust</span>
+                </div>
             </button>
+
+            <!-- 2. Make Quotation from Cart -->
+            <button class="btn btn-secondary btn-lg py-4 pos-retail-action-btn pos-retail-action-make-quote"
+                    t-on-click="() => this.onClickMakeQuotation()">
+                <div class="d-flex flex-column align-items-center justify-content-center text-center">
+                    <i class="fa fa-file-text-o fa-2x mb-1 text-success"/>
+                    <span class="fw-bold fs-6">Make Quotation</span>
+                    <span class="small text-muted" style="font-size: 0.72rem;">Save Cart as Quote</span>
+                </div>
+            </button>
+
+            <!-- 3. Quotation History: View, Settle & Print -->
+            <button class="btn btn-secondary btn-lg py-4 pos-retail-action-btn pos-retail-action-quote-history"
+                    t-on-click="() => this.onClickQuotationHistory()">
+                <div class="d-flex flex-column align-items-center justify-content-center text-center">
+                    <i class="fa fa-history fa-2x mb-1 text-info"/>
+                    <span class="fw-bold fs-6">Quotation History</span>
+                    <span class="small text-muted" style="font-size: 0.72rem;">View &amp; Settle Quotes</span>
+                </div>
+            </button>
+
+            <!-- 4. Today's Takings / Daily Sales -->
             <button t-if="posRetailCanSeeDailySales"
-                    class="btn btn-secondary btn-lg py-5 pos-retail-daily-btn"
+                    class="btn btn-secondary btn-lg py-4 pos-retail-action-btn pos-retail-daily-btn"
                     t-on-click="() => this.onClickDailySales()">
-                <i class="fa fa-line-chart me-1"/>Today's Sales
+                <div class="d-flex flex-column align-items-center justify-content-center text-center">
+                    <i class="fa fa-line-chart fa-2x mb-1 text-warning"/>
+                    <span class="fw-bold fs-6">Today's Sales</span>
+                    <span class="small text-muted" style="font-size: 0.72rem;">Day Takings Summary</span>
+                </div>
             </button>
-            <button class="btn btn-secondary btn-lg py-5 pos-retail-label-btn"
+
+            <!-- 5. Print Barcode Label -->
+            <button class="btn btn-secondary btn-lg py-4 pos-retail-action-btn pos-retail-label-btn"
                     t-on-click="() => this.onClickPrintThermalLabel()">
-                <i class="fa fa-barcode me-1"/>Print Label
+                <div class="d-flex flex-column align-items-center justify-content-center text-center">
+                    <i class="fa fa-barcode fa-2x mb-1 text-secondary"/>
+                    <span class="fw-bold fs-6">Print Label</span>
+                    <span class="small text-muted" style="font-size: 0.72rem;">Thermal Shelf Tag</span>
+                </div>
             </button>
         </xpath>
-
     </t>
 
 </templates>

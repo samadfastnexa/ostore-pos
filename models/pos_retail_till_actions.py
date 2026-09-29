@@ -47,6 +47,46 @@ class PosSessionTillActions(models.Model):
     # Stock correction
     # ------------------------------------------------------------------
     @api.model
+    def pos_retail_search_stock(self, config_id, query='', limit=80):
+        """Search products with real-time on-hand stock at this register's location."""
+        config = self.env['pos.config'].sudo().browse(int(config_id))
+        location = config.picking_type_id.default_location_src_id
+        if not location:
+            raise UserError(_("This register has no stock location set."))
+
+        domain = [
+            ('available_in_pos', '=', True),
+            ('sale_ok', '=', True),
+        ]
+        if config.company_id:
+            domain += ['|', ('company_id', '=', False), ('company_id', '=', config.company_id.id)]
+        if query:
+            q = str(query).strip()
+            domain += ['|', '|', ('name', 'ilike', q), ('barcode', 'ilike', q), ('default_code', 'ilike', q)]
+
+        products = self.env['product.product'].sudo().search(domain, order='name asc', limit=int(limit))
+        Quant = self.env['stock.quant'].sudo().with_company(config.company_id)
+
+        items = []
+        for p in products:
+            quants = Quant._gather(p, location)
+            on_hand = sum(quants.mapped('quantity'))
+            items.append({
+                'id': p.id,
+                'name': p.display_name,
+                'default_code': p.default_code or '',
+                'barcode': p.barcode or '',
+                'list_price': p.list_price,
+                'uom': p.uom_id.name or '',
+                'on_hand': on_hand,
+                'is_storable': p.type == 'consu' and p.is_storable,
+            })
+        return {
+            'location_name': location.display_name,
+            'products': items,
+        }
+
+    @api.model
     def pos_retail_stock_snapshot(self, config_id, product_id):
         """What the system thinks is on the shelf, before anybody changes it."""
         config = self.env['pos.config'].sudo().browse(int(config_id))

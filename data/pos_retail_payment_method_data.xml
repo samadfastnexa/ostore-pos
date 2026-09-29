@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="pos_payment_method_online" model="pos.payment.method">
+        <field name="name">Online Payment</field>
+        <field name="is_cash_count">False</field>
+        <field name="split_transactions">False</field>
+        <field name="company_id" eval="False"/>
+    </record>
+
+</odoo>

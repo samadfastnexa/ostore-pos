@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.7.50.0',
+    'version': '19.0.7.51.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -67,6 +67,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
         'data/pos_retail_uom_data.xml',
         'data/pos_retail_uom_measurement_data.xml',
         'data/pos_retail_pricelist_data.xml',
+        'data/pos_retail_payment_method_data.xml',
         'data/pos_retail_thermal_label_data.xml',
         'views/product_brand_views.xml',
         'views/pos_retail_inventory_movement_views.xml',
@@ -273,7 +274,10 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/return_no_receipt_popup.js',
             'pos_retail/static/src/overrides/return_no_receipt_popup.xml',
             'pos_retail/static/src/overrides/return_no_receipt.js',
-            'pos_retail/static/src/overrides/return_no_receipt.xml',
+            'pos_retail/static/src/overrides/stock_modal.js',
+            'pos_retail/static/src/overrides/stock_modal.xml',
+            'pos_retail/static/src/overrides/quotation_modal.js',
+            'pos_retail/static/src/overrides/quotation_modal.xml',
             'pos_retail/static/src/overrides/quotation.js',
             'pos_retail/static/src/overrides/quotation.xml',
             'pos_retail/static/src/overrides/quotation_picker.js',

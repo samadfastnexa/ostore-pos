@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.QuotationModal">
+        <Dialog size="'xl'" title="'Quotations History &amp; Settle'" bodyClass="'pos-retail-quote-modal p-0'">
+            <div class="pos-retail-quote-container d-flex flex-column" style="max-height: 80vh;">
+
+                <!-- Header Bar -->
+                <div class="p-3 bg-light border-bottom">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge text-white px-3 py-2 fs-6" style="background-color: #6f42c1;">
+                                <i class="fa fa-file-text-o me-1"/> Store Quotations
+                            </span>
+                            <span class="text-muted small">
+                                Showing <strong t-esc="filteredQuotations.length"/> quotations
+                            </span>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" t-on-click="fetchQuotations">
+                            <i class="fa fa-refresh me-1"/> Refresh
+                        </button>
+                    </div>
+
+                    <!-- Search & Filter Controls -->
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-7">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fa fa-search text-muted"/></span>
+                                <input type="text"
+                                       class="form-control form-control-lg"
+                                       placeholder="Search by quote number (e.g. SO001) or customer name..."
+                                       t-att-value="state.searchQuery"
+                                       t-on-input="onSearchInput"
+                                       autofocus="autofocus"/>
+                                <button t-if="state.searchQuery" class="btn btn-outline-secondary" t-on-click="clearSearch">
+                                    <i class="fa fa-times"/>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-5 d-flex gap-2">
+                            <button t-if="state.currentPartner"
+                                    type="button"
+                                    class="btn btn-sm text-truncate"
+                                    t-att-class="state.onlyThisCustomer ? 'btn-primary' : 'btn-outline-secondary'"
+                                    t-on-click="toggleCustomerFilter"
+                                    style="max-width: 180px;">
+                                <i class="fa fa-user me-1"/> <t t-esc="state.currentPartner.name"/>
+                            </button>
+
+                            <div class="btn-group btn-group-sm flex-fill" role="group">
+                                <button type="button"
+                                        class="btn"
+                                        t-att-class="state.filter === 'all' ? 'btn-dark' : 'btn-outline-secondary'"
+                                        t-on-click="() => this.setFilter('all')">
+                                    All
+                                </button>
+                                <button type="button"
+                                        class="btn"
+                                        t-att-class="state.filter === 'draft' ? 'btn-warning text-dark' : 'btn-outline-warning'"
+                                        t-on-click="() => this.setFilter('draft')">
+                                    Drafts
+                                </button>
+                                <button type="button"
+                                        class="btn"
+                                        t-att-class="state.filter === 'sent' ? 'btn-info text-white' : 'btn-outline-info'"
+                                        t-on-click="() => this.setFilter('sent')">
+                                    Sent Quotes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Alert if any -->
+                <div t-if="state.errorMessage" class="alert alert-danger m-3 mb-0 py-2 px-3">
+                    <i class="fa fa-exclamation-triangle me-1"/> <t t-esc="state.errorMessage"/>
+                </div>
+
+                <!-- Quotations Table Area -->
+                <div class="flex-grow-1 overflow-auto p-0" style="min-height: 350px;">
+                    <div t-if="state.loading" class="text-center p-5 text-muted">
+                        <i class="fa fa-circle-o-notch fa-spin fa-2x mb-2 text-primary"/>
+                        <div>Loading quotations from server...</div>
+                    </div>
+
+                    <div t-elif="!filteredQuotations.length" class="text-center p-5 text-muted">
+                        <i class="fa fa-file-text-o fa-3x mb-2 text-black-50"/>
+                        <div class="fs-6">No quotations found.</div>
+                        <div class="small text-muted mt-1">Open quotations (Draft or Sent) will appear here.</div>
+                    </div>
+
+                    <table t-else="" class="table table-hover table-striped align-middle mb-0" style="font-size: 0.92rem;">
+                        <thead class="table-light sticky-top" style="z-index: 2;">
+                            <tr>
+                                <th style="width: 15%;">Quote #</th>
+                                <th style="width: 20%;">Date &amp; Time</th>
+                                <th style="width: 25%;">Customer</th>
+                                <th class="text-center" style="width: 12%;">Status</th>
+                                <th class="text-end" style="width: 13%;">Total Amount</th>
+                                <th class="text-center" style="width: 15%;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="filteredQuotations" t-as="q" t-key="q.id">
+                                <td>
+                                    <div class="fw-bold font-monospace text-primary fs-6" t-esc="q.name"/>
+                                    <div class="small text-muted"><t t-esc="q.line_count"/> item(s)</div>
+                                </td>
+                                <td>
+                                    <div class="small text-dark" t-esc="q.date || '-'"/>
+                                    <div t-if="q.validity_date" class="small text-muted">
+                                        Valid: <t t-esc="q.validity_date"/>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">
+                                        <i class="fa fa-user-circle me-1 text-secondary"/>
+                                        <t t-esc="q.partner_name || 'Walk-in Customer'"/>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span t-if="q.state === 'sent'" class="badge bg-info text-white px-2 py-1">
+                                        Sent
+                                    </span>
+                                    <span t-elif="q.state === 'draft'" class="badge bg-warning text-dark px-2 py-1">
+                                        Draft
+                                    </span>
+                                    <span t-else="" class="badge bg-secondary px-2 py-1" t-esc="q.state"/>
+                                    <span t-if="q.approved" class="badge bg-success ms-1">Approved</span>
+                                </td>
+                                <td class="text-end fw-bold text-dark fs-6">
+                                    <t t-esc="formatMoney(q.amount_total)"/>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-success fw-semibold"
+                                                title="Load into POS cart to settle or ring up"
+                                                t-att-disabled="state.isLoadingLines"
+                                                t-on-click="() => this.loadQuoteIntoCart(q)">
+                                            <i class="fa fa-shopping-cart me-1"/> Load
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-outline-secondary"
+                                                title="Print or view quotation PDF"
+                                                t-on-click="() => this.printQuotationPdf(q)">
+                                            <i class="fa fa-print"/>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-outline-secondary"
+                                                title="Duplicate into a fresh draft quote"
+                                                t-on-click="() => this.duplicateQuotation(q)">
+                                            <i class="fa fa-clone"/>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        <i class="fa fa-info-circle me-1"/> Click <strong>Load</strong> to import all items into your current POS order.
+                    </div>
+                    <button class="btn btn-secondary px-4" t-on-click="() => this.props.close()">
+                        Close
+                    </button>
+                </div>
+
+            </div>
+        </Dialog>
+    </t>
+
+</templates>
