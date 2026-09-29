@@ -8,6 +8,7 @@
             <list string="Inventory Movements" create="false" decoration-danger="has_negative_stock_warning">
                 <field name="date"/>
                 <field name="product_id"/>
+                <field name="brand_id" optional="show"/>
                 <field name="barcode" optional="show"/>
                 <field name="sku" optional="hide"/>
                 <field name="qty_sold"/>

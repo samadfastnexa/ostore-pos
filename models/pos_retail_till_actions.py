@@ -62,7 +62,13 @@ class PosSessionTillActions(models.Model):
             domain += ['|', ('company_id', '=', False), ('company_id', '=', config.company_id.id)]
         if query:
             q = str(query).strip()
-            domain += ['|', '|', ('name', 'ilike', q), ('barcode', 'ilike', q), ('default_code', 'ilike', q)]
+            domain += [
+                '|', '|', '|',
+                ('name', 'ilike', q),
+                ('barcode', 'ilike', q),
+                ('default_code', 'ilike', q),
+                ('brand_id.name', 'ilike', q),
+            ]
 
         products = self.env['product.product'].sudo().search(domain, order='name asc', limit=int(limit))
         Quant = self.env['stock.quant'].sudo().with_company(config.company_id)
@@ -73,7 +79,9 @@ class PosSessionTillActions(models.Model):
             on_hand = sum(quants.mapped('quantity'))
             items.append({
                 'id': p.id,
-                'name': p.display_name,
+                'name': p.name,
+                'display_name': p.display_name,
+                'brand_name': p.brand_id.name or '',
                 'default_code': p.default_code or '',
                 'barcode': p.barcode or '',
                 'list_price': p.list_price,

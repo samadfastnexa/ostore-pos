@@ -86,6 +86,7 @@
                 <field name="name" string="Reference"/>
                 <field name="product_id"/>
                 <field name="pos_retail_product_barcode" optional="show"/>
+                <field name="brand_id" optional="show"/>
                 <field name="scrap_qty" string="Quantity"/>
                 <field name="product_uom_id" string="Unit" groups="uom.group_uom" optional="hide"/>
                 <field name="scrap_reason_tag_ids" widget="many2many_tags"
@@ -104,6 +105,7 @@
         <field name="arch" type="xml">
             <search string="Damage &amp; Wastage">
                 <field name="product_id"/>
+                <field name="brand_id"/>
                 <field name="scrap_reason_tag_ids" string="Reason"/>
                 <field name="name"/>
                 <filter name="done" string="Confirmed" domain="[('state', '=', 'done')]"/>
@@ -115,6 +117,8 @@
                             context="{'group_by': 'scrap_reason_tag_ids'}"/>
                     <filter name="group_product" string="Product"
                             context="{'group_by': 'product_id'}"/>
+                    <filter name="group_brand" string="Brand"
+                            context="{'group_by': 'brand_id'}"/>
                     <filter name="group_month" string="Month"
                             context="{'group_by': 'date_done:month'}"/>
                 </group>
@@ -163,6 +167,7 @@
                        context="{'pos_retail_hide_product_code': True}"
                        options="{'no_create': True}"/>
                 <field name="pos_retail_product_barcode" optional="show"/>
+                <field name="brand_id" optional="show"/>
                 <field name="location_id" readonly="id"
                        domain="[('usage', 'in', ('internal', 'transit'))]"
                        options="{'no_create': True}"
@@ -191,6 +196,7 @@
         <field name="arch" type="xml">
             <search string="Stock Count">
                 <field name="product_id"/>
+                <field name="brand_id"/>
                 <filter name="counted" string="Counted, Not Yet Applied"
                         domain="[('inventory_quantity_set', '=', True)]"/>
                 <filter name="mismatch" string="Does Not Match"
@@ -201,6 +207,7 @@
                 <filter name="negative" string="Negative Stock" domain="[('quantity', '&lt;', 0)]"/>
                 <group>
                     <filter name="group_product" string="Product" context="{'group_by': 'product_id'}"/>
+                    <filter name="group_brand" string="Brand" context="{'group_by': 'brand_id'}"/>
                 </group>
             </search>
         </field>
@@ -223,6 +230,55 @@
                The Difference column shows what you are over or short by; press the tick to
                apply a line, or use Apply from the Actions menu to post several at once.
                Nothing changes until you apply.</p>
+        </field>
+    </record>
+
+    <!-- ============ NATIVE INVENTORY VIEWS: BRAND COLUMN & SEARCH ============ -->
+
+    <record id="view_stock_quant_tree_inventory_editable_brand" model="ir.ui.view">
+        <field name="name">stock.quant.inventory.list.editable.brand</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.view_stock_quant_tree_inventory_editable"/>
+        <field name="arch" type="xml">
+            <field name="product_id" position="after">
+                <field name="brand_id" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_stock_quant_tree_editable_brand" model="ir.ui.view">
+        <field name="name">stock.quant.list.editable.brand</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.view_stock_quant_tree_editable"/>
+        <field name="arch" type="xml">
+            <field name="product_id" position="after">
+                <field name="brand_id" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_stock_quant_tree_simple_brand" model="ir.ui.view">
+        <field name="name">stock.quant.list.simple.brand</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.view_stock_quant_tree_simple"/>
+        <field name="arch" type="xml">
+            <field name="product_id" position="after">
+                <field name="brand_id" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="quant_search_view_brand" model="ir.ui.view">
+        <field name="name">stock.quant.search.brand</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.quant_search_view"/>
+        <field name="arch" type="xml">
+            <field name="product_categ_id" position="after">
+                <field name="brand_id"/>
+            </field>
+            <filter name="productcategorygroup" position="after">
+                <filter string="Brand" name="brandgroup" context="{'group_by': 'brand_id'}"/>
+            </filter>
         </field>
     </record>
 

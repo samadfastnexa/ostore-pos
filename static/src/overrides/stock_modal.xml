@@ -28,7 +28,7 @@
                                 <span class="input-group-text bg-white"><i class="fa fa-search text-muted"/></span>
                                 <input type="text"
                                        class="form-control"
-                                       placeholder="Search product by name, barcode, or SKU..."
+                                       placeholder="Search product by name, brand, barcode, or SKU..."
                                        t-att-value="state.searchQuery"
                                        t-on-input="onSearchInput"
                                        autofocus="autofocus"/>
@@ -136,11 +136,13 @@
                     <table t-else="" class="table table-hover align-middle mb-0" style="font-size: 0.92rem;">
                         <thead>
                             <tr>
-                                <th style="width: 40%;">Product</th>
-                                <th style="width: 15%;">SKU / Barcode</th>
-                                <th class="text-end" style="width: 15%;">Sales Price</th>
-                                <th class="text-center" style="width: 15%;">Stock On Hand</th>
-                                <th class="text-center" style="width: 15%;">Actions</th>
+                                <th style="width: 26%;">Product</th>
+                                <th style="width: 14%;">Brand</th>
+                                <th style="width: 12%;">Item Code (SKU)</th>
+                                <th style="width: 14%;">Barcode</th>
+                                <th class="text-end" style="width: 10%;">Sales Price</th>
+                                <th class="text-center" style="width: 12%;">Stock On Hand</th>
+                                <th class="text-center" style="width: 12%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -150,11 +152,20 @@
                                     <div t-if="p.uom" class="small text-muted">UoM: <t t-esc="p.uom"/></div>
                                 </td>
                                 <td>
-                                    <div t-if="p.barcode" class="small font-monospace text-secondary">
-                                        <i class="fa fa-barcode me-1"/> <t t-esc="p.barcode"/>
+                                    <span t-if="p.brand_name" class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
+                                        <i class="fa fa-tag me-1"/> <t t-esc="p.brand_name"/>
+                                    </span>
+                                    <span t-else="" class="text-muted small">-</span>
+                                </td>
+                                <td>
+                                    <span t-if="p.default_code" class="badge bg-light text-dark border font-monospace px-2 py-1 fs-6" t-esc="p.default_code"/>
+                                    <span t-else="" class="text-muted small">-</span>
+                                </td>
+                                <td>
+                                    <div t-if="p.barcode" class="small font-monospace text-dark fw-semibold">
+                                        <i class="fa fa-barcode me-1 text-primary"/> <t t-esc="p.barcode"/>
                                     </div>
-                                    <div t-if="p.default_code" class="small text-muted font-monospace" t-esc="p.default_code"/>
-                                    <div t-if="!p.barcode and !p.default_code" class="small text-muted">-</div>
+                                    <span t-else="" class="text-muted small">-</span>
                                 </td>
                                 <td class="text-end fw-semibold text-dark">
                                     <t t-esc="formatMoney(p.list_price)"/>

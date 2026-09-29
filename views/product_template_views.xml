@@ -19,7 +19,19 @@
         <field name="inherit_id" ref="product.product_template_tree_view"/>
         <field name="arch" type="xml">
             <field name="name" position="after">
+                <field name="brand_id" optional="show"/>
                 <field name="pos_retail_size" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="product_product_tree_view_brand" model="ir.ui.view">
+        <field name="name">product.product.list.brand</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_product_tree_view"/>
+        <field name="arch" type="xml">
+            <field name="name" position="after">
+                <field name="brand_id" optional="show"/>
             </field>
         </field>
     </record>

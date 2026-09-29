@@ -53,3 +53,4 @@ from . import thermal_barcode_generator
 from . import pos_retail_thermal_label_preset
 from . import pos_retail_thermal_label_wizard
 from . import product_barcode_columns
+from . import product_brand_columns
