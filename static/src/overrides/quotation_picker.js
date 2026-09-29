@@ -40,7 +40,7 @@ export class PosRetailQuotationPicker extends Component {
         try {
             this.state.quotes = await this.pos.data.call(
                 "sale.order",
-                "_pos_retail_search_quotations",
+                "pos_retail_search_quotations",
                 [],
                 {
                     partner_id:

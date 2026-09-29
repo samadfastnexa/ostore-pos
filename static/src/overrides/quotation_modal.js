@@ -46,7 +46,7 @@ export class PosRetailQuotationModal extends Component {
                     : false;
             const res = await this.pos.data.call(
                 "sale.order",
-                "_pos_retail_search_quotations",
+                "pos_retail_search_quotations",
                 [],
                 { partner_id: partnerId, limit: 50 }
             );
@@ -104,7 +104,7 @@ export class PosRetailQuotationModal extends Component {
         try {
             const res = await this.pos.data.call(
                 "sale.order",
-                "_pos_retail_get_quotation_lines",
+                "pos_retail_get_quotation_lines",
                 [quote.id]
             );
 
@@ -174,7 +174,7 @@ export class PosRetailQuotationModal extends Component {
         try {
             const copy = await this.pos.data.call(
                 "sale.order",
-                "_pos_retail_duplicate_quotation",
+                "pos_retail_duplicate_quotation",
                 [quote.id]
             );
             this.notification.add(

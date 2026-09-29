@@ -22,7 +22,7 @@ class SaleOrder(models.Model):
     )
 
     @api.model
-    def _pos_retail_create_quotation(self, vals):
+    def pos_retail_create_quotation(self, vals):
         """Create a draft sale.order (quotation) from a POS cart.
 
         `vals` (built client-side by the 'Save as Quotation' button):
@@ -55,16 +55,16 @@ class SaleOrder(models.Model):
             order_vals['pos_approved_by'] = vals.get('approved_by')
 
         order = self.sudo().create(order_vals)
-        self._pos_retail_apply_quoted_prices(order, vals['lines'])
+        self.pos_retail_apply_quoted_prices(order, vals['lines'])
         # A quotation handed to the customer is 'sent'; one saved to finish
         # later stays 'draft'. Both are quotations, but only one has been
         # given out, and the back office needs to tell them apart.
         if not vals.get('draft'):
             order.state = 'sent'
-        return self._pos_retail_quote_summary(order)
+        return self.pos_retail_quote_summary(order)
 
     @api.model
-    def _pos_retail_apply_quoted_prices(self, order, lines):
+    def pos_retail_apply_quoted_prices(self, order, lines):
         """Force the prices the cashier actually quoted.
 
         sale.order.line recomputes price_unit from the pricelist on create,
@@ -75,7 +75,7 @@ class SaleOrder(models.Model):
                 sol.price_unit = line['price_unit']
 
     @api.model
-    def _pos_retail_quote_summary(self, order):
+    def pos_retail_quote_summary(self, order):
         return {
             'id': order.id,
             'name': order.name,
@@ -90,16 +90,16 @@ class SaleOrder(models.Model):
         }
 
     @api.model
-    def _pos_retail_search_quotations(self, partner_id=None, limit=30):
+    def pos_retail_search_quotations(self, partner_id=None, limit=30):
         """Open quotations the till may duplicate, load, or update."""
         domain = [('state', 'in', ('draft', 'sent'))]
         if partner_id:
             domain.append(('partner_id', '=', partner_id))
         orders = self.sudo().search(domain, order='date_order desc, id desc', limit=limit)
-        return [self._pos_retail_quote_summary(o) for o in orders]
+        return [self.pos_retail_quote_summary(o) for o in orders]
 
     @api.model
-    def _pos_retail_get_quotation_lines(self, order_id):
+    def pos_retail_get_quotation_lines(self, order_id):
         """Fetch quotation lines for loading into a POS cart."""
         order = self.sudo().browse(int(order_id))
         if not order.exists():
@@ -123,7 +123,7 @@ class SaleOrder(models.Model):
         }
 
     @api.model
-    def _pos_retail_duplicate_quotation(self, order_id):
+    def pos_retail_duplicate_quotation(self, order_id):
         """Copy an existing quotation into a fresh draft.
 
         Uses Odoo's own copy(), so anything a quotation carries that the POS
@@ -138,10 +138,10 @@ class SaleOrder(models.Model):
         # belongs to the original.
         copy.write({'state': 'draft', 'pos_customer_approved': False,
                     'pos_approved_by': False})
-        return self._pos_retail_quote_summary(copy)
+        return self.pos_retail_quote_summary(copy)
 
     @api.model
-    def _pos_retail_update_quotation(self, order_id, vals):
+    def pos_retail_update_quotation(self, order_id, vals):
         """Replace an existing quotation's lines with the current POS cart."""
         order = self.sudo().browse(order_id)
         if not order.exists():
@@ -164,7 +164,7 @@ class SaleOrder(models.Model):
                 for line in vals['lines']
             ],
         })
-        self._pos_retail_apply_quoted_prices(order, vals['lines'])
+        self.pos_retail_apply_quoted_prices(order, vals['lines'])
         if vals.get('validity_date'):
             order.validity_date = vals['validity_date']
         if vals.get('partner_id') and vals['partner_id'] != order.partner_id.id:
@@ -173,7 +173,16 @@ class SaleOrder(models.Model):
         # refers to what this document now says.
         if order.pos_customer_approved:
             order.write({'pos_customer_approved': False, 'pos_approved_by': False})
-        return self._pos_retail_quote_summary(order)
+        return self.pos_retail_quote_summary(order)
+
+    # Aliases for backwards compatibility with backend calls
+    _pos_retail_create_quotation = pos_retail_create_quotation
+    _pos_retail_search_quotations = pos_retail_search_quotations
+    _pos_retail_get_quotation_lines = pos_retail_get_quotation_lines
+    _pos_retail_duplicate_quotation = pos_retail_duplicate_quotation
+    _pos_retail_update_quotation = pos_retail_update_quotation
+    _pos_retail_quote_summary = pos_retail_quote_summary
+    _pos_retail_apply_quoted_prices = pos_retail_apply_quoted_prices
 
     def _pos_retail_quote_qr_url(self):
         """Barcode-controller URL for a QR of this quotation's portal link.

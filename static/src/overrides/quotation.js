@@ -94,7 +94,7 @@ patch(ControlButtons.prototype, {
         }
         let result;
         try {
-            result = await this.pos.data.call("sale.order", "_pos_retail_create_quotation", [
+            result = await this.pos.data.call("sale.order", "pos_retail_create_quotation", [
                 { ...vals, draft },
             ]);
         } catch {
@@ -142,7 +142,7 @@ patch(ControlButtons.prototype, {
         }
         let result;
         try {
-            result = await this.pos.data.call("sale.order", "_pos_retail_update_quotation", [
+            result = await this.pos.data.call("sale.order", "pos_retail_update_quotation", [
                 quote.id,
                 vals,
             ]);
@@ -163,7 +163,7 @@ patch(ControlButtons.prototype, {
         }
         let result;
         try {
-            result = await this.pos.data.call("sale.order", "_pos_retail_duplicate_quotation", [
+            result = await this.pos.data.call("sale.order", "pos_retail_duplicate_quotation", [
                 quote.id,
             ]);
         } catch {

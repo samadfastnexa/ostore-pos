@@ -65,7 +65,7 @@ patch(ControlButtons.prototype, {
                     tax_ids: (l.tax_ids || []).map((t) => t.id),
                 })),
             };
-            const res = await this.pos.data.call("sale.order", "_pos_retail_create_quotation", [
+            const res = await this.pos.data.call("sale.order", "pos_retail_create_quotation", [
                 payload,
             ]);
 
