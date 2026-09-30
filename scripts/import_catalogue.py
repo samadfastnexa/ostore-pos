@@ -42,7 +42,12 @@ HOW A ROW BECOMES A PRODUCT
     row with only a name, after an empty row, e.g. "CONDUTE eLECTRIC"); else
     the tab's department. Till section = the category's second level.
   * a price, cost or quantity with a unit ("160 rs/ft", "480/lts", "242 total
-    fts", "6 Kg") creates the product in that unit (ft, L, kg, m).
+    fts", "6 Kg") creates the product in that unit (ft, L, kg, m); the till
+    then sells it in fractions (1.5 L at 300/L = 450). An existing product is
+    moved to that unit only while it has no stock, sales or purchases yet.
+  * loose goods sold per unit with QUANTITY empty: a SIZE in that unit is the
+    amount in hand ("Thinner | 17Litr | | 470/ltr" -> 17 L; "2 KILO 850 GRAM"
+    -> 2.85 kg), and the size itself is left blank.
   * opening stock = the sheet's quantity, loaded ONCE per product: anything
     already counted in the branch (by this import or by hand) is never
     touched again -- sales and receipts keep it right after that.
@@ -178,6 +183,31 @@ def amount(value):
     return num, unit
 
 
+GRAM_WORDS = {'g', 'gm', 'gms', 'gram', 'grams', 'grm'}
+
+
+def measured_amount(raw):
+    """A size that is really an amount: '45Litr' -> (45, 'L'), '2 KILO 850 GRAM'
+    -> (2.85, 'kg'), '1170 gram' -> (1.17, 'kg'); anything else -> (None, '')."""
+    s = clean(raw).lower()
+    pattern = r'(\d+(?:\.\d+)?)\s*([a-z]+)'
+    parts = re.findall(pattern, s)
+    if not parts or re.sub(pattern, '', s).strip():
+        return None, ''
+    total, unit = 0.0, ''
+    for number, word in parts:
+        if word in GRAM_WORDS:
+            part_unit, value = 'kg', float(number) / 1000
+        elif word in UNIT_WORDS:
+            part_unit, value = UNIT_WORDS[word], float(number)
+        else:
+            return None, ''
+        if unit and part_unit != unit:
+            return None, ''
+        unit, total = part_unit, total + value
+    return round(total, 3), unit
+
+
 SIZE_UNITS = {'x', 'mm', 'cm', 'ml', 'kg', 'gm', 'ft', 'ltr'}  # '32 x 25 mm', not '32 X 25 Mm'
 
 
@@ -286,6 +316,16 @@ for tab in tabs:
         minimum, _ = amount(get('min'))
         mrp, _ = amount(get('mrp'))
         qty, q_unit = amount(get('qty'))
+        # Loose goods sold by the litre or kilo carry the amount in hand in the
+        # SIZE column ("Thinner | 17Litr | (no quantity) | 470/ltr"): a drum's
+        # size is meaningless when the price is per litre, its contents are not.
+        sold_per = p_unit or c_unit
+        if qty is None and sold_per:
+            in_hand, in_hand_unit = measured_amount(size_raw)
+            if in_hand is not None and in_hand_unit == sold_per:
+                notes.append(f"row {rownum} {name}: sold per {sold_per} with QUANTITY empty -> SIZE "
+                             f"'{size_raw}' taken as {in_hand:g} {sold_per} in hand")
+                qty, q_unit, size_raw = in_hand, in_hand_unit, ''
         categ_raw = clean(get('categ'))
         has_data = any(v is not None for v in (price, cost, qty, minimum, mrp)) or size_raw or categ_raw or code
         if not has_data:
@@ -425,6 +465,14 @@ def only_counted(t):
                    for model in ('pos.order.line', 'sale.order.line', 'purchase.order.line'))
 
 
+def untouched(t):
+    """Never stocked, sold, bought or quoted -- so its unit can still change.
+    (Odoo 19 would relabel the history instead: "10 Units" becoming "10 kg".)"""
+    variants = t.product_variant_ids.ids
+    return not any(model in env and env[model].sudo().search_count([('product_id', 'in', variants)], limit=1)
+                   for model in ('stock.move', 'pos.order.line', 'sale.order.line', 'purchase.order.line'))
+
+
 imported = set(imported_ids.values())
 pool = {}
 for t in Template.browse(imported).exists().filtered('active'):
@@ -516,6 +564,8 @@ def differences(p):
             diff[field] = (f"{now:g}", f"{want:g}") if isinstance(want, float) else (now or '-', want or '-')
     if any(abs(t.with_company(c).standard_price - p['cost']) > 0.001 for c in companies):
         diff['cost'] = (f"{t.with_company(branch).standard_price:g}", f"{p['cost']:g}")
+    if p['unit'] and t.uom_id.name != p['unit'] and untouched(t):
+        diff['unit'] = (t.uom_id.name, p['unit'])
     if t.pos_retail_branch_ids != branch:
         diff['sold at'] = (', '.join(t.pos_retail_branch_ids.mapped('name')) or 'every branch', branch.name)
     if not (t.available_in_pos and t.sale_ok and t.purchase_ok and t.is_storable and not t.company_id):
@@ -664,6 +714,7 @@ else:
             'name': p['name'], 'pos_retail_size': p['size'] or False, 'brand_id': brand(p['brand']),
             'list_price': p['price'], 'minimum_selling_price': p['minimum'], 'mrp': p['mrp'],
             'categ_id': category(p['categ']).id, 'pos_categ_ids': [(6, 0, section(p['categ']).ids)],
+            'uom_id': uom(p['unit']).id,
             'pos_retail_branch_ids': [(6, 0, branch.ids)], 'type': 'consu', 'is_storable': True,
             'available_in_pos': True, 'sale_ok': True, 'purchase_ok': True, 'company_id': False,
         }
@@ -675,7 +726,7 @@ else:
         'name': ['name'], 'size': ['pos_retail_size'], 'brand': ['brand_id'], 'price': ['list_price'],
         'min': ['minimum_selling_price'], 'MRP': ['mrp'], 'category': ['categ_id'],
         'till section': ['pos_categ_ids'], 'barcode': ['barcode'], 'internal ref': ['default_code'],
-        'sold at': ['pos_retail_branch_ids'],
+        'sold at': ['pos_retail_branch_ids'], 'unit': ['uom_id'],
         'settings': ['type', 'is_storable', 'available_in_pos', 'sale_ok', 'purchase_ok', 'company_id'],
     }
     def retire(copy):
@@ -724,10 +775,10 @@ else:
                         updated += 1
                     if t.uom_id != uom(p['unit']) and p['unit']:
                         print(f"  note: {p['name']} is sold per {t.uom_id.name} in Odoo, per {p['unit']} in the "
-                              f"sheet; unit left unchanged (Odoo refuses once stock has moved)")
+                              f"sheet; unit left unchanged, it already has stock or sales in {t.uom_id.name}")
             new = [p for p in products if not p['template']]
             if new:
-                records = Template.create([dict(full_vals(p), uom_id=uom(p['unit']).id) for p in new])
+                records = Template.create([full_vals(p) for p in new])
                 taken = set(imported_ids)
                 xmlids = []
                 for p, record in zip(new, records):
