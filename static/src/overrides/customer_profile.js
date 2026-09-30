@@ -10,6 +10,8 @@ import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { PartnerList } from "@point_of_sale/app/screens/partner_list/partner_list";
 import { ReceivePaymentPopup } from "./receive_payment_popup";
 import { PaymentReceiptPopup } from "./payment_receipt_popup";
+import { PosRetailVendorPaymentPopup } from "./vendor_payment_popup";
+import { PosRetailVendorAdjustPopup } from "./vendor_adjust_popup";
 import { openWhatsAppChoice } from "../backend/whatsapp_choice_dialog";
 
 
@@ -357,6 +359,63 @@ export class PosRetailCustomerProfile extends Component {
         });
 
         // Reactively reload partner ledger and history immediately!
+        await this.loadPartnerData(partner);
+    }
+
+    /** Pay vendor directly from within the vendor view of profile/ledger dialog. */
+    async onClickPayVendor() {
+        const partner = this.partner;
+        if (!partner) return;
+        const bal = typeof this.state.data?.vendor_balance === "object"
+            ? (this.state.data.vendor_balance.raw ?? 0)
+            : (parseFloat(this.state.data?.vendor_balance) || 0);
+        const balFormatted = typeof this.state.data?.vendor_balance === "object"
+            ? (this.state.data.vendor_balance.formatted || "")
+            : this.formatCurrency(bal);
+
+        const vendorData = {
+            id: partner.id,
+            name: partner.name,
+            balance: bal,
+            balance_formatted: balFormatted,
+            contact_phone: partner.mobile || partner.phone || (this.state.data?.phone) || "",
+            vendor_contact_person: partner.vendor_contact_person || "",
+        };
+
+        await makeAwaitable(this.dialog, PosRetailVendorPaymentPopup, {
+            vendor: vendorData,
+            onPaymentDone: async () => {
+                await this.loadPartnerData(partner);
+            },
+        });
+        await this.loadPartnerData(partner);
+    }
+
+    /** Adjust vendor khata directly from within the vendor view of profile/ledger dialog. */
+    async onClickAdjustVendorKhata() {
+        const partner = this.partner;
+        if (!partner) return;
+        const bal = typeof this.state.data?.vendor_balance === "object"
+            ? (this.state.data.vendor_balance.raw ?? 0)
+            : (parseFloat(this.state.data?.vendor_balance) || 0);
+        const balFormatted = typeof this.state.data?.vendor_balance === "object"
+            ? (this.state.data.vendor_balance.formatted || "")
+            : this.formatCurrency(bal);
+
+        const vendorData = {
+            id: partner.id,
+            name: partner.name,
+            balance: bal,
+            balance_formatted: balFormatted,
+            vendor_contact_person: partner.vendor_contact_person || "",
+        };
+
+        await makeAwaitable(this.dialog, PosRetailVendorAdjustPopup, {
+            vendor: vendorData,
+            onAdjustDone: async () => {
+                await this.loadPartnerData(partner);
+            },
+        });
         await this.loadPartnerData(partner);
     }
 

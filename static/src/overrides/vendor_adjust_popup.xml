@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.VendorAdjustPopup">
+        <Dialog size="'md'" title="'Adjust Khata: ' + (vendor ? vendor.name : '')" bodyClass="'pos-retail-vendor-adjust-modal'">
+            <div class="pos-retail-vendor-adjust-popup p-1">
+
+                <!-- Vendor Quick Header Info -->
+                <div class="d-flex align-items-center justify-content-between p-3 mb-3 bg-light rounded border">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                             style="width: 44px; height: 44px; font-size: 1.2rem;">
+                            <i class="fa fa-sliders"/>
+                        </div>
+                        <div>
+                            <div class="fw-bold fs-6 text-dark" t-esc="vendor ? vendor.name : ''"/>
+                            <div class="small text-muted" t-if="vendor.vendor_contact_person">
+                                <i class="fa fa-user me-1 text-primary"/>
+                                <span t-esc="vendor.vendor_contact_person"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Current Payable</div>
+                        <div class="fs-5 fw-bold"
+                             t-att-class="previousBalance > 0 ? 'text-danger' : 'text-success'"
+                             t-esc="vendor.balance_formatted || formatCurrency(previousBalance)"/>
+                    </div>
+                </div>
+
+                <!-- Error Alert if any -->
+                <div t-if="state.errorMsg" class="alert alert-danger py-2 px-3 mb-3" role="alert">
+                    <i class="fa fa-exclamation-circle me-1"/>
+                    <t t-esc="state.errorMsg"/>
+                </div>
+
+                <!-- 1. Direction Selector (Owes Less vs Owes More) -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small mb-1">Adjustment Direction <span class="text-danger">*</span></label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button type="button"
+                                    class="btn w-100 p-3 text-start border rounded-3 d-flex flex-column"
+                                    t-att-class="state.direction === 'decrease' ? 'btn-success text-white shadow-sm' : 'btn-outline-secondary'"
+                                    t-on-click="() => this.setDirection('decrease')">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <i class="fa fa-minus-circle fa-lg"/>
+                                    <span class="fw-bold">Shop Owes LESS</span>
+                                </div>
+                                <span class="small opacity-75">Discount, rebate, return deduction, waiver</span>
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button"
+                                    class="btn w-100 p-3 text-start border rounded-3 d-flex flex-column"
+                                    t-att-class="state.direction === 'increase' ? 'btn-danger text-white shadow-sm' : 'btn-outline-secondary'"
+                                    t-on-click="() => this.setDirection('increase')">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <i class="fa fa-plus-circle fa-lg"/>
+                                    <span class="fw-bold">Shop Owes MORE</span>
+                                </div>
+                                <span class="small opacity-75">Old debt, unbilled delivery, paper khata</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Amount Input -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small mb-1">Adjustment Amount <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white fw-bold"><i class="fa fa-money text-primary"/></span>
+                        <input type="number"
+                               step="any"
+                               class="form-control form-control-lg fw-bold"
+                               t-att-class="state.direction === 'decrease' ? 'text-success' : 'text-danger'"
+                               placeholder="0.00"
+                               t-model="state.amount"
+                               autofocus="autofocus"/>
+                    </div>
+                </div>
+
+                <!-- 3. Quick Reason Chips -->
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small mb-1">Reason / Description <span class="text-danger">*</span></label>
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" style="font-size: 0.75rem;"
+                                t-on-click="() => this.setQuickReason('Vendor Rebate / Special Discount')">
+                            Rebate / Discount
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" style="font-size: 0.75rem;"
+                                t-on-click="() => this.setQuickReason('Damaged Goods Deduction')">
+                            Damaged Goods
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" style="font-size: 0.75rem;"
+                                t-on-click="() => this.setQuickReason('Goods Return Deduction')">
+                            Goods Return
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" style="font-size: 0.75rem;"
+                                t-on-click="() => this.setQuickReason('Old Paper Khata Opening Balance')">
+                            Old Paper Khata
+                        </button>
+                    </div>
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Describe the adjustment reason..."
+                           t-model="state.reason"/>
+                </div>
+
+                <!-- 4. Date -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small mb-1">Date</label>
+                    <input type="date"
+                           class="form-control form-control-sm"
+                           t-model="state.date"/>
+                </div>
+
+                <!-- 5. Live Calculation Preview -->
+                <div class="p-3 bg-light rounded border mb-2">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 small">
+                        <span>Current: <strong t-esc="vendor.balance_formatted || formatCurrency(previousBalance)"/></span>
+                        <span class="text-muted" t-esc="state.direction === 'increase' ? '+' : '−'"/>
+                        <span>Adjustment: <strong t-att-class="state.direction === 'decrease' ? 'text-success' : 'text-danger'" t-esc="formatCurrency(state.amount)"/></span>
+                        <span class="text-muted">=</span>
+                        <span>Projected Balance: <strong t-att-class="newBalancePreview > 0 ? 'text-danger' : 'text-success'" t-esc="formatCurrency(newBalancePreview)"/></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Buttons -->
+            <t t-set-slot="footer">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    <button type="button" class="btn btn-outline-secondary" t-on-click="props.close" t-att-disabled="state.submitting">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            class="btn btn-primary fw-bold d-flex align-items-center gap-2 px-4 shadow-sm"
+                            t-att-disabled="!canConfirm"
+                            t-on-click="onConfirm">
+                        <i t-if="state.submitting" class="fa fa-circle-o-notch fa-spin"/>
+                        <i t-else="" class="fa fa-check"/>
+                        <span>Post Adjustment</span>
+                    </button>
+                </div>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

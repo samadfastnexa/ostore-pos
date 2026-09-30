@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.7.54.0',
+    'version': '19.0.7.55.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -291,6 +291,12 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/thermal_label_popup.js',
             'pos_retail/static/src/overrides/thermal_label_popup.xml',
             'pos_retail/static/src/overrides/thermal_label_popup.scss',
+            'pos_retail/static/src/overrides/vendor_payment_popup.js',
+            'pos_retail/static/src/overrides/vendor_payment_popup.xml',
+            'pos_retail/static/src/overrides/vendor_adjust_popup.js',
+            'pos_retail/static/src/overrides/vendor_adjust_popup.xml',
+            'pos_retail/static/src/overrides/vendor_modal.js',
+            'pos_retail/static/src/overrides/vendor_modal.xml',
         ],
         # The customer display page is served from its own bundle, separate
         # from the main POS assets.

@@ -10,6 +10,7 @@ import { ThermalLabelPopup } from "@pos_retail/overrides/thermal_label_popup";
 import { PosRetailStockModal } from "@pos_retail/overrides/stock_modal";
 import { PosRetailQuotationModal } from "@pos_retail/overrides/quotation_modal";
 import { PosRetailQuotationSuccessPopup } from "@pos_retail/overrides/quotation_success_popup";
+import { PosRetailVendorModal } from "@pos_retail/overrides/vendor_modal";
 
 patch(ControlButtons.prototype, {
     get posRetailCanAdjustStock() {
@@ -237,5 +238,11 @@ patch(ControlButtons.prototype, {
         this.dialog.add(ThermalLabelPopup, {
             product: product,
         });
+    },
+
+    /** Open the comprehensive Vendors & Khata Modal to search, add, pay vendors and adjust khata */
+    async onClickVendorsKhata() {
+        this.props.close?.();
+        this.dialog.add(PosRetailVendorModal, {});
     },
 });

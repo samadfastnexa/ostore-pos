@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.VendorPaymentPopup">
+        <Dialog size="'lg'" title="'Pay Vendor: ' + (vendor ? vendor.name : '')" bodyClass="'pos-retail-vendor-payment-modal'">
+            <div class="pos-retail-vendor-payment-popup p-1">
+
+                <!-- 1. COMPLETED RECEIPT VIEW -->
+                <div t-if="state.completedReceipt" class="p-2">
+                    <div class="alert alert-success d-flex align-items-center gap-2 mb-3 py-2 px-3">
+                        <i class="fa fa-check-circle fa-lg"/>
+                        <div>
+                            <strong>Payment Recorded Successfully!</strong>
+                            <div class="small">Voucher: <strong t-esc="state.completedReceipt.payment_name"/></div>
+                        </div>
+                    </div>
+
+                    <!-- Printable Voucher / Receipt Card -->
+                    <div class="pos-retail-vendor-receipt p-4 bg-white border rounded shadow-sm text-dark font-monospace mb-3"
+                         style="max-width: 440px; margin: 0 auto; font-family: 'Courier New', Courier, monospace; font-size: 0.85rem;">
+                        <div class="text-center pb-3 border-bottom border-dashed mb-3">
+                            <div class="fw-bold fs-5 text-uppercase" t-esc="state.completedReceipt.branch_name || 'RETAIL STORE'"/>
+                            <div class="fw-bold fs-6 mt-1 text-primary">VENDOR PAYMENT RECEIPT</div>
+                            <div class="text-muted small mt-1">Ref: <strong t-esc="state.completedReceipt.payment_name"/></div>
+                        </div>
+
+                        <div class="mb-3 small pb-2 border-bottom border-dashed">
+                            <div class="d-flex justify-content-between py-1">
+                                <span class="text-muted">Date &amp; Time:</span>
+                                <span class="fw-bold text-end" t-esc="state.completedReceipt.datetime || state.completedReceipt.date"/>
+                            </div>
+                            <div class="d-flex justify-content-between py-1">
+                                <span class="text-muted">Cashier:</span>
+                                <span class="fw-bold" t-esc="state.completedReceipt.cashier_name"/>
+                            </div>
+                            <div class="d-flex justify-content-between py-1">
+                                <span class="text-muted">Vendor:</span>
+                                <span class="fw-bold text-end" t-esc="state.completedReceipt.partner_name"/>
+                            </div>
+                            <div t-if="state.completedReceipt.partner_phone" class="d-flex justify-content-between py-1">
+                                <span class="text-muted">Phone:</span>
+                                <span t-esc="state.completedReceipt.partner_phone"/>
+                            </div>
+                            <div class="d-flex justify-content-between py-1">
+                                <span class="text-muted">Payment Journal:</span>
+                                <span class="fw-bold text-uppercase" t-esc="state.completedReceipt.journal_name"/>
+                            </div>
+                            <div t-if="state.completedReceipt.memo" class="d-flex justify-content-between py-1">
+                                <span class="text-muted">Memo:</span>
+                                <span class="fst-italic" t-esc="state.completedReceipt.memo"/>
+                            </div>
+                        </div>
+
+                        <!-- Balances Breakdown -->
+                        <div class="p-3 bg-light rounded border mb-3">
+                            <div class="d-flex justify-content-between py-1 small">
+                                <span class="text-muted">Previous Balance:</span>
+                                <span class="fw-bold" t-esc="state.completedReceipt.previous_balance_formatted"/>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 fs-6">
+                                <span class="fw-bold text-success">Amount Paid:</span>
+                                <span class="fw-bold text-success" t-esc="state.completedReceipt.paid_formatted"/>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 small border-top pt-2">
+                                <span class="fw-bold text-dark">Remaining Balance:</span>
+                                <span class="fw-bold"
+                                      t-att-class="state.completedReceipt.new_balance > 0 ? 'text-danger' : 'text-success'"
+                                      t-esc="state.completedReceipt.new_balance_formatted"/>
+                            </div>
+                        </div>
+
+                        <div class="text-center small text-muted">
+                            Electronic Payment Voucher generated at till counter.
+                        </div>
+                    </div>
+
+                    <!-- Receipt Actions -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-center gap-2">
+                        <button type="button" class="btn btn-success fw-bold d-flex align-items-center gap-2 px-3 py-2 shadow-sm"
+                                t-att-disabled="state.sharingWa"
+                                t-on-click="onShareWhatsApp">
+                            <i t-att-class="state.sharingWa ? 'fa fa-circle-o-notch fa-spin' : 'fa fa-whatsapp'"/>
+                            <span>Share WhatsApp</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary fw-bold d-flex align-items-center gap-2 px-3 py-2"
+                                t-on-click="printReceipt">
+                            <i class="fa fa-print"/>
+                            <span>Print Voucher</span>
+                        </button>
+                        <button type="button" class="btn btn-primary fw-bold px-4 py-2"
+                                t-on-click="props.close">
+                            <span>Done</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. PAYMENT INPUT VIEW -->
+                <div t-else="">
+                    <!-- Vendor Quick Header Info -->
+                    <div class="d-flex align-items-center justify-content-between p-3 mb-3 bg-light rounded border">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                                 style="width: 44px; height: 44px; font-size: 1.2rem;">
+                                <i class="fa fa-truck"/>
+                            </div>
+                            <div>
+                                <div class="fw-bold fs-6 text-dark" t-esc="vendor ? vendor.name : ''"/>
+                                <div class="small text-muted d-flex align-items-center gap-2">
+                                    <span t-if="vendor.vendor_contact_person">
+                                        <i class="fa fa-user me-1 text-primary"/>
+                                        <span t-esc="vendor.vendor_contact_person"/>
+                                    </span>
+                                    <span t-if="vendor.phone or vendor.mobile">
+                                        <i class="fa fa-phone me-1 text-success"/>
+                                        <span t-esc="vendor.mobile || vendor.phone"/>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.72rem;">Current Payable (Shop Owes)</div>
+                            <div class="fs-5 fw-bold"
+                                 t-att-class="previousBalance > 0 ? 'text-danger' : 'text-success'"
+                                 t-esc="vendor.balance_formatted || formatCurrency(previousBalance)"/>
+                        </div>
+                    </div>
+
+                    <!-- Alert / Error message -->
+                    <div t-if="state.errorMsg" class="alert alert-danger py-2 px-3 mb-3" role="alert">
+                        <i class="fa fa-exclamation-circle me-1"/>
+                        <t t-esc="state.errorMsg"/>
+                    </div>
+
+                    <!-- Payment Inputs -->
+                    <div class="row g-3 mb-3">
+                        <!-- Amount Input -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small mb-1">Payment Amount <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white fw-bold"><i class="fa fa-money text-success"/></span>
+                                <input type="number"
+                                       step="any"
+                                       class="form-control form-control-lg fw-bold text-success"
+                                       placeholder="0.00"
+                                       t-att-value="state.amount"
+                                       t-on-input="onAmountInput"
+                                       autofocus="autofocus"/>
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        t-on-click="setFullAmount"
+                                        title="Pay full outstanding balance">
+                                    Full Balance
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method / Journal Selector -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small mb-1">Paid From (Till Drawer / Bank) <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <t t-foreach="state.journals" t-as="j" t-key="j.id">
+                                    <button type="button"
+                                            class="btn btn-sm d-flex align-items-center gap-1 py-2 px-3 rounded-2"
+                                            t-att-class="state.journalId === j.id ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary'"
+                                            t-on-click="() => this.setJournal(j.id)">
+                                        <i t-att-class="j.is_cash ? 'fa fa-money' : 'fa fa-credit-card'"/>
+                                        <span t-esc="j.name"/>
+                                    </button>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- Payment Date -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small mb-1">Payment Date</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fa fa-calendar text-muted"/></span>
+                                <input type="date"
+                                       class="form-control"
+                                       t-model="state.date"/>
+                            </div>
+                        </div>
+
+                        <!-- Reference / Memo -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small mb-1">Reference / Note (Optional)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fa fa-pencil text-muted"/></span>
+                                <input type="text"
+                                       class="form-control"
+                                       placeholder="e.g. Paid to driver, Inv #401 settlement"
+                                       t-model="state.memo"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Calculation Preview -->
+                    <div class="p-3 bg-light rounded border mb-2">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 small">
+                            <span>Current Balance: <strong t-esc="vendor.balance_formatted || formatCurrency(previousBalance)"/></span>
+                            <span class="text-muted">−</span>
+                            <span>Payment Amount: <strong class="text-success" t-esc="formatCurrency(state.amount)"/></span>
+                            <span class="text-muted">=</span>
+                            <span>Projected Balance: <strong t-att-class="newBalancePreview > 0 ? 'text-danger' : 'text-success'" t-esc="formatCurrency(newBalancePreview)"/></span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer (only shown in input state) -->
+            <t t-if="!state.completedReceipt" t-set-slot="footer">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    <button type="button" class="btn btn-outline-secondary" t-on-click="props.close" t-att-disabled="state.submitting">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            class="btn btn-success fw-bold d-flex align-items-center gap-2 px-4 shadow-sm"
+                            t-att-disabled="!canConfirm"
+                            t-on-click="onConfirm">
+                        <i t-if="state.submitting" class="fa fa-circle-o-notch fa-spin"/>
+                        <i t-else="" class="fa fa-check"/>
+                        <span>Confirm Vendor Payment</span>
+                    </button>
+                </div>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

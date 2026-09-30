@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.VendorModal">
+        <Dialog size="'xl'" title="'Vendors &amp; Vendor Khata'" contentClass="'pos-retail-vendor-modal-content'" bodyClass="'pos-retail-vendor-modal p-0'">
+            <div class="pos-retail-vendor-container d-flex flex-column h-100">
+
+                <!-- Header Bar with Stats & Add Vendor Button -->
+                <div class="p-3 bg-light border-bottom flex-shrink-0">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2">
+                        <!-- Stats Counters -->
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge bg-dark px-3 py-2 fs-6">
+                                <i class="fa fa-truck me-1"/> <t t-esc="state.totalVendors"/> Vendors
+                            </span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fs-6">
+                                Total Payable: <strong class="ms-1" t-esc="state.totalPayableFormatted"/>
+                            </span>
+                        </div>
+
+                        <!-- Top Actions -->
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.fetchVendors(state.searchQuery)">
+                                <i class="fa fa-refresh me-1"/> Refresh
+                            </button>
+                            <button class="btn btn-primary btn-sm fw-bold d-flex align-items-center gap-1 shadow-sm"
+                                    t-on-click="toggleAddForm">
+                                <i t-att-class="state.showAddForm ? 'fa fa-times' : 'fa fa-plus-circle'"/>
+                                <span t-esc="state.showAddForm ? 'Close Form' : '+ Add New Vendor'"/>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search input and filter tabs -->
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-7">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fa fa-search text-muted"/></span>
+                                <input type="text"
+                                       class="form-control"
+                                       placeholder="Search vendor by name, contact person, phone, mobile, or code..."
+                                       t-att-value="state.searchQuery"
+                                       t-on-input="onSearchInput"
+                                       autofocus="autofocus"/>
+                                <button t-if="state.searchQuery" class="btn btn-outline-secondary" t-on-click="clearSearch">
+                                    <i class="fa fa-times"/>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="btn-group w-100" role="group">
+                                <button type="button"
+                                        class="btn btn-sm"
+                                        t-att-class="state.filter === 'all' ? 'btn-dark' : 'btn-outline-secondary'"
+                                        t-on-click="() => this.setFilter('all')">
+                                    All Vendors (<t t-esc="state.vendors.length"/>)
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm"
+                                        t-att-class="state.filter === 'owed' ? 'btn-danger text-white' : 'btn-outline-danger'"
+                                        t-on-click="() => this.setFilter('owed')">
+                                    Owed / Balance (>0)
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm"
+                                        t-att-class="state.filter === 'settled' ? 'btn-success text-white' : 'btn-outline-success'"
+                                        t-on-click="() => this.setFilter('settled')">
+                                    Settled / Clear (0.00)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Alert if any -->
+                <div t-if="state.errorMessage" class="alert alert-danger m-3 mb-0 py-2 px-3 flex-shrink-0">
+                    <i class="fa fa-exclamation-triangle me-1"/> <t t-esc="state.errorMessage"/>
+                </div>
+
+                <!-- Inline "+ Add New Vendor" Drawer / Form -->
+                <div t-if="state.showAddForm" class="p-3 bg-primary-subtle border-bottom border-primary flex-shrink-0">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="fw-bold fs-6 text-primary d-flex align-items-center gap-2">
+                            <i class="fa fa-user-plus"/>
+                            <span>Quick Register New Vendor</span>
+                        </div>
+                        <button type="button" class="btn-close" aria-label="Close" t-on-click="toggleAddForm"/>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold mb-1">Vendor / Business Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm"
+                                   placeholder="e.g. Al-Madina Traders"
+                                   t-model="state.newVendor.name"
+                                   autofocus="autofocus"/>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small mb-1">Contact Person (Salesman / Rep)</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   placeholder="e.g. Tariq Mehmood"
+                                   t-model="state.newVendor.vendor_contact_person"/>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small mb-1">Phone / Mobile</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="fa fa-phone"/></span>
+                                <input type="text" class="form-control"
+                                       placeholder="e.g. 03001234567"
+                                       t-model="state.newVendor.phone"/>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small mb-1">Secondary Mobile</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   placeholder="e.g. 03219876543"
+                                   t-model="state.newVendor.mobile"/>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small mb-1">City / Area</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   placeholder="e.g. Lahore / Karachi"
+                                   t-model="state.newVendor.city"/>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-danger mb-1">
+                                Opening Balance (Shop Owes)
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Rs.</span>
+                                <input type="number" step="any" class="form-control fw-bold text-danger"
+                                       placeholder="0.00"
+                                       t-model="state.newVendor.opening_balance"/>
+                            </div>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm flex-grow-1"
+                                    t-on-click="toggleAddForm">
+                                Cancel
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm flex-grow-1 fw-bold shadow-sm"
+                                    t-att-disabled="state.isSaving"
+                                    t-on-click="saveNewVendor">
+                                <i t-if="state.isSaving" class="fa fa-circle-o-notch fa-spin"/>
+                                <i t-else="" class="fa fa-check"/>
+                                <span>Save Vendor</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Scrollable Vendor List -->
+                <div class="pos-retail-vendor-list flex-grow-1 overflow-auto p-3" style="max-height: 520px;">
+                    <!-- Loading state -->
+                    <div t-if="state.loading" class="text-center py-5">
+                        <i class="fa fa-circle-o-notch fa-spin fa-3x text-primary mb-2"/>
+                        <div class="text-muted">Loading vendors and khata balances...</div>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div t-elif="!filteredVendors.length" class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fa fa-truck fa-4x text-muted opacity-50"/>
+                        </div>
+                        <h5 class="fw-bold text-muted">No Vendors Found</h5>
+                        <p class="text-muted small">
+                            <t t-if="state.searchQuery">No vendors match your search "<t t-esc="state.searchQuery"/>".</t>
+                            <t t-else="">You haven't added any vendors to this register yet.</t>
+                        </p>
+                        <button type="button" class="btn btn-primary fw-bold px-4" t-on-click="toggleAddForm">
+                            <i class="fa fa-plus-circle me-1"/> Add New Vendor
+                        </button>
+                    </div>
+
+                    <!-- Table of Vendors -->
+                    <div t-else="" class="table-responsive bg-white rounded border shadow-sm">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 28%;">Vendor / Contact</th>
+                                    <th style="width: 18%;">Contact Details</th>
+                                    <th class="text-end" style="width: 14%;">Bills Total</th>
+                                    <th class="text-end" style="width: 14%;">Paid Total</th>
+                                    <th class="text-end" style="width: 14%;">Khata Balance</th>
+                                    <th class="text-center" style="width: 12%;">Till Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="filteredVendors" t-as="v" t-key="v.id">
+                                    <!-- Vendor Name & Person -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                                                 style="width: 38px; height: 38px; font-size: 1rem;">
+                                                <t t-esc="v.name.charAt(0).toUpperCase()"/>
+                                            </div>
+                                            <div class="text-truncate">
+                                                <div class="fw-bold text-dark" t-esc="v.name"/>
+                                                <div class="small text-muted" t-if="v.vendor_contact_person">
+                                                    <i class="fa fa-user me-1 text-primary"/>
+                                                    <span t-esc="v.vendor_contact_person"/>
+                                                </div>
+                                                <span t-if="v.vendor_code" class="badge bg-light text-muted border font-monospace" style="font-size: 0.68rem;" t-esc="v.vendor_code"/>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Phone, Mobile, City -->
+                                    <td>
+                                        <div class="small">
+                                            <div t-if="v.phone or v.mobile" class="text-dark">
+                                                <i class="fa fa-phone me-1 text-success"/>
+                                                <span t-esc="v.mobile || v.phone"/>
+                                            </div>
+                                            <div t-if="v.city" class="text-muted">
+                                                <i class="fa fa-map-marker me-1 text-secondary"/>
+                                                <span t-esc="v.city"/>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Bills Total -->
+                                    <td class="text-end small" t-esc="v.bills_total_formatted"/>
+
+                                    <!-- Paid Total -->
+                                    <td class="text-end small text-success fw-semibold" t-esc="v.paid_total_formatted"/>
+
+                                    <!-- Net Khata Balance -->
+                                    <td class="text-end">
+                                        <div class="fw-bold fs-6"
+                                             t-att-class="v.balance > 0 ? 'text-danger' : (v.balance &lt; 0 ? 'text-info' : 'text-success')"
+                                             t-esc="v.balance_formatted"/>
+                                        <div class="small text-muted" style="font-size: 0.72rem;">
+                                            <span t-if="v.balance > 0" class="badge text-bg-danger-subtle text-danger border border-danger-subtle">Shop Owes</span>
+                                            <span t-elif="v.balance &lt; 0" class="badge text-bg-info-subtle text-info border border-info-subtle">Advance</span>
+                                            <span t-else="" class="badge text-bg-success-subtle text-success border border-success-subtle">Settled</span>
+                                        </div>
+                                    </td>
+
+                                    <!-- Till Quick Actions -->
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            <!-- Pay Vendor Button -->
+                                            <button type="button" class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
+                                                    title="Pay Vendor from Till"
+                                                    t-on-click="() => this.onClickPayVendor(v)">
+                                                <i class="fa fa-money"/>
+                                                <span>Pay</span>
+                                            </button>
+
+                                            <!-- Adjust Khata Button -->
+                                            <button type="button" class="btn btn-sm btn-warning text-dark fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
+                                                    title="Adjust Vendor Khata (Rebate / Deduction / Opening)"
+                                                    t-on-click="() => this.onClickAdjustKhata(v)">
+                                                <i class="fa fa-sliders"/>
+                                                <span>Adjust</span>
+                                            </button>
+
+                                            <!-- Statement / Profile Button -->
+                                            <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2"
+                                                    title="View Full Vendor Statement &amp; Purchase History"
+                                                    t-on-click="() => this.onClickStatement(v)">
+                                                <i class="fa fa-file-text-o"/>
+                                            </button>
+
+                                            <!-- WhatsApp Share Button -->
+                                            <button type="button" class="btn btn-sm btn-outline-success py-1 px-2"
+                                                    title="Share Statement via WhatsApp"
+                                                    t-on-click="() => this.onClickShareWhatsApp(v)">
+                                                <i class="fa fa-whatsapp"/>
+                                            </button>
+
+                                            <!-- Download PDF Button -->
+                                            <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2"
+                                                    title="Download Vendor Statement PDF"
+                                                    t-on-click="() => this.onClickDownloadPdf(v)">
+                                                <i class="fa fa-file-pdf-o"/>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Close Button -->
+            <t t-set-slot="footer">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    <span class="small text-muted">
+                        Showing <strong t-esc="filteredVendors.length"/> of <strong t-esc="state.totalVendors"/> registered vendors
+                    </span>
+                    <button type="button" class="btn btn-secondary px-4" t-on-click="props.close">
+                        Close
+                    </button>
+                </div>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>
