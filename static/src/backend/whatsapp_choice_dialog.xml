@@ -17,7 +17,7 @@
                         <i class="fa fa-globe fa-2x me-3 text-success"/>
                         <div>
                             <div class="fw-bold fs-6 text-dark">WhatsApp Web</div>
-                            <div class="small text-muted">Message only. The PDF is downloaded for you to attach</div>
+                            <div class="small text-muted">Opens the chat and downloads the PDF: drag it from the downloads icon into the chat, or paperclip, Document</div>
                         </div>
                     </button>
                     <button type="button" class="btn btn-success btn-lg d-flex align-items-center justify-content-start p-3 text-start shadow-sm text-white"
@@ -25,7 +25,7 @@
                         <i class="fa fa-mobile fa-2x me-3 text-white"/>
                         <div>
                             <div class="fw-bold fs-6 text-white">WhatsApp App</div>
-                            <div class="small text-white-50">Sends the PDF file itself: choose WhatsApp, then the person. The message is copied, paste it as the caption</div>
+                            <div class="small text-white-50">Sends the PDF file itself: choose WhatsApp, then the person</div>
                         </div>
                     </button>
                 </div>

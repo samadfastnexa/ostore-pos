@@ -33,26 +33,29 @@ export class WhatsAppChoiceDialog extends Component {
 /**
  * Ask Web or App (every time, nothing remembered), then send the document.
  *
- * WhatsApp's own links (wa.me, web.whatsapp.com/send, whatsapp://send) carry
- * TEXT only -- no website can attach a file through them. So:
+ * The PDF goes on its own, never with the message: the shop wants the
+ * customer to receive the document, not a wall of text with a link. WhatsApp's
+ * own links (wa.me, web.whatsapp.com/send, whatsapp://send) carry TEXT only --
+ * no website can attach a file through them -- so:
  *
- *   App  -> the operating system's share sheet with the real PDF file: pick
+ *   App  -> the operating system's share sheet with the PDF file alone: pick
  *           WhatsApp, pick the person, the PDF is attached. Chrome/Edge on
- *           Windows (with WhatsApp Desktop installed), Android and iPhone all
- *           do this. Where the browser cannot share files (Firefox), falls
- *           back to opening the chat in the app with the message.
- *   Web  -> WhatsApp Web can never receive a file from another tab, so it
- *           opens the person's chat with the message already typed -- the
- *           callers put a download link to the PDF in it -- and downloads the
- *           PDF as well, for dragging into the chat if preferred.
+ *           Windows (with WhatsApp Desktop installed), Android, iPhone and a
+ *           Chromebook with the WhatsApp app all do this. Where the browser
+ *           cannot share files, the chat opens empty and the PDF is
+ *           downloaded to attach.
+ *   Web  -> WhatsApp Web can never receive a file from another tab (Chromebook
+ *           is the usual case), so the person's chat opens EMPTY and the PDF
+ *           is downloaded: drag it from the downloads icon into the chat, or
+ *           paperclip > Document.
  *
- * Whenever only the message could go out, the cashier is told so and shown
- * how to attach the downloaded PDF, instead of the chat quietly receiving
- * text and nobody noticing the statement never arrived.
+ * The message is only sent when there is no PDF at all (it failed to render,
+ * or the caller shares text), so the customer is never left with nothing.
  *
- * `text` is the message; `phone` international digits, or "" to let the user
- * pick the chat. Returns "file" when the PDF itself was handed to WhatsApp,
- * "text" when only the message was, false when the user backed out.
+ * `text` is the fallback message; `phone` international digits, or "" to let
+ * the user pick the chat. Returns "file" when the PDF itself was handed to
+ * WhatsApp, "download" when the chat was opened and the PDF downloaded to
+ * attach, "text" when only the message went, false when the user backed out.
  */
 export async function openWhatsAppChoice(dialogService, phone = "", { blob = null, filename = "document.pdf", text = "" } = {}) {
     // 1. Actively clear any past saved preference from all storage
@@ -108,15 +111,18 @@ export async function openWhatsAppChoice(dialogService, phone = "", { blob = nul
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
         .join("&");
 
-    // Only the message went out: say so, and how to add the PDF by hand.
-    const explainTextOnly = (why) => {
-        if (!blob || typeof dialogService?.add !== "function") {
+    // With a PDF the chat opens empty (the file is the message); without one
+    // the text is all there is, so it goes instead of nothing.
+    const chatParams = () => query(blob ? { phone } : { phone, text });
+
+    const explainAttach = (why) => {
+        if (typeof dialogService?.add !== "function") {
             return;
         }
         dialogService.add(AlertDialog, {
             title: _t("Attach the PDF in WhatsApp"),
             body: _t(
-                "%(why)s The PDF \"%(file)s\" has been downloaded to this computer. In the chat, press the paperclip (+), choose Document, and pick it from Downloads.",
+                "%(why)s The PDF \"%(file)s\" has been downloaded. In the chat, press the paperclip (+), choose Document, and pick it from Downloads.",
                 { why, file: filename }
             ),
         });
@@ -124,32 +130,28 @@ export async function openWhatsAppChoice(dialogService, phone = "", { blob = nul
 
     // 3. Execute chosen target without storing preference
     if (chosen === "web") {
+        // The steps are on the button itself: this tab loses focus to the
+        // WhatsApp tab, so a dialog here would only be seen afterwards.
         downloadBlob();
-        const params = query({ phone, text });
-        window.open(`https://web.whatsapp.com/send${params ? "?" + params : ""}`, "_blank", "noopener,noreferrer");
-        explainTextOnly(_t("WhatsApp Web only accepts a message from a link, never a file."));
-        return "text";
+        // No number (a walk-in) and no text: /send with nothing is an error
+        // page, the home screen lets the cashier pick the chat.
+        const params = chatParams();
+        window.open(params ? `https://web.whatsapp.com/send?${params}` : "https://web.whatsapp.com/",
+            "_blank", "noopener,noreferrer");
+        return blob ? "download" : "text";
     }
 
     // App: any platform whose browser can share files -- not just phones.
     // Chrome and Edge on Windows hand the PDF to the Windows share sheet,
-    // where WhatsApp Desktop is listed.
+    // where WhatsApp Desktop is listed; ChromeOS to its own, where the
+    // WhatsApp app from the Play Store is.
     if (blob && typeof navigator !== "undefined" && typeof navigator.share === "function") {
         const file = new File([blob], filename, { type: "application/pdf" });
         if (navigator.canShare?.({ files: [file] })) {
-            // The PDF on its own, never together with the message. Handed
-            // both, WhatsApp keeps the text and drops the file -- which is how
-            // statements kept arriving as text only. The message goes to the
-            // clipboard instead, to paste as the document's caption.
-            if (text && navigator.clipboard?.writeText) {
-                try {
-                    await navigator.clipboard.writeText(text);
-                } catch (_) {
-                    // No clipboard access: the PDF still goes, just without it.
-                }
-            }
             try {
-                await navigator.share({ files: [file], title: filename });
+                // The file alone: handed a title or text as well, WhatsApp
+                // keeps the text and drops the file.
+                await navigator.share({ files: [file] });
                 return "file";
             } catch (err) {
                 if (err && err.name === "AbortError") {
@@ -160,12 +162,15 @@ export async function openWhatsAppChoice(dialogService, phone = "", { blob = nul
         }
     }
     downloadBlob();
-    const params = query({ phone, text });
+    const params = chatParams();
     const a = document.createElement("a");
     a.href = `whatsapp://send${params ? "?" + params : ""}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    explainTextOnly(_t("This browser cannot hand a file to WhatsApp, so only the message was sent."));
-    return "text";
+    if (!blob) {
+        return "text";
+    }
+    explainAttach(_t("This browser cannot hand a file to WhatsApp, so the chat was opened for you."));
+    return "download";
 }
