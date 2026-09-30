@@ -1,0 +1,616 @@
+"""Check and import the whole Bahria catalogue from the Murshid Store Google Sheet.
+
+    Server:  bash scripts/run_import_on_server.sh           (check -- writes nothing)
+             APPLY=1 bash scripts/run_import_on_server.sh   (update products)
+    Local:   IMPORT_BRANCH="Branch 2" venv/Scripts/python.exe odoo/odoo-bin shell \
+                 -c odoo.conf -d OStore --no-http < custom_addons/pos_retail/scripts/import_catalogue.py
+
+Every tab whose name starts with "Bahria" is read -- a new tab is picked up
+without touching this file. Columns are found by header name, whatever order
+they are in.
+
+WITHOUT APPLY=1 THIS IS A CHECK: it compares the sheet with Odoo and prints,
+per tab, the new products, every field that would change on existing ones
+("price 400 -> 450"), stock that would be loaded, products that will show
+out of stock and why, and the rows it skips. Nothing is written.
+
+Environment (all optional):
+    APPLY=1          write the changes
+    IMPORT_BRANCH    branch that sells and stocks the products (default Bahria)
+    IMPORT_TABS      only these tabs, comma-separated
+    IMPORT_XLSX      a local .xlsx instead of the Google Sheet
+    FORCE_STOCK=1    re-count products already counted -- OVERWRITES live stock
+
+HOW A ROW BECOMES A PRODUCT
+  * identity: the BARCODE code (MBAHRIA0001...) when there is one -- it is set
+    as the product's barcode and Internal Reference. A row without a code is
+    still imported, recognised on later runs by tab + name + size + brand, and
+    gets an automatic barcode until a code is added to the sheet (the next run
+    then moves the product onto that code). Codes must never be renumbered:
+    the run refuses when many codes suddenly sit on differently named products.
+  * name exactly as in the sheet; size into the Size field; brand from the
+    first Brand column with a value; sold at the branch only; cost set in
+    every company (company-dependent in Odoo 19).
+  * category: the Product Category column; else the heading row above it (a
+    row with only a name, after an empty row, e.g. "CONDUTE eLECTRIC"); else
+    the tab's department. Till section = the category's second level.
+  * a price, cost or quantity with a unit ("160 rs/ft", "480/lts", "242 total
+    fts", "6 Kg") creates the product in that unit (ft, L, kg, m).
+  * opening stock = the sheet's quantity, loaded ONCE per product: anything
+    already counted in the branch (by this import or by hand) is never
+    touched again -- sales and receipts keep it right after that.
+  * skipped and listed, never imported: rows pasted far below the table (after
+    10+ empty rows) without a code, copies of a product that has a code
+    elsewhere in the sheet, heading rows, and rows with no price, quantity or
+    code at all.
+"""
+
+import datetime
+import io
+import os
+import re
+import time
+import urllib.request
+
+import openpyxl
+
+APPLY = os.environ.get('APPLY', '').strip().lower() in ('1', 'true', 'yes')
+FORCE_STOCK = os.environ.get('FORCE_STOCK', '').strip().lower() in ('1', 'true', 'yes')
+SHEET_URL = ('https://docs.google.com/spreadsheets/d/'
+             '1wyP6KnQO5LowvsHZoHM4rntFwyJA8Wc5Kc652SXJDtI/export?format=xlsx')
+XLSX = os.environ.get('IMPORT_XLSX', SHEET_URL)
+BRANCH = os.environ.get('IMPORT_BRANCH', 'Bahria').strip()
+ONLY_TABS = [t.strip().lower() for t in os.environ.get('IMPORT_TABS', '').split(',') if t.strip()]
+TAB_PREFIX = 'bahria'
+GAP = 10
+XMLID_MODULE = '__import__'
+IMPORT_PREFIXES = ('cat_', 'paint_', 'polish_', 'chemical_', 'electric_')
+
+# Department and default category per tab (anything else: the tab's own name).
+DEFAULT_CATEG = {
+    'bahria paints': ['Paints'], 'bahria polish': ['Paints', 'Polish'],
+    'bahria chemicals': ['Paints', 'Polish', 'Chemicals'], 'bahria electric': ['Electric'],
+    'bahria hardware': ['Hardware'], 'bahria sanitoryplumbering': ['Sanitary & Plumbing'],
+}
+COLUMNS = {
+    'name': ['name'], 'size': ['size', 'amp/watt/volt'], 'qty': ['quantity', 'pieces'],
+    'cost': ['cost'], 'price': ['sales price'], 'min': ['minimum selling price'],
+    'mrp': ['maximum retail price (mrp)'], 'categ': ['product category'],
+    'code': ['barcode'], 'unit': ['unit'],
+}
+
+# Spellings below are what earlier imports produced -- change one and the
+# products it covers are renamed/re-filed on the next run. Only ADD entries.
+SIZES = {
+    'gallon': 'Gallon', 'quarter': 'Quarter', 'drum': 'Drum',
+    'adha pound': 'Half Pound', 'half liter': 'Half Litre',
+    '4 inche': '4 Inch', '4 inchi': '4 Inch', '5 inchi': '5 Inch',
+}
+BRANDS = {
+    'advacne': 'Advance', 'advance series': 'Advance',
+    'black and white': 'Black and White', 'captain': 'Captain', 'commander': 'Commander',
+    'elite': 'Elite', 'exclusive nelson': 'Exclusive Nelson', 'nelson exclusive': 'Exclusive Nelson',
+    'fine coat': 'Finecoat', 'finecoat': 'Finecoat',
+    'finecoat/ makro': 'Makro / Finecoat', 'makro/fincoat': 'Makro / Finecoat',
+    'marko/fincoat': 'Makro / Finecoat', 'fish': 'Fish', 'glide': 'Glide',
+    "gobi's": "Gobi's", 'group master': 'Group Master', 'jotun': 'Jotun',
+    'kent tone': 'Kent Tone', 'local': 'Local', 'makro': 'Makro',
+    'murshid colors': 'Murshid Colors', 'nelson': 'Nelson', 'nelson extra': 'Nelson Extra',
+    'silicon master paint': 'Silicon Master Paint', 'sooper': 'Sooper', 'universal': 'Universal',
+    'aqua': 'AQUA', 'arik-lux': 'Arik-Lux', 'brooks': 'Brooks', 'broox': 'Broox',
+    'burq': 'Burq', 'china': 'China', 'classic': 'Classic', 'clopal': 'Clopal',
+    'chinton': 'Chinton', 'daiichi': 'Daiichi', 'deco': 'Deco', 'diamond': 'Diamond',
+    'excelent': 'Excellent', 'five star': 'Five Star', 'flud': 'Flud',
+    'meezan': 'Meezan', 'max': 'MAX', 'schneider': 'Schneider',
+}
+CATEGORY_WORDS = {
+    'distamber': 'Distemper', 'oilpant': 'Oil Paint', 'oilpaint': 'Oil Paint',
+    'electric_items': 'Electric Items', 'gasitems': 'Gas Items',
+}
+UNIT_WORDS = {
+    'ft': 'ft', 'fts': 'ft', 'feet': 'ft', 'foot': 'ft',
+    'm': 'm', 'meter': 'm', 'meters': 'm', 'metre': 'm', 'metres': 'm', 'mtr': 'm', 'mtrs': 'm',
+    'kg': 'kg', 'kgs': 'kg', 'kilo': 'kg', 'kilos': 'kg',
+    'l': 'L', 'lt': 'L', 'ltr': 'L', 'ltrs': 'L', 'lts': 'L', 'litr': 'L',
+    'liter': 'L', 'liters': 'L', 'litre': 'L', 'litres': 'L',
+}
+# Till sections: the second category level, renamed where the category word
+# is not what a cashier would look for.
+SECTION_NAMES = {'handbrush': 'Brushes', 'spraypaints': 'Spray Paint', 'spray paints': 'Spray Paint',
+                 'paint tube': 'Paint Tubes', 'regmal': 'Sandpaper'}
+DEEP_SECTIONS = {'chemicals', 'brackets'}
+SECTION_ORDER = ['Distemper', 'Oil Paint', 'Putty', 'Brushes', 'Spray Paint', 'Paint Tubes', 'Sandpaper',
+                 'Polish', 'Chemicals', 'Electric Items', 'Brackets']
+
+
+def clean(value):
+    if value is None:
+        return ''
+    if isinstance(value, datetime.datetime):
+        return f"{value.month}/{value.day}"  # Sheets turned a size like 1/2 into a date
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return re.sub(r'\s+', ' ', str(value)).strip()
+
+
+def slug(*parts):
+    return re.sub(r'[^a-z0-9]+', '_', ' '.join(str(p) for p in parts).lower()).strip('_')
+
+
+def amount(value):
+    """480 -> (480, ''), '480/lts' -> (480, 'L'), '242 total fts' -> (242, 'ft'),
+    '7500.kg' -> (7500, 'kg'), '35o' -> (350, ''), empty -> (None, '')."""
+    if isinstance(value, (int, float)):
+        return float(value), ''
+    s = clean(value)
+    if not s or s.lower() in ('none', '-', '.'):
+        return None, ''
+    s = re.sub(r'(\d)[oO](?=\D|$)', r'\g<1>0', s)
+    match = re.search(r'\d+(?:\.\d+)?', s)
+    if not match:
+        return None, ''
+    num = float(match.group(0))
+    if s.lstrip().startswith('-'):
+        num = -num
+    unit = next((UNIT_WORDS[w] for w in re.findall(r'[a-z]+', s.lower()) if w in UNIT_WORDS), '')
+    return num, unit
+
+
+def tidy_size(raw):
+    """Known sizes to their usual spelling; otherwise capitalise plain words and
+    leave anything with a digit alone ('25MM', '3/4"', '1liter' stay as typed)."""
+    if raw.lower() in SIZES:
+        return SIZES[raw.lower()]
+    return ' '.join(w if re.search(r'\d', w) else w.capitalize() if w.isalpha() and (w.islower() or w.isupper())
+                    else w for w in raw.split(' '))
+
+
+def category_path(raw):
+    return [CATEGORY_WORDS.get(p.strip().lower(), p.strip().title()) for p in str(raw).split('/') if p.strip()]
+
+
+def till_section(categ):
+    """('Paints', 'Distemper') for Paints/Distemper/Drum; (top, None) for a bare top category."""
+    if len(categ) >= 3 and categ[2].lower() in DEEP_SECTIONS:
+        sub = categ[2]
+    elif len(categ) >= 2:
+        sub = categ[1]
+    else:
+        return categ[0], None
+    return categ[0], SECTION_NAMES.get(sub.lower(), sub)
+
+
+# ---------------------------------------------------------------- read sheet
+if XLSX.startswith('http'):
+    with urllib.request.urlopen(XLSX, timeout=120) as response:
+        payload = response.read()
+    if not payload.startswith(b'PK'):
+        raise SystemExit("The sheet did not download as a spreadsheet -- is it still shared "
+                         "'Anyone with the link can view'?")
+    source = io.BytesIO(payload)
+else:
+    source = XLSX
+wb = openpyxl.load_workbook(source, read_only=True, data_only=True)
+tabs = [t for t in wb.sheetnames if t.lower().startswith(TAB_PREFIX)
+        and (not ONLY_TABS or t.lower() in ONLY_TABS or any(o in t.lower() for o in ONLY_TABS))]
+
+branch = env['res.company'].sudo().search([('name', 'ilike', BRANCH), ('child_ids', '=', False)])
+if len(branch) != 1:
+    raise SystemExit(f"Expected exactly one branch matching {BRANCH!r}, found "
+                     f"{branch.mapped('name') or 'none'}. Pass the right one as IMPORT_BRANCH.")
+warehouse = env['stock.warehouse'].sudo().search([('company_id', '=', branch.id)], limit=1)
+if not warehouse:
+    raise SystemExit(f"{branch.name} has no warehouse to hold the opening stock.")
+
+Template = env['product.template'].sudo().with_context(active_test=False)
+IMD = env['ir.model.data'].sudo()
+companies = env['res.company'].sudo().search([])
+
+print()
+print("=" * 78)
+print("MURSHID CATALOGUE " + ("IMPORT" if APPLY else "CHECK   (nothing is written -- APPLY=1 to update)"))
+print("=" * 78)
+print(f"branch {branch.name} | warehouse {warehouse.name} | tabs {tabs}")
+
+# ------------------------------------------------------------- parse all tabs
+parsed = {}          # tab -> list of product dicts
+skipped = {}         # tab -> list of (reason, row, name)
+tab_notes = {}
+for tab in tabs:
+    rows = list(wb[tab].iter_rows(values_only=True))
+    if not rows:
+        continue
+    header = [clean(h).lower() for h in rows[0]]
+    col = {key: next((header.index(a) for a in aliases if a in header), None) for key, aliases in COLUMNS.items()}
+    # Only the first Brand column: in Hardware and Sanitary a second one holds
+    # leftovers of pasted paint rows ("Exclusive Nelson" on a gas part).
+    brand_cols = [i for i, h in enumerate(header) if h == 'brand'][:1]
+    missing = [k for k in ('name', 'price', 'cost', 'qty') if col[k] is None]
+    if missing:
+        raise SystemExit(f"Tab {tab!r} has no column for {missing}. Header: "
+                         f"{[clean(h) for h in rows[0] if h]}. Rename it back.")
+    default = DEFAULT_CATEG.get(tab.lower(), [re.sub(r'(?i)^bahria\s*', '', tab).strip().title() or tab])
+    products, notes, skips = [], [], []
+    heading, empty_run, blank_before, in_table = None, 0, True, True
+    for rownum, row in enumerate(rows[1:], start=2):
+        get = lambda k: row[col[k]] if col[k] is not None and col[k] < len(row) else None
+        if not any(c is not None and str(c).strip() for c in row):
+            empty_run += 1
+            blank_before = True
+            if empty_run >= GAP:
+                in_table = False
+            continue
+        name_cell = get('name')
+        name = clean(name_cell)
+        was_blank, blank_before, empty_run = blank_before, False, 0
+        if not name:
+            continue
+        code = clean(get('code')).upper()
+        code = code if re.fullmatch(r'MBAHRIA\d+', code) else ''
+        size_raw = clean(get('size'))
+        size_raw = '' if size_raw in ('0', '-') else size_raw
+        brand_raw = next((clean(row[i]) for i in brand_cols if i < len(row) and clean(row[i])), '')
+        price, p_unit = amount(get('price'))
+        cost, c_unit = amount(get('cost'))
+        minimum, _ = amount(get('min'))
+        mrp, _ = amount(get('mrp'))
+        qty, q_unit = amount(get('qty'))
+        categ_raw = clean(get('categ'))
+        has_data = any(v is not None for v in (price, cost, qty, minimum, mrp)) or size_raw or categ_raw or code
+        if not has_data:
+            if was_blank and in_table:
+                heading = name  # e.g. "CONDUTE eLECTRIC" -- files the rows below it
+                skips.append(('heading row (used as the category of the rows below)', rownum, name))
+            else:
+                skips.append(('no price, quantity or code', rownum, name))
+            continue
+        if not code and not in_table:
+            skips.append(('pasted far below the table, no code', rownum, name))
+            continue
+        size = tidy_size(size_raw)
+        brand = BRANDS.get(brand_raw.lower(), brand_raw.title()) if brand_raw and brand_raw.lower() != 'none' else ''
+        if categ_raw:
+            categ = category_path(categ_raw)
+        elif heading:
+            categ = default[:1] + [heading.title()]
+        else:
+            categ = list(default)
+        price = price or 0.0
+        cost = cost or 0.0
+        minimum = minimum or 0.0
+        mrp = mrp or 0.0
+        if price <= 0:
+            notes.append(f"row {rownum} {name}: no sales price -> sold at 0, which the till refuses")
+        elif cost > price:
+            notes.append(f"row {rownum} {name}: cost {cost:g} above sales price {price:g}")
+        # A bound that contradicts the price is left out; the other one is kept.
+        if price and minimum > price:
+            notes.append(f"row {rownum} {name}: min {minimum:g} above price {price:g} -> min left out")
+            minimum = 0.0
+        if price and mrp and mrp < price:
+            notes.append(f"row {rownum} {name}: MRP {mrp:g} below price {price:g} -> MRP left out")
+            mrp = 0.0
+        if minimum and mrp and minimum > mrp:
+            notes.append(f"row {rownum} {name}: min {minimum:g} above MRP {mrp:g} -> range left out")
+            minimum = mrp = 0.0
+        if qty is not None and qty < 0:
+            notes.append(f"row {rownum} {name}: negative quantity {qty:g} ignored")
+            qty = None
+        units = {u for u in (clean(get('unit')).lower() and UNIT_WORDS.get(clean(get('unit')).lower(), ''),
+                             p_unit, c_unit, q_unit) if u}
+        if len(units) > 1:
+            notes.append(f"row {rownum} {name}: mixes units {sorted(units)} -> sold per piece")
+        products.append({
+            'tab': tab, 'row': rownum, 'name': name, 'code': code, 'size': size, 'brand': brand,
+            'price': price, 'cost': cost, 'minimum': minimum, 'mrp': mrp, 'qty': qty,
+            'unit': units.pop() if len(units) == 1 else '', 'categ': categ,
+            'key': f"cat_{slug(tab)}_{slug(name, size, brand)}",
+        })
+    parsed[tab], skipped[tab], tab_notes[tab] = products, skips, notes
+
+# Copies: an uncoded row naming the same product (name + size) as a coded row
+# anywhere in the sheet is a pasted duplicate, not a second product.
+coded_names = {(slug(p['name']), slug(p['size'])) for ps in parsed.values() for p in ps if p['code']}
+for tab, products in parsed.items():
+    keep, seen = [], {}
+    for p in products:
+        if not p['code'] and (slug(p['name']), slug(p['size'])) in coded_names:
+            skipped[tab].append(('copy of a product with a code elsewhere in the sheet', p['row'], p['name']))
+            continue
+        ident = p['code'] or p['key']
+        if ident in seen:
+            first = seen[ident]
+            if p['code']:
+                raise SystemExit(f"{tab}: code {p['code']} is on rows {first['row']} and {p['row']} -- "
+                                 f"every product needs its own code.")
+            if p['qty']:
+                first['qty'] = (first['qty'] or 0.0) + p['qty']
+            tab_notes[tab].append(f"row {p['row']} {p['name']}: same name/size/brand as row {first['row']}, "
+                                  f"merged (quantities added)")
+            continue
+        seen[ident] = p
+        keep.append(p)
+    parsed[tab] = keep
+
+# ----------------------------------------------------- match to Odoo products
+imported_ids = {imd.name: imd.res_id for imd in IMD.search([
+    ('module', '=', XMLID_MODULE), ('model', '=', 'product.template')])
+    if imd.name.startswith(IMPORT_PREFIXES)}
+all_codes = [p['code'] for ps in parsed.values() for p in ps if p['code']]
+by_code = {t.default_code.upper(): t for t in Template.search([('default_code', 'in', all_codes)])} if all_codes else {}
+claimed = set()
+for tab, products in parsed.items():
+    renamed = 0
+    code_hits = 0
+    for p in products:
+        t = by_code.get(p['code']) if p['code'] else None
+        if t:
+            code_hits += 1
+            if slug(t.name) != slug(p['name']):
+                renamed += 1
+        else:
+            t = Template.browse(imported_ids.get(p['key'])).exists()
+        if t and t.id in claimed:
+            t = Template
+        p['template'] = t
+        if t:
+            claimed.add(t.id)
+    if code_hits >= 10 and renamed > 0.3 * code_hits:
+        raise SystemExit(f"Refusing: in {tab!r}, {renamed} of {code_hits} codes now sit on a differently "
+                         f"named product. It looks like the codes were renumbered; put each code back on "
+                         f"its own product first.")
+
+
+def counted(templates):
+    """Templates already counted in the branch (an inventory adjustment exists)."""
+    variants = templates.product_variant_ids
+    if not variants:
+        return set()
+    groups = env['stock.move'].sudo()._read_group(
+        [('product_id', 'in', variants.ids), ('company_id', '=', branch.id),
+         ('is_inventory', '=', True), ('state', '=', 'done')], ['product_id'])
+    return {product.product_tmpl_id.id for (product,) in groups}
+
+
+existing = Template.browse([p['template'].id for ps in parsed.values() for p in ps if p['template']])
+already_counted = counted(existing)
+
+
+def section_label(categ):
+    top, sub = till_section(categ)
+    return f"{top} > {sub}" if sub else top
+
+
+def differences(p):
+    """Field -> (now, sheet) for an existing product."""
+    t = p['template']
+    diff = {}
+    compare = [
+        ('name', t.name or '', p['name']),
+        ('size', t.pos_retail_size or '', p['size']),
+        ('brand', (t.brand_id.name or ''), p['brand']),
+        ('price', t.list_price, p['price']),
+        ('min', t.minimum_selling_price, p['minimum']),
+        ('MRP', t.mrp, p['mrp']),
+        ('category', t.categ_id.complete_name or '', ' / '.join(p['categ'])),
+        ('till section', ' > '.join(n for n in (t.pos_categ_ids[:1].parent_id.name, t.pos_categ_ids[:1].name) if n)
+         if t.pos_categ_ids else '', section_label(p['categ'])),
+    ]
+    if p['code']:
+        compare += [('barcode', t.barcode or '', p['code']), ('internal ref', t.default_code or '', p['code'])]
+    for field, now, want in compare:
+        if isinstance(want, float):
+            same = abs((now or 0.0) - want) <= 0.001
+        elif field == 'name':
+            same = clean(now) == clean(want)       # spacing alone is not a rename
+        elif field in ('size', 'brand'):
+            same = slug(now) == slug(want)         # nor is a change of capitals
+        else:
+            same = now == want
+        if not same:
+            diff[field] = (f"{now:g}", f"{want:g}") if isinstance(want, float) else (now or '-', want or '-')
+    if any(abs(t.with_company(c).standard_price - p['cost']) > 0.001 for c in companies):
+        diff['cost'] = (f"{t.with_company(branch).standard_price:g}", f"{p['cost']:g}")
+    if t.pos_retail_branch_ids != branch:
+        diff['sold at'] = (', '.join(t.pos_retail_branch_ids.mapped('name')) or 'every branch', branch.name)
+    if not (t.available_in_pos and t.sale_ok and t.purchase_ok and t.is_storable and not t.company_id):
+        diff['settings'] = ('off', 'sellable, stocked, shared')
+    return diff
+
+
+# ------------------------------------------------------------------- report
+report_rows = {}
+for tab in tabs:
+    products = parsed.get(tab, [])
+    new = [p for p in products if not p['template']]
+    changed = [(p, differences(p)) for p in products if p['template']]
+    changed = [(p, d) for p, d in changed if d]
+    unchanged = len(products) - len(new) - len(changed)
+    stock_load = [p for p in products if p['qty'] and (FORCE_STOCK or not p['template']
+                                                       or p['template'].id not in already_counted)]
+    report_rows[tab] = stock_load
+    print(f"\n{'-' * 78}\n{tab}: {len(products)} products  |  {len(new)} new, {len(changed)} to update, "
+          f"{unchanged} unchanged  |  {sum(1 for p in products if not p['code'])} without a code")
+    print(f"  categories:    {sorted({' / '.join(p['categ']) for p in products})}")
+    print(f"  till sections: {sorted({section_label(p['categ']) for p in products})}")
+    print(f"  opening stock to load: {len(stock_load)} products, {sum(p['qty'] for p in stock_load):g}"
+          + (f" (units: {sorted({p['unit'] for p in products if p['unit']})})" if any(p['unit'] for p in products) else ""))
+    if new:
+        print(f"  NEW ({len(new)}):")
+        for p in new[:30]:
+            print(f"    + row {p['row']} {p['code'] or '(no code)'} {p['name']} | {p['size'] or '-'} | "
+                  f"{p['brand'] or '-'} | price {p['price']:g} | qty {p['qty'] if p['qty'] is not None else '-'}"
+                  f"{' ' + p['unit'] if p['unit'] else ''}")
+        if len(new) > 30:
+            print(f"    ... and {len(new) - 30} more")
+    if changed:
+        fields = {}
+        for _p, d in changed:
+            for f in d:
+                fields[f] = fields.get(f, 0) + 1
+        print(f"  TO UPDATE ({len(changed)}): " + ', '.join(f"{f} x{n}" for f, n in sorted(fields.items())))
+        for p, d in changed[:30]:
+            print(f"    ~ row {p['row']} {p['code'] or '(no code)'} {p['name']}: "
+                  + '; '.join(f"{f} {a} -> {b}" for f, (a, b) in d.items()))
+        if len(changed) > 30:
+            print(f"    ... and {len(changed) - 30} more")
+    out = []
+    for p in products:
+        if p['qty'] and p in stock_load:
+            continue
+        on_hand = 0.0
+        if p['template']:
+            on_hand = p['template'].product_variant_id.with_company(branch).with_context(
+                warehouse_id=warehouse.id).qty_available
+        if on_hand > 0:
+            continue
+        if p['qty'] is None:
+            why = "quantity empty in the sheet"
+        elif p['qty'] <= 0:
+            why = "the sheet says 0"
+        else:
+            why = f"sheet says {p['qty']:g}; counted before, sold or adjusted since"
+        out.append(f"row {p['row']} {p['name']}: {why}")
+    if out:
+        print(f"  OUT OF STOCK at the till after this run ({len(out)}):")
+        for line in out:
+            print(f"    - {line}")
+    for n in tab_notes.get(tab, []):
+        print(f"  note: {n}")
+    groups = {}
+    for reason, rownum, name in skipped.get(tab, []):
+        groups.setdefault(reason, []).append(f"{rownum} {name}")
+    for reason, items in groups.items():
+        print(f"  skipped -- {reason} ({len(items)}): rows {', '.join(items[:6])}"
+              + (f" ... +{len(items) - 6}" if len(items) > 6 else ""))
+
+gone = Template.browse([rid for name, rid in imported_ids.items() if rid not in claimed]).exists()
+if gone:
+    print(f"\n{len(gone)} product(s) imported earlier match no row in the sheet (left untouched; archive "
+          f"them by hand if unwanted): {', '.join(gone.mapped('name')[:20])}")
+
+if not APPLY:
+    print("\n" + "=" * 78)
+    print("CHECK ONLY -- nothing was written. Run again with APPLY=1 to update.")
+    print("=" * 78)
+else:
+    Category = env['product.category'].sudo()
+    PosCategory = env['pos.category'].sudo()
+    Brand = env['product.brand'].sudo()
+    caches = {'categ': {}, 'section': {}, 'brand': {}, 'uom': {}}
+
+    def category(path):
+        key = tuple(path)
+        if key not in caches['categ']:
+            parent = Category.browse()
+            for name in path:
+                parent = Category.search([('name', '=', name), ('parent_id', '=', parent.id or False)], limit=1) \
+                    or Category.create({'name': name, 'parent_id': parent.id or False})
+            caches['categ'][key] = parent
+        return caches['categ'][key]
+
+    def section(categ):
+        top, sub = till_section(categ)
+        if (top, sub) not in caches['section']:
+            parent = PosCategory.search([('name', '=ilike', top), ('parent_id', '=', False)], limit=1) \
+                or PosCategory.create({'name': top})
+            record = parent
+            if sub:
+                record = PosCategory.search([('name', '=ilike', sub), ('parent_id', '=', parent.id)], limit=1) \
+                    or PosCategory.create({'name': sub, 'parent_id': parent.id,
+                                           'sequence': SECTION_ORDER.index(sub) if sub in SECTION_ORDER else 99})
+            caches['section'][(top, sub)] = record
+        return caches['section'][(top, sub)]
+
+    def brand(name):
+        if not name:
+            return False
+        if name.lower() not in caches['brand']:
+            caches['brand'][name.lower()] = Brand.with_context(active_test=False).search(
+                [('name', '=ilike', name)], limit=1) or Brand.create({'name': name})
+        return caches['brand'][name.lower()].id
+
+    def uom(unit):
+        if unit not in caches['uom']:
+            found = env['uom.uom'].sudo().search([('name', '=', unit)], limit=1) if unit else None
+            caches['uom'][unit] = found or env.ref('uom.product_uom_unit')
+        return caches['uom'][unit]
+
+    def full_vals(p):
+        vals = {
+            'name': p['name'], 'pos_retail_size': p['size'] or False, 'brand_id': brand(p['brand']),
+            'list_price': p['price'], 'minimum_selling_price': p['minimum'], 'mrp': p['mrp'],
+            'categ_id': category(p['categ']).id, 'pos_categ_ids': [(6, 0, section(p['categ']).ids)],
+            'pos_retail_branch_ids': [(6, 0, branch.ids)], 'type': 'consu', 'is_storable': True,
+            'available_in_pos': True, 'sale_ok': True, 'purchase_ok': True, 'company_id': False,
+        }
+        if p['code']:
+            vals.update(default_code=p['code'], barcode=p['code'])
+        return vals
+
+    FIELD_VALS = {  # report field -> the vals that set it
+        'name': ['name'], 'size': ['pos_retail_size'], 'brand': ['brand_id'], 'price': ['list_price'],
+        'min': ['minimum_selling_price'], 'MRP': ['mrp'], 'category': ['categ_id'],
+        'till section': ['pos_categ_ids'], 'barcode': ['barcode'], 'internal ref': ['default_code'],
+        'sold at': ['pos_retail_branch_ids'],
+        'settings': ['type', 'is_storable', 'available_in_pos', 'sale_ok', 'purchase_ok', 'company_id'],
+    }
+    started = time.monotonic()
+    print("\nimporting... (each tab is saved when it finishes; don't interrupt)", flush=True)
+    for tab in tabs:
+        products = parsed.get(tab, [])
+        with env.cr.savepoint():
+            created = updated = 0
+            for p in products:
+                t = p['template']
+                if t:
+                    diff = differences(p)
+                    vals = full_vals(p)
+                    write = {k: vals[k] for f in diff for k in FIELD_VALS.get(f, []) if k in vals}
+                    if write:
+                        t.write(write)
+                        updated += 1
+                    if t.uom_id != uom(p['unit']) and p['unit']:
+                        print(f"  note: {p['name']} is sold per {t.uom_id.name} in Odoo, per {p['unit']} in the "
+                              f"sheet; unit left unchanged (Odoo refuses once stock has moved)")
+            new = [p for p in products if not p['template']]
+            if new:
+                records = Template.create([dict(full_vals(p), uom_id=uom(p['unit']).id) for p in new])
+                taken = set(imported_ids)
+                xmlids = []
+                for p, record in zip(new, records):
+                    name = f"cat_{slug(p['code'])}" if p['code'] else p['key']
+                    while name in taken:
+                        name += '_x'
+                    taken.add(name)
+                    xmlids.append({'module': XMLID_MODULE, 'name': name, 'model': 'product.template',
+                                   'res_id': record.id, 'noupdate': True})
+                    p['template'] = record
+                IMD.create(xmlids)
+                created = len(new)
+            # cost is company-dependent: one write per company per distinct value
+            for company in companies:
+                groups = {}
+                for p in products:
+                    if abs(p['template'].with_company(company).standard_price - p['cost']) > 0.001:
+                        groups.setdefault(p['cost'], Template.browse())
+                        groups[p['cost']] |= p['template']
+                for value, records in groups.items():
+                    records.with_company(company).write({'standard_price': value})
+            # opening stock, re-checked inside the transaction
+            wanted = {p['template']: p['qty'] for p in products if p['qty']}
+            done = set() if FORCE_STOCK else counted(Template.browse([t.id for t in wanted]))
+            load = {t: q for t, q in wanted.items() if t.id not in done}
+            if load:
+                quants = env['stock.quant'].sudo().with_company(branch).with_context(inventory_mode=True).create([{
+                    'product_id': t.product_variant_id.id, 'location_id': warehouse.lot_stock_id.id,
+                    'inventory_quantity': q} for t, q in load.items()])
+                if isinstance(quants.action_apply_inventory(), dict):
+                    raise SystemExit("Odoo asked to resolve an inventory conflict; nothing was saved. "
+                                     "Check Inventory > Physical Inventory for this branch.")
+        env.cr.commit()
+        print(f"  {tab}: created {created}, updated {updated}, opening stock on {len(load)} products "
+              f"({sum(load.values()):g})  [{time.monotonic() - started:.0f}s]", flush=True)
+    print("=" * 78)
+    print("Import finished. Reload the till pages.")
+    print("=" * 78)
