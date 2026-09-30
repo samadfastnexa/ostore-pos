@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_retail.QuotationSuccessPopup">
+        <Dialog size="'md'" title="props.isUpdate ? 'Quotation Updated!' : 'Quotation Created!'"
+                contentClass="'pos-retail-success-popup-content'"
+                bodyClass="'pos-retail-success-popup-body p-0'">
+            <div class="p-4 text-center">
+                <!-- Icon badge -->
+                <div class="mb-3">
+                    <span class="rounded-circle d-inline-flex align-items-center justify-content-center bg-success text-white shadow-sm"
+                          style="width: 68px; height: 68px;">
+                        <i class="fa fa-check fa-2x"/>
+                    </span>
+                </div>
+
+                <!-- Title & Quotation Number -->
+                <h4 class="fw-bold text-dark mb-1">
+                    <t t-if="props.isUpdate">Quotation Updated Successfully!</t>
+                    <t t-else="">Quotation Created Successfully!</t>
+                </h4>
+                <div class="fs-2 fw-bold font-monospace text-primary mb-3">
+                    <t t-esc="props.quote.name"/>
+                </div>
+
+                <!-- Details card -->
+                <div class="card bg-light border-0 text-start p-3 mb-4 mx-auto shadow-sm" style="max-width: 420px; border-radius: 8px;">
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <span class="text-muted"><i class="fa fa-user me-1 text-secondary"/> Customer:</span>
+                        <strong class="text-dark" t-esc="props.quote.partner_name || 'Walk-in Customer'"/>
+                    </div>
+                    <div t-if="props.quote.partner_phone" class="d-flex justify-content-between py-1 border-bottom">
+                        <span class="text-muted"><i class="fa fa-whatsapp me-1 text-success"/> Phone:</span>
+                        <span class="font-monospace text-dark fw-semibold" t-esc="props.quote.partner_phone"/>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <span class="text-muted"><i class="fa fa-cubes me-1 text-secondary"/> Items:</span>
+                        <span class="text-dark"><t t-esc="props.quote.line_count || (props.lines ? props.lines.length : 1)"/> item(s)</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 align-items-center">
+                        <span class="text-muted fw-bold">Total Amount:</span>
+                        <span class="fs-4 fw-bold text-success" t-esc="formatMoney(props.quote.amount_total)"/>
+                    </div>
+                </div>
+
+                <!-- Primary Action Buttons -->
+                <div class="d-grid gap-2 mb-3 mx-auto" style="max-width: 420px;">
+                    <!-- Share on WhatsApp -->
+                    <button type="button"
+                            class="btn btn-success btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm py-2"
+                            style="background-color: #25D366; border-color: #25D366;"
+                            t-att-disabled="state.sharing"
+                            t-on-click="onShareWhatsApp">
+                        <i t-if="state.sharing" class="fa fa-circle-o-notch fa-spin fa-lg"/>
+                        <i t-else="" class="fa fa-whatsapp fa-lg"/>
+                        <span>Share on WhatsApp</span>
+                    </button>
+
+                    <!-- Print Quotation -->
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-lg fw-semibold d-flex align-items-center justify-content-center gap-2 py-2"
+                            t-on-click="printQuotationPdf">
+                        <i class="fa fa-print fa-lg text-secondary"/>
+                        <span>Print Quotation PDF</span>
+                    </button>
+                </div>
+
+                <!-- Secondary Actions -->
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top mx-auto" style="max-width: 420px;">
+                    <button type="button" class="btn btn-link text-decoration-none text-muted p-0"
+                            t-on-click="onViewAllQuotations">
+                        <i class="fa fa-history me-1"/> Quotation History
+                    </button>
+                    <button type="button" class="btn btn-secondary px-4"
+                            t-on-click="() => this.props.close()">
+                        Done / New Order
+                    </button>
+                </div>
+            </div>
+        </Dialog>
+    </t>
+
+</templates>
