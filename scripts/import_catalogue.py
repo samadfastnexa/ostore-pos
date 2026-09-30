@@ -28,6 +28,13 @@ HOW A ROW BECOMES A PRODUCT
     gets an automatic barcode until a code is added to the sheet (the next run
     then moves the product onto that code). Codes must never be renumbered:
     the run refuses when many codes suddenly sit on differently named products.
+  * a corrected row stays the same product: when a row no longer finds its
+    product (brand or size fixed, the two columns swapped back, code changed)
+    it keeps the one unmatched product of the same department and name whose
+    size and brand fit -- listed as "[same product, row changed]". A second
+    copy an earlier run made that way (nothing but its opening count) is
+    archived with that stock zeroed; the original keeps its stock and history.
+  * a heading row named NEW (or "new items"...) is a marker, not a category.
   * name exactly as in the sheet; size into the Size field; brand from the
     first Brand column with a value; sold at the branch only; cost set in
     every company (company-dependent in Odoo 19).
@@ -54,6 +61,8 @@ import urllib.request
 
 import openpyxl
 
+from odoo.exceptions import UserError
+
 APPLY = os.environ.get('APPLY', '').strip().lower() in ('1', 'true', 'yes')
 FORCE_STOCK = os.environ.get('FORCE_STOCK', '').strip().lower() in ('1', 'true', 'yes')
 SHEET_URL = ('https://docs.google.com/spreadsheets/d/'
@@ -63,6 +72,8 @@ BRANCH = os.environ.get('IMPORT_BRANCH', 'Bahria').strip()
 ONLY_TABS = [t.strip().lower() for t in os.environ.get('IMPORT_TABS', '').split(',') if t.strip()]
 TAB_PREFIX = 'bahria'
 GAP = 10
+# A heading row with one of these names marks new stock, it is not a category.
+MARKER_HEADINGS = {'new', 'new items', 'new stock', 'new arrival', 'new arrivals'}
 XMLID_MODULE = '__import__'
 IMPORT_PREFIXES = ('cat_', 'paint_', 'polish_', 'chemical_', 'electric_')
 
@@ -137,6 +148,17 @@ def slug(*parts):
     return re.sub(r'[^a-z0-9]+', '_', ' '.join(str(p) for p in parts).lower()).strip('_')
 
 
+def row_ranges(numbers):
+    """[6, 7, 42, 43, 44, 50] -> '6-7, 42-44, 50'"""
+    runs = []
+    for n in sorted(numbers):
+        if runs and n == runs[-1][1] + 1:
+            runs[-1][1] = n
+        else:
+            runs.append([n, n])
+    return ', '.join(f"{a}-{b}" if b > a else f"{a}" for a, b in runs)
+
+
 def amount(value):
     """480 -> (480, ''), '480/lts' -> (480, 'L'), '242 total fts' -> (242, 'ft'),
     '7500.kg' -> (7500, 'kg'), '35o' -> (350, ''), empty -> (None, '')."""
@@ -156,12 +178,16 @@ def amount(value):
     return num, unit
 
 
+SIZE_UNITS = {'x', 'mm', 'cm', 'ml', 'kg', 'gm', 'ft', 'ltr'}  # '32 x 25 mm', not '32 X 25 Mm'
+
+
 def tidy_size(raw):
     """Known sizes to their usual spelling; otherwise capitalise plain words and
     leave anything with a digit alone ('25MM', '3/4"', '1liter' stay as typed)."""
     if raw.lower() in SIZES:
         return SIZES[raw.lower()]
-    return ' '.join(w if re.search(r'\d', w) else w.capitalize() if w.isalpha() and (w.islower() or w.isupper())
+    return ' '.join(w if re.search(r'\d', w) or w.lower() in SIZE_UNITS
+                    else w.capitalize() if w.isalpha() and (w.islower() or w.isupper())
                     else w for w in raw.split(' '))
 
 
@@ -191,8 +217,12 @@ if XLSX.startswith('http'):
 else:
     source = XLSX
 wb = openpyxl.load_workbook(source, read_only=True, data_only=True)
-tabs = [t for t in wb.sheetnames if t.lower().startswith(TAB_PREFIX)
-        and (not ONLY_TABS or t.lower() in ONLY_TABS or any(o in t.lower() for o in ONLY_TABS))]
+# Every Bahria tab is read and matched, so a product on another tab is never
+# taken for a stray; IMPORT_TABS only narrows what is reported and written.
+tabs = [t for t in wb.sheetnames if t.lower().startswith(TAB_PREFIX)]
+work_tabs = [t for t in tabs if not ONLY_TABS or t.lower() in ONLY_TABS or any(o in t.lower() for o in ONLY_TABS)]
+if not work_tabs:
+    raise SystemExit(f"No tab matches IMPORT_TABS {ONLY_TABS}; the Bahria tabs are {tabs}.")
 
 branch = env['res.company'].sudo().search([('name', 'ilike', BRANCH), ('child_ids', '=', False)])
 if len(branch) != 1:
@@ -210,12 +240,13 @@ print()
 print("=" * 78)
 print("MURSHID CATALOGUE " + ("IMPORT" if APPLY else "CHECK   (nothing is written -- APPLY=1 to update)"))
 print("=" * 78)
-print(f"branch {branch.name} | warehouse {warehouse.name} | tabs {tabs}")
+print(f"branch {branch.name} | warehouse {warehouse.name} | tabs {work_tabs}")
 
 # ------------------------------------------------------------- parse all tabs
 parsed = {}          # tab -> list of product dicts
 skipped = {}         # tab -> list of (reason, row, name)
 tab_notes = {}
+tab_no_price = {}    # tab -> row numbers without a sales price
 for tab in tabs:
     rows = list(wb[tab].iter_rows(values_only=True))
     if not rows:
@@ -230,7 +261,7 @@ for tab in tabs:
         raise SystemExit(f"Tab {tab!r} has no column for {missing}. Header: "
                          f"{[clean(h) for h in rows[0] if h]}. Rename it back.")
     default = DEFAULT_CATEG.get(tab.lower(), [re.sub(r'(?i)^bahria\s*', '', tab).strip().title() or tab])
-    products, notes, skips = [], [], []
+    products, notes, skips, no_price = [], [], [], []
     heading, empty_run, blank_before, in_table = None, 0, True, True
     for rownum, row in enumerate(rows[1:], start=2):
         get = lambda k: row[col[k]] if col[k] is not None and col[k] < len(row) else None
@@ -258,7 +289,10 @@ for tab in tabs:
         categ_raw = clean(get('categ'))
         has_data = any(v is not None for v in (price, cost, qty, minimum, mrp)) or size_raw or categ_raw or code
         if not has_data:
-            if was_blank and in_table:
+            if was_blank and in_table and name.lower() in MARKER_HEADINGS:
+                heading = None
+                skips.append(('marker row, not a category', rownum, name))
+            elif was_blank and in_table:
                 heading = name  # e.g. "CONDUTE eLECTRIC" -- files the rows below it
                 skips.append(('heading row (used as the category of the rows below)', rownum, name))
             else:
@@ -280,7 +314,7 @@ for tab in tabs:
         minimum = minimum or 0.0
         mrp = mrp or 0.0
         if price <= 0:
-            notes.append(f"row {rownum} {name}: no sales price -> sold at 0, which the till refuses")
+            no_price.append(rownum)
         elif cost > price:
             notes.append(f"row {rownum} {name}: cost {cost:g} above sales price {price:g}")
         # A bound that contradicts the price is left out; the other one is kept.
@@ -306,7 +340,7 @@ for tab in tabs:
             'unit': units.pop() if len(units) == 1 else '', 'categ': categ,
             'key': f"cat_{slug(tab)}_{slug(name, size, brand)}",
         })
-    parsed[tab], skipped[tab], tab_notes[tab] = products, skips, notes
+    parsed[tab], skipped[tab], tab_notes[tab], tab_no_price[tab] = products, skips, notes, no_price
 
 # Copies: an uncoded row naming the same product (name + size) as a coded row
 # anywhere in the sheet is a pasted duplicate, not a second product.
@@ -359,6 +393,77 @@ for tab, products in parsed.items():
         raise SystemExit(f"Refusing: in {tab!r}, {renamed} of {code_hits} codes now sit on a differently "
                          f"named product. It looks like the codes were renumbered; put each code back on "
                          f"its own product first.")
+
+# ------------------------------------------- same product, changed in the sheet
+# A row whose code or name/size/brand no longer finds its product is usually a
+# product already in Odoo whose row was corrected: a brand typo fixed, the size
+# and brand columns swapped back, a code added or changed. Creating it again
+# would put a second copy at the till with the stock stranded on the first. So
+# such a row keeps the unmatched product of the same department and name when
+# exactly one fits -- same size and brand (either way round), else one of the two.
+
+
+def fit(p, t):
+    """2: same size and brand, in either column; 1: one of them; 0: neither."""
+    sheet = [slug(p['size']), slug(p['brand'])]
+    odoo = [slug(t.pos_retail_size or ''), slug(t.brand_id.name or '')]
+    if sorted(sheet) == sorted(odoo):
+        return 2
+    return 1 if sheet[0] == odoo[0] or sheet[1] == odoo[1] else 0
+
+
+def pool_key(p):
+    return p['categ'][0].lower(), slug(p['name'])
+
+
+def only_counted(t):
+    """Nothing but inventory counts: never sold, bought, quoted or moved."""
+    variants = t.product_variant_ids.ids
+    if env['stock.move'].sudo().search_count([('product_id', 'in', variants), ('is_inventory', '=', False)], limit=1):
+        return False
+    return not any(model in env and env[model].sudo().search_count([('product_id', 'in', variants)], limit=1)
+                   for model in ('pos.order.line', 'sale.order.line', 'purchase.order.line'))
+
+
+imported = set(imported_ids.values())
+pool = {}
+for t in Template.browse(imported).exists().filtered('active'):
+    if t.id not in claimed:
+        pool.setdefault(((t.categ_id.complete_name or '').split(' / ')[0].lower(), slug(t.name)), []).append(t)
+
+# An earlier run already made the second copy (the original had lost its code):
+# the original takes the row back, the copy -- which has nothing but its opening
+# count -- is archived with that stock zeroed.
+for products in parsed.values():
+    for p in products:
+        t = p['template']
+        if not t or t.id not in imported:
+            continue
+        twins = [u for u in pool.get(pool_key(p), []) if fit(p, u) == 2 and u.create_date < t.create_date]
+        if len(twins) == 1 and only_counted(t):
+            pool[pool_key(p)].remove(twins[0])
+            claimed.discard(t.id)
+            claimed.add(twins[0].id)
+            p['template'], p['retire'] = twins[0], t
+
+candidates, wanted_by = {}, {}
+for products in parsed.values():
+    for p in products:
+        if p['template']:
+            continue
+        for tier in (2, 1):
+            hits = [u for u in pool.get(pool_key(p), []) if fit(p, u) == tier]
+            if hits:
+                candidates[id(p)] = hits
+                for u in hits:
+                    wanted_by.setdefault(u.id, []).append(p)
+                break
+for products in parsed.values():
+    for p in products:
+        hits = candidates.get(id(p), [])
+        if len(hits) == 1 and len(wanted_by[hits[0].id]) == 1:
+            p['template'], p['kept'] = hits[0], True
+            claimed.add(hits[0].id)
 
 
 def counted(templates):
@@ -420,7 +525,7 @@ def differences(p):
 
 # ------------------------------------------------------------------- report
 report_rows = {}
-for tab in tabs:
+for tab in work_tabs:
     products = parsed.get(tab, [])
     new = [p for p in products if not p['template']]
     changed = [(p, differences(p)) for p in products if p['template']]
@@ -429,8 +534,10 @@ for tab in tabs:
     stock_load = [p for p in products if p['qty'] and (FORCE_STOCK or not p['template']
                                                        or p['template'].id not in already_counted)]
     report_rows[tab] = stock_load
+    kept = sum(1 for p in products if p.get('kept'))
     print(f"\n{'-' * 78}\n{tab}: {len(products)} products  |  {len(new)} new, {len(changed)} to update, "
-          f"{unchanged} unchanged  |  {sum(1 for p in products if not p['code'])} without a code")
+          f"{unchanged} unchanged  |  {sum(1 for p in products if not p['code'])} without a code"
+          + (f"  |  {kept} kept after a change in the sheet" if kept else ""))
     print(f"  categories:    {sorted({' / '.join(p['categ']) for p in products})}")
     print(f"  till sections: {sorted({section_label(p['categ']) for p in products})}")
     print(f"  opening stock to load: {len(stock_load)} products, {sum(p['qty'] for p in stock_load):g}"
@@ -450,10 +557,21 @@ for tab in tabs:
                 fields[f] = fields.get(f, 0) + 1
         print(f"  TO UPDATE ({len(changed)}): " + ', '.join(f"{f} x{n}" for f, n in sorted(fields.items())))
         for p, d in changed[:30]:
-            print(f"    ~ row {p['row']} {p['code'] or '(no code)'} {p['name']}: "
+            print(f"    ~ row {p['row']} {p['code'] or '(no code)'} {p['name']}"
+                  + (" [same product, row changed]" if p.get('kept') else "") + ": "
                   + '; '.join(f"{f} {a} -> {b}" for f, (a, b) in d.items()))
         if len(changed) > 30:
             print(f"    ... and {len(changed) - 30} more")
+    twins = [p for p in products if p.get('retire')]
+    if twins:
+        print(f"  SECOND COPY FROM AN EARLIER RUN ({len(twins)}) -- the original keeps its stock and "
+              f"history, the copy is archived and its opening stock zeroed:")
+        for p in twins:
+            copy = p['retire']
+            on_hand = lambda t: t.product_variant_id.with_company(branch).with_context(
+                warehouse_id=warehouse.id).qty_available
+            print(f"    x row {p['row']} {p['code'] or '(no code)'} {p['name']}: copy id {copy.id} "
+                  f"(on hand {on_hand(copy):g}), original id {p['template'].id} (on hand {on_hand(p['template']):g})")
     out = []
     for p in products:
         if p['qty'] and p in stock_load:
@@ -475,6 +593,9 @@ for tab in tabs:
         print(f"  OUT OF STOCK at the till after this run ({len(out)}):")
         for line in out:
             print(f"    - {line}")
+    if tab_no_price.get(tab):
+        print(f"  NO SALES PRICE ({len(tab_no_price[tab])}) -- the till won't sell these until the sheet "
+              f"has one: rows {row_ranges(tab_no_price[tab])}")
     for n in tab_notes.get(tab, []):
         print(f"  note: {n}")
     groups = {}
@@ -484,7 +605,9 @@ for tab in tabs:
         print(f"  skipped -- {reason} ({len(items)}): rows {', '.join(items[:6])}"
               + (f" ... +{len(items) - 6}" if len(items) > 6 else ""))
 
-gone = Template.browse([rid for name, rid in imported_ids.items() if rid not in claimed]).exists()
+retiring = {p['retire'].id for ps in parsed.values() for p in ps if p.get('retire')}
+gone = Template.browse([rid for name, rid in imported_ids.items()
+                        if rid not in claimed and rid not in retiring]).exists().filtered('active')
 if gone:
     print(f"\n{len(gone)} product(s) imported earlier match no row in the sheet (left untouched; archive "
           f"them by hand if unwanted): {', '.join(gone.mapped('name')[:20])}")
@@ -555,15 +678,44 @@ else:
         'sold at': ['pos_retail_branch_ids'],
         'settings': ['type', 'is_storable', 'available_in_pos', 'sale_ok', 'purchase_ok', 'company_id'],
     }
+    def retire(copy):
+        """Zero the copy's stock and archive it, freeing its barcode for the original."""
+        variant = copy.product_variant_id
+        quants = env['stock.quant'].sudo().search([('product_id', '=', variant.id),
+                                                   ('location_id.usage', '=', 'internal'), ('quantity', '!=', 0)])
+        if quants:
+            zero = env['stock.quant'].sudo().with_company(branch).with_context(inventory_mode=True).create([
+                {'product_id': variant.id, 'location_id': q.location_id.id, 'inventory_quantity': 0}
+                for q in quants])
+            if isinstance(zero.action_apply_inventory(), dict):
+                raise SystemExit(f"Odoo asked to resolve an inventory conflict on {copy.name}; nothing was "
+                                 f"saved. Check Inventory > Physical Inventory for this branch.")
+        copy.write({'barcode': False, 'default_code': False, 'active': False})
+
+    def remember(p):
+        """Point the row's key at its product, so the next run finds it directly."""
+        if p['code'] or imported_ids.get(p['key']) == p['template'].id:
+            return
+        record = IMD.search([('module', '=', XMLID_MODULE), ('name', '=', p['key'])], limit=1)
+        if record:
+            record.write({'model': 'product.template', 'res_id': p['template'].id})
+        else:
+            IMD.create({'module': XMLID_MODULE, 'name': p['key'], 'model': 'product.template',
+                        'res_id': p['template'].id, 'noupdate': True})
+        imported_ids[p['key']] = p['template'].id
+
     started = time.monotonic()
     print("\nimporting... (each tab is saved when it finishes; don't interrupt)", flush=True)
-    for tab in tabs:
+    for tab in work_tabs:
         products = parsed.get(tab, [])
         with env.cr.savepoint():
             created = updated = 0
             for p in products:
                 t = p['template']
                 if t:
+                    if p.get('retire'):
+                        retire(p['retire'])
+                    remember(p)
                     diff = differences(p)
                     vals = full_vals(p)
                     write = {k: vals[k] for f in diff for k in FIELD_VALS.get(f, []) if k in vals}
@@ -609,8 +761,41 @@ else:
                     raise SystemExit("Odoo asked to resolve an inventory conflict; nothing was saved. "
                                      "Check Inventory > Physical Inventory for this branch.")
         env.cr.commit()
+        retired = sum(1 for p in products if p.get('retire'))
         print(f"  {tab}: created {created}, updated {updated}, opening stock on {len(load)} products "
-              f"({sum(load.values()):g})  [{time.monotonic() - started:.0f}s]", flush=True)
+              f"({sum(load.values()):g})" + (f", second copies archived {retired}" if retired else "")
+              + f"  [{time.monotonic() - started:.0f}s]", flush=True)
+    # An earlier run filed rows under a marker row ("NEW") as if it were a
+    # category; once its products have moved back, the empty leftovers go.
+    for marker in MARKER_HEADINGS:
+        empty = [c for c in Category.search([('name', '=ilike', marker), ('parent_id', '!=', False)])
+                 if not c.child_id and not Template.search_count([('categ_id', '=', c.id)])]
+        empty += [s for s in PosCategory.search([('name', '=ilike', marker), ('parent_id', '!=', False)])
+                  if not s.child_ids and not Template.search_count([('pos_categ_ids', 'in', s.ids)])]
+        for record in empty:
+            label = f"{record.parent_id.name} > {record.name}"
+            try:
+                with env.cr.savepoint():
+                    record.unlink()
+                print(f"  removed the empty {record._description.lower()} {label}")
+            except UserError as e:  # e.g. a till section while a register session is open
+                print(f"  left the empty {record._description.lower()} {label}: {e} -- run again later")
+    # Brands that were really sizes typed into the Brand column ("32 x 25 mm"),
+    # left without products once the sheet was corrected. Only names with a
+    # digit: a real brand ("Master") may sit in the size column of a bad row.
+    sizes = {slug(p['size']) for ps in parsed.values() for p in ps if p['size']}
+    brands_used = {slug(p['brand']) for ps in parsed.values() for p in ps if p['brand']}
+    for b in Brand.with_context(active_test=False).search([]):
+        if (re.search(r'\d', b.name) and slug(b.name) in sizes and slug(b.name) not in brands_used
+                and not Template.search_count([('brand_id', '=', b.id)])):
+            try:
+                with env.cr.savepoint():
+                    name = b.name
+                    b.unlink()
+                print(f"  removed the brand {name!r} (a size typed in the Brand column, no products left)")
+            except UserError as e:
+                print(f"  left the brand {b.name!r}: {e}")
+    env.cr.commit()
     print("=" * 78)
     print("Import finished. Reload the till pages.")
     print("=" * 78)
