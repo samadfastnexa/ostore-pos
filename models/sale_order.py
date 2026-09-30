@@ -76,49 +76,90 @@ class SaleOrder(models.Model):
 
     @api.model
     def pos_retail_quote_summary(self, order):
+        partner = order.partner_id
         return {
             'id': order.id,
             'name': order.name,
             'state': order.state,
-            'partner_id': order.partner_id.id if order.partner_id else False,
-            'partner_name': order.partner_id.name or '',
+            'partner_id': partner.id if partner else False,
+            'partner_name': partner.name or '',
+            'partner_phone': (partner.phone or partner.mobile or '') if partner else '',
+            'partner_mobile': partner.mobile or '' if partner else '',
             'amount_total': order.amount_total,
+            'amount_untaxed': order.amount_untaxed,
+            'amount_tax': order.amount_tax,
             'date': self.env['res.partner']._format_datetime_pak(order.date_order) if order.date_order else '',
+            'date_order': str(order.date_order) if order.date_order else '',
             'validity_date': order.validity_date and str(order.validity_date) or '',
+            'note': order.note or '',
             'approved': order.pos_customer_approved,
             'line_count': len(order.order_line),
         }
 
     @api.model
-    def pos_retail_search_quotations(self, partner_id=None, limit=30):
-        """Open quotations the till may duplicate, load, or update."""
+    def pos_retail_search_quotations(self, partner_id=None, query=None, limit=50):
+        """Open quotations the till may duplicate, load, edit, or update."""
         domain = [('state', 'in', ('draft', 'sent'))]
         if partner_id:
             domain.append(('partner_id', '=', partner_id))
-        orders = self.sudo().search(domain, order='date_order desc, id desc', limit=limit)
+        if query:
+            q = str(query).strip()
+            domain += [
+                '|', '|', '|',
+                ('name', 'ilike', q),
+                ('partner_id.name', 'ilike', q),
+                ('partner_id.phone', 'ilike', q),
+                ('partner_id.mobile', 'ilike', q),
+            ]
+        orders = self.sudo().search(domain, order='date_order desc, id desc', limit=int(limit))
         return [self.pos_retail_quote_summary(o) for o in orders]
 
     @api.model
     def pos_retail_get_quotation_lines(self, order_id):
-        """Fetch quotation lines for loading into a POS cart."""
+        """Fetch quotation lines for loading into a POS cart or editing in modal."""
         order = self.sudo().browse(int(order_id))
         if not order.exists():
             raise UserError(_("That quotation no longer exists."))
         lines = []
         for line in order.order_line:
             if line.product_id:
+                p = line.product_id
+                brand_name = ''
+                if hasattr(p, 'brand_id') and p.brand_id:
+                    brand_name = p.brand_id.name or ''
+                elif hasattr(p.product_tmpl_id, 'brand_id') and p.product_tmpl_id.brand_id:
+                    brand_name = p.product_tmpl_id.brand_id.name or ''
+
                 lines.append({
-                    'product_id': line.product_id.id,
-                    'product_name': line.product_id.display_name,
+                    'id': line.id,
+                    'product_id': p.id,
+                    'product_name': p.name,
+                    'display_name': p.display_name,
+                    'brand_name': brand_name,
+                    'barcode': p.barcode or '',
+                    'default_code': p.default_code or '',
+                    'uom': line.product_uom_id.name or p.uom_id.name or '',
                     'qty': line.product_uom_qty,
                     'price_unit': line.price_unit,
                     'discount': line.discount or 0.0,
+                    'price_subtotal': line.price_subtotal,
+                    'price_total': line.price_total,
                 })
+        partner = order.partner_id
         return {
             'order_id': order.id,
             'name': order.name,
-            'partner_id': order.partner_id.id if order.partner_id else False,
-            'partner_name': order.partner_id.name if order.partner_id else '',
+            'state': order.state,
+            'partner_id': partner.id if partner else False,
+            'partner_name': partner.name if partner else '',
+            'partner_phone': (partner.phone or partner.mobile or '') if partner else '',
+            'partner_mobile': partner.mobile or '' if partner else '',
+            'amount_total': order.amount_total,
+            'amount_untaxed': order.amount_untaxed,
+            'amount_tax': order.amount_tax,
+            'date': self.env['res.partner']._format_datetime_pak(order.date_order) if order.date_order else '',
+            'validity_date': order.validity_date and str(order.validity_date) or '',
+            'note': order.note or '',
             'lines': lines,
         }
 
@@ -142,8 +183,8 @@ class SaleOrder(models.Model):
 
     @api.model
     def pos_retail_update_quotation(self, order_id, vals):
-        """Replace an existing quotation's lines with the current POS cart."""
-        order = self.sudo().browse(order_id)
+        """Replace an existing quotation's lines and update fields."""
+        order = self.sudo().browse(int(order_id))
         if not order.exists():
             raise UserError(_("That quotation no longer exists."))
         if order.state not in ('draft', 'sent'):
@@ -154,21 +195,24 @@ class SaleOrder(models.Model):
             raise UserError(_("Add at least one product before updating a quotation."))
 
         order.order_line.unlink()
-        order.write({
-            'order_line': [
-                (0, 0, {
-                    'product_id': line['product_id'],
-                    'product_uom_qty': line.get('qty', 1),
-                    'discount': line.get('discount', 0.0),
-                })
-                for line in vals['lines']
-            ],
-        })
-        self.pos_retail_apply_quoted_prices(order, vals['lines'])
-        if vals.get('validity_date'):
-            order.validity_date = vals['validity_date']
+        order_lines = [
+            (0, 0, {
+                'product_id': line['product_id'],
+                'product_uom_qty': line.get('qty', 1),
+                'discount': line.get('discount', 0.0),
+            })
+            for line in vals['lines']
+        ]
+        update_vals = {'order_line': order_lines}
+        if vals.get('validity_date') is not None:
+            update_vals['validity_date'] = vals['validity_date'] or False
         if vals.get('partner_id') and vals['partner_id'] != order.partner_id.id:
-            order.partner_id = vals['partner_id']
+            update_vals['partner_id'] = vals['partner_id']
+        if 'note' in vals:
+            update_vals['note'] = vals['note'] or False
+
+        order.write(update_vals)
+        self.pos_retail_apply_quoted_prices(order, vals['lines'])
         # The quote changed, so any previous customer approval no longer
         # refers to what this document now says.
         if order.pos_customer_approved:

@@ -9,6 +9,7 @@ import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { ThermalLabelPopup } from "@pos_retail/overrides/thermal_label_popup";
 import { PosRetailStockModal } from "@pos_retail/overrides/stock_modal";
 import { PosRetailQuotationModal } from "@pos_retail/overrides/quotation_modal";
+import { PosRetailQuotationSuccessPopup } from "@pos_retail/overrides/quotation_success_popup";
 
 patch(ControlButtons.prototype, {
     get posRetailCanAdjustStock() {
@@ -23,13 +24,21 @@ patch(ControlButtons.prototype, {
         return this.pos.getOrder()?.getSelectedOrderline()?.product_id;
     },
 
+    get posRetailEditingQuoteId() {
+        return this.pos.getOrder()?.pos_retail_editing_quote_id || null;
+    },
+
+    get posRetailEditingQuoteName() {
+        return this.pos.getOrder()?.pos_retail_editing_quote_name || null;
+    },
+
     /** Open the comprehensive Store Stock Browser & Adjustment Modal */
     async onClickStockInventory() {
         this.props.close?.();
         this.dialog.add(PosRetailStockModal, {});
     },
 
-    /** Turn the current POS cart directly into an official Sales Quotation */
+    /** Turn current cart into an official Sales Quotation, or update an existing one */
     async onClickMakeQuotation() {
         const order = this.pos.getOrder();
         const lines = (order?.getOrderlines() || []).filter(
@@ -53,31 +62,55 @@ patch(ControlButtons.prototype, {
             }
         }
 
+        const editingId = this.posRetailEditingQuoteId;
+        const editingName = this.posRetailEditingQuoteName;
+
         try {
+            const mappedLines = lines.map((l) => ({
+                product_id: l.product_id.id,
+                product_name: l.product_id.display_name,
+                qty: l.getQuantity(),
+                price_unit: l.price_unit,
+                discount: l.discount || 0,
+                tax_ids: (l.tax_ids || []).map((t) => t.id),
+            }));
+
             const payload = {
                 partner_id: partner.id,
                 approved_by: this.pos.getCashier()?.id || false,
-                lines: lines.map((l) => ({
-                    product_id: l.product_id.id,
-                    qty: l.getQuantity(),
-                    price_unit: l.price_unit,
-                    discount: l.discount || 0,
-                    tax_ids: (l.tax_ids || []).map((t) => t.id),
-                })),
+                lines: mappedLines,
             };
-            const res = await this.pos.data.call("sale.order", "pos_retail_create_quotation", [
-                payload,
-            ]);
 
+            let res;
+            if (editingId) {
+                res = await this.pos.data.call("sale.order", "pos_retail_update_quotation", [
+                    editingId,
+                    payload,
+                ]);
+            } else {
+                res = await this.pos.data.call("sale.order", "pos_retail_create_quotation", [
+                    payload,
+                ]);
+            }
+
+            // Clean POS state
             this.pos.addNewOrder();
             this.pos.removeOrder(order, false);
             this.props.close?.();
 
+            // Open rich Success Modal offering instant WhatsApp share & PDF print
+            this.dialog.add(PosRetailQuotationSuccessPopup, {
+                quote: res,
+                lines: mappedLines,
+            });
+
             this.notification.add(
-                _t("Quotation %(name)s created successfully for %(partner)s!", {
-                    name: res.name,
-                    partner: res.partner_name,
-                }),
+                editingId
+                    ? _t("Quotation %(name)s updated successfully!", { name: res.name })
+                    : _t("Quotation %(name)s created successfully for %(partner)s!", {
+                          name: res.name,
+                          partner: res.partner_name,
+                      }),
                 { type: "success" }
             );
         } catch (err) {
@@ -88,7 +121,7 @@ patch(ControlButtons.prototype, {
         }
     },
 
-    /** Open the Quotations History & Settle modal to view, settle, or duplicate quotes */
+    /** Open the Quotations History & Settle modal to view, settle, edit, or duplicate quotes */
     async onClickQuotationHistory() {
         this.props.close?.();
         this.dialog.add(PosRetailQuotationModal, {});
