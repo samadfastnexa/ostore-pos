@@ -537,8 +537,9 @@ while True:
             if score:
                 scored.append((score, u))
         best = clear_winner(scored)
-        # Only a copy with nothing but its opening count may be given up.
-        if best and (not t or only_counted(t)):
+        # Two products for one row: one of them must have nothing but its
+        # opening count, or both carry sales and neither can go.
+        if best and (not t or only_counted(t) or only_counted(best[1])):
             offers.setdefault(best[1].id, []).append((best[0], p))
     taken = []
     for uid, bids in offers.items():
@@ -547,13 +548,21 @@ while True:
             continue
         p, t = winner[1], winner[1]['template']
         u = Template.browse(uid)
-        if t:
+        if t and only_counted(u):
+            # Neither was sold: the newer one was counted from the corrected
+            # row, so it stays and the older goes -- an older count can belong
+            # to a row whose name was out of line with its quantity.
+            p['retire'] = [u]
+        elif t:
+            # The older one has sales: it keeps its stock and history.
             p['retire'] = [t]
             claimed.discard(t.id)
+            p['template'] = u
+            claimed.add(u.id)
         else:
             p['kept'] = True
-        p['template'] = u
-        claimed.add(u.id)
+            p['template'] = u
+            claimed.add(u.id)
         taken.append((p, u))
     if not taken:
         break
@@ -677,13 +686,13 @@ for tab in work_tabs:
         warehouse_id=warehouse.id).qty_available
     twins = [p for p in products if p.get('retire') and not p.get('replaces')]
     if twins:
-        print(f"  SECOND COPY FROM AN EARLIER RUN ({len(twins)}) -- the original keeps its stock and "
-              f"history, the copy is archived and its opening stock zeroed:")
+        print(f"  SAME PRODUCT TWICE ({len(twins)}) -- one stays, the other is archived with its stock "
+              f"zeroed (the one with sales stays; neither sold: the one counted from this row):")
         for p in twins[:30]:
             copy = p['retire'][0]
-            print(f"    x row {p['row']} {p['code'] or '(no code)'} {p['name']}: copy id {copy.id} "
-                  f"(on hand {on_hand(copy):g}), original id {p['template'].id} '{p['template'].name}' "
-                  f"(on hand {on_hand(p['template']):g})")
+            print(f"    x row {p['row']} {p['code'] or '(no code)'} {p['name']}: keeps id {p['template'].id} "
+                  f"'{p['template'].name}' ({on_hand(p['template']):g} in hand), archives id {copy.id} "
+                  f"'{copy.name}' ({on_hand(copy):g})")
         if len(twins) > 30:
             print(f"    ... and {len(twins) - 30} more")
     replaced = [p for p in products if p.get('replaces')]
