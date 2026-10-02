@@ -40,6 +40,7 @@
         <field name="name">product.template.kanban.pos.retail</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_kanban_view"/>
+        <field name="priority">25</field>
         <field name="arch" type="xml">
             <xpath expr="//kanban" position="inside">
                 <field name="brand_id"/>
@@ -52,15 +53,15 @@
             </xpath>
             <xpath expr="//div[hasclass('mb-1')]" position="inside">
                 <div class="d-flex flex-wrap gap-1 align-items-center mt-1">
-                    <span t-if="record.brand_id.value" class="pos-retail-brand-badge badge rounded-pill px-2 py-1" title="Brand">
+                    <span t-if="record.brand_id.value or record.brand_id.raw_value" class="pos-retail-brand-badge badge rounded-pill px-2 py-1" title="Brand">
                         <i class="fa fa-tag me-1"/>
                         <field name="brand_id"/>
                     </span>
-                    <span t-if="record.pos_retail_size.value" class="pos-retail-size-badge badge rounded-pill px-2 py-1" title="Size">
+                    <span t-if="record.pos_retail_size.value or record.pos_retail_size.raw_value" class="pos-retail-size-badge badge rounded-pill px-2 py-1" title="Size">
                         <i class="fa fa-balance-scale me-1"/>
                         <field name="pos_retail_size"/>
                     </span>
-                    <span t-if="record.categ_id.value" class="pos-retail-categ-badge badge rounded-pill px-2 py-1" title="Category">
+                    <span t-if="record.categ_id.value or record.categ_id.raw_value" class="pos-retail-categ-badge badge rounded-pill px-2 py-1" title="Category">
                         <field name="categ_id"/>
                     </span>
                 </div>
@@ -115,6 +116,7 @@
         <field name="name">product.product.kanban.pos.retail</field>
         <field name="model">product.product</field>
         <field name="inherit_id" ref="product.product_kanban_view"/>
+        <field name="priority">25</field>
         <field name="arch" type="xml">
             <xpath expr="//kanban" position="inside">
                 <field name="brand_id"/>
@@ -123,11 +125,11 @@
             </xpath>
             <xpath expr="//div[hasclass('mb-1')]" position="inside">
                 <div class="d-flex flex-wrap gap-1 align-items-center mt-1">
-                    <span t-if="record.brand_id.value" class="pos-retail-brand-badge badge rounded-pill px-2 py-1" title="Brand">
+                    <span t-if="record.brand_id.value or record.brand_id.raw_value" class="pos-retail-brand-badge badge rounded-pill px-2 py-1" title="Brand">
                         <i class="fa fa-tag me-1"/>
                         <field name="brand_id"/>
                     </span>
-                    <span t-if="record.pos_retail_size.value" class="pos-retail-size-badge badge rounded-pill px-2 py-1" title="Size">
+                    <span t-if="record.pos_retail_size.value or record.pos_retail_size.raw_value" class="pos-retail-size-badge badge rounded-pill px-2 py-1" title="Size">
                         <i class="fa fa-balance-scale me-1"/>
                         <field name="pos_retail_size"/>
                     </span>
