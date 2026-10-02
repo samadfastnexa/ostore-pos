@@ -29,11 +29,17 @@ HOW A ROW BECOMES A PRODUCT
     then moves the product onto that code). Codes must never be renumbered:
     the run refuses when many codes suddenly sit on differently named products.
   * a corrected row stays the same product: when a row no longer finds its
-    product (brand or size fixed, the two columns swapped back, code changed)
-    it keeps the one unmatched product of the same department and name whose
-    size and brand fit -- listed as "[same product, row changed]". A second
-    copy an earlier run made that way (nothing but its opening count) is
-    archived with that stock zeroed; the original keeps its stock and history.
+    product (brand or size fixed, the two columns swapped back, code changed,
+    the name made longer: "Tee" -> "Tee - 11L") it keeps the one unmatched
+    product of the same department that plainly fits -- listed as "[same
+    product, row changed]". A second copy an earlier run made that way
+    (nothing but its opening count) is archived with that stock zeroed; the
+    original keeps its stock and sales.
+  * counted in the wrong unit (15 pipes in Units, now "195ft" per foot) and
+    never sold: replaced by a product in the sheet's unit, counted afresh.
+  * gone from the sheet and never sold or bought: archived, stock zeroed.
+    With sales it is only listed. Never a quarter or more of a department at
+    once (a renamed tab or a bad download), never a tab not imported now.
   * a heading row named NEW (or "new items"...) is a marker, not a category.
   * name exactly as in the sheet; size into the Size field; brand from the
     first Brand column with a value; sold at the branch only; cost set in
@@ -437,10 +443,16 @@ for tab, products in parsed.items():
 # ------------------------------------------- same product, changed in the sheet
 # A row whose code or name/size/brand no longer finds its product is usually a
 # product already in Odoo whose row was corrected: a brand typo fixed, the size
-# and brand columns swapped back, a code added or changed. Creating it again
-# would put a second copy at the till with the stock stranded on the first. So
-# such a row keeps the unmatched product of the same department and name when
-# exactly one fits -- same size and brand (either way round), else one of the two.
+# and brand columns swapped back, a code added or changed, the name made longer
+# ("Tee" -> "Tee - 11L"). Creating it again would put a second copy at the till
+# with the stock counted twice. So such a row keeps the unmatched product of the
+# same department that is plainly the same thing, when exactly one is:
+#
+#   same name, same size and brand (either column)        best
+#   same name, same size or same brand
+#   one name inside the other word for word, same size and brand
+#
+# and no other row wants that product.
 
 
 def fit(p, t):
@@ -452,8 +464,25 @@ def fit(p, t):
     return 1 if sheet[0] == odoo[0] or sheet[1] == odoo[1] else 0
 
 
-def pool_key(p):
-    return p['categ'][0].lower(), slug(p['name'])
+def words(name):
+    return set(slug(name).split('_')) - {''}
+
+
+def same_product(p, t):
+    """How surely the sheet row and the Odoo product are one product (0: not).
+    The share of words in common breaks ties: "F.M Wall Socket 11L" is nearer
+    "F.M Wall Socket" than "M. Wall Socket", though both names fit inside it."""
+    sizes_brands = fit(p, t)
+    if slug(p['name']) == slug(t.name):
+        return {2: 5, 1: 4}.get(sizes_brands, 0)
+    a, b = words(p['name']), words(t.name)
+    if a and b and (a <= b or b <= a) and sizes_brands == 2:
+        return 2 + len(a & b) / len(a | b)
+    return 0
+
+
+def department(t):
+    return (t.categ_id.complete_name or '').split(' / ')[0].lower()
 
 
 def only_counted(t):
@@ -474,44 +503,76 @@ def untouched(t):
 
 
 imported = set(imported_ids.values())
-pool = {}
+pool = {}  # department -> imported products no row claims
 for t in Template.browse(imported).exists().filtered('active'):
     if t.id not in claimed:
-        pool.setdefault(((t.categ_id.complete_name or '').split(' / ')[0].lower(), slug(t.name)), []).append(t)
+        pool.setdefault(department(t), []).append(t)
 
-# An earlier run already made the second copy (the original had lost its code):
-# the original takes the row back, the copy -- which has nothing but its opening
-# count -- is archived with that stock zeroed.
+# Unmatched rows look for their product; so do rows matched to a copy an
+# earlier run made from a renamed row (only an OLDER product -- lower id -- can be the
+# original). The copy -- nothing but its opening count -- is then archived with
+# that stock zeroed, and the original keeps its stock and sales.
+def clear_winner(scored):
+    """The best of [(score, item)] when it beats the runner-up, else None."""
+    scored = sorted(scored, key=lambda pair: pair[0], reverse=True)
+    if scored and (len(scored) == 1 or scored[0][0] > scored[1][0]):
+        return scored[0]
+    return None
+
+
+# In rounds: a product one row takes is out of the running for the others, which
+# can leave another row with a single clear match.
+seeking = [p for ps in parsed.values() for p in ps if not p['template'] or p['template'].id in imported]
+while True:
+    offers = {}  # product id -> [(score, row)]
+    for p in seeking:
+        t = p['template']
+        scored = []
+        for u in pool.get(p['categ'][0].lower(), []):
+            # A row that already has its product swaps it only for an older
+            # one (lower id) with the very same size and brand.
+            if t and (u.id >= t.id or fit(p, u) != 2):
+                continue
+            score = same_product(p, u)
+            if score:
+                scored.append((score, u))
+        best = clear_winner(scored)
+        # Only a copy with nothing but its opening count may be given up.
+        if best and (not t or only_counted(t)):
+            offers.setdefault(best[1].id, []).append((best[0], p))
+    taken = []
+    for uid, bids in offers.items():
+        winner = clear_winner(bids)
+        if not winner:
+            continue
+        p, t = winner[1], winner[1]['template']
+        u = Template.browse(uid)
+        if t:
+            p['retire'] = [t]
+            claimed.discard(t.id)
+        else:
+            p['kept'] = True
+        p['template'] = u
+        claimed.add(u.id)
+        taken.append((p, u))
+    if not taken:
+        break
+    for p, u in taken:
+        seeking.remove(p)
+        pool[department(u)].remove(u)
+
+# Counted in the wrong unit: "15" pipes in Units, now "195ft" priced per foot.
+# A product with nothing but that count is replaced by one in the sheet's unit,
+# counted from the sheet; relabelling would turn 15 pipes into 15 ft.
 for products in parsed.values():
     for p in products:
         t = p['template']
-        if not t or t.id not in imported:
-            continue
-        twins = [u for u in pool.get(pool_key(p), []) if fit(p, u) == 2 and u.create_date < t.create_date]
-        if len(twins) == 1 and only_counted(t):
-            pool[pool_key(p)].remove(twins[0])
+        if (t and p['unit'] and t.uom_id.name != p['unit'] and not untouched(t)
+                and only_counted(t)):
+            p.setdefault('retire', []).append(t)
+            p['replaces'] = t
             claimed.discard(t.id)
-            claimed.add(twins[0].id)
-            p['template'], p['retire'] = twins[0], t
-
-candidates, wanted_by = {}, {}
-for products in parsed.values():
-    for p in products:
-        if p['template']:
-            continue
-        for tier in (2, 1):
-            hits = [u for u in pool.get(pool_key(p), []) if fit(p, u) == tier]
-            if hits:
-                candidates[id(p)] = hits
-                for u in hits:
-                    wanted_by.setdefault(u.id, []).append(p)
-                break
-for products in parsed.values():
-    for p in products:
-        hits = candidates.get(id(p), [])
-        if len(hits) == 1 and len(wanted_by[hits[0].id]) == 1:
-            p['template'], p['kept'] = hits[0], True
-            claimed.add(hits[0].id)
+            p['template'] = Template
 
 
 def counted(templates):
@@ -612,16 +673,27 @@ for tab in work_tabs:
                   + '; '.join(f"{f} {a} -> {b}" for f, (a, b) in d.items()))
         if len(changed) > 30:
             print(f"    ... and {len(changed) - 30} more")
-    twins = [p for p in products if p.get('retire')]
+    on_hand = lambda t: t.product_variant_id.with_company(branch).with_context(
+        warehouse_id=warehouse.id).qty_available
+    twins = [p for p in products if p.get('retire') and not p.get('replaces')]
     if twins:
         print(f"  SECOND COPY FROM AN EARLIER RUN ({len(twins)}) -- the original keeps its stock and "
               f"history, the copy is archived and its opening stock zeroed:")
-        for p in twins:
-            copy = p['retire']
-            on_hand = lambda t: t.product_variant_id.with_company(branch).with_context(
-                warehouse_id=warehouse.id).qty_available
+        for p in twins[:30]:
+            copy = p['retire'][0]
             print(f"    x row {p['row']} {p['code'] or '(no code)'} {p['name']}: copy id {copy.id} "
-                  f"(on hand {on_hand(copy):g}), original id {p['template'].id} (on hand {on_hand(p['template']):g})")
+                  f"(on hand {on_hand(copy):g}), original id {p['template'].id} '{p['template'].name}' "
+                  f"(on hand {on_hand(p['template']):g})")
+        if len(twins) > 30:
+            print(f"    ... and {len(twins) - 30} more")
+    replaced = [p for p in products if p.get('replaces')]
+    if replaced:
+        print(f"  WRONG UNIT ({len(replaced)}) -- counted but never sold; replaced by a new product in the "
+              f"sheet's unit, counted from the sheet:")
+        for p in replaced:
+            old = p['replaces']
+            print(f"    x row {p['row']} {p['name']}: id {old.id} had {on_hand(old):g} {old.uom_id.name} -> "
+                  f"{p['qty'] if p['qty'] is not None else 0:g} {p['unit']}")
     out = []
     for p in products:
         if p['qty'] and p in stock_load:
@@ -655,12 +727,40 @@ for tab in work_tabs:
         print(f"  skipped -- {reason} ({len(items)}): rows {', '.join(items[:6])}"
               + (f" ... +{len(items) - 6}" if len(items) > 6 else ""))
 
-retiring = {p['retire'].id for ps in parsed.values() for p in ps if p.get('retire')}
+retiring = {r.id for ps in parsed.values() for p in ps for r in p.get('retire', [])}
 gone = Template.browse([rid for name, rid in imported_ids.items()
                         if rid not in claimed and rid not in retiring]).exists().filtered('active')
-if gone:
-    print(f"\n{len(gone)} product(s) imported earlier match no row in the sheet (left untouched; archive "
-          f"them by hand if unwanted): {', '.join(gone.mapped('name')[:20])}")
+# Gone from the sheet. Never sold or bought (nothing but the opening count): it
+# is archived with that stock zeroed, or the till keeps offering a line the
+# shop deleted -- often a row renamed so far it no longer resembles itself,
+# whose corrected row is already a product of its own. With sales it stays,
+# for the shop to decide. Only departments imported in this run, and never a
+# quarter or more of one: that is a renamed tab or a bad download, not edits.
+work_depts = {p['categ'][0].lower() for tab in work_tabs for p in parsed.get(tab, [])}
+imported_active = Template.browse(list(imported)).exists().filtered('active')
+to_archive, kept_gone = Template.browse(), Template.browse()
+for dept in sorted({department(t) for t in gone}):
+    in_dept = gone.filtered(lambda t: department(t) == dept)
+    if dept not in work_depts:
+        kept_gone |= in_dept
+        continue
+    unsold = in_dept.filtered(only_counted)
+    total = len(imported_active.filtered(lambda t: department(t) == dept))
+    if unsold and len(unsold) >= 0.25 * total:
+        print(f"\nNOT archiving {len(unsold)} of {total} {dept} products missing from the sheet -- too many "
+              f"at once; check the tab was not renamed or emptied.")
+        kept_gone |= in_dept
+        continue
+    to_archive |= unsold
+    kept_gone |= in_dept - unsold
+if to_archive:
+    print(f"\nNO LONGER IN THE SHEET, never sold ({len(to_archive)}) -- "
+          + ("archived, stock zeroed" if APPLY else "will be archived, stock zeroed") + ": "
+          + ', '.join(f"{t.name} {t.pos_retail_size or ''}".strip() for t in to_archive.sorted('id')[:40])
+          + (f" ... +{len(to_archive) - 40}" if len(to_archive) > 40 else ""))
+if kept_gone:
+    print(f"\nNO LONGER IN THE SHEET, with sales or not imported now ({len(kept_gone)}) -- left as they are; "
+          f"archive them by hand if unwanted: {', '.join(kept_gone.mapped('name')[:20])}")
 
 if not APPLY:
     print("\n" + "=" * 78)
@@ -762,10 +862,11 @@ else:
         with env.cr.savepoint():
             created = updated = 0
             for p in products:
+                for copy in p.get('retire', []):
+                    retire(copy)
+            for p in products:
                 t = p['template']
                 if t:
-                    if p.get('retire'):
-                        retire(p['retire'])
                     remember(p)
                     diff = differences(p)
                     vals = full_vals(p)
@@ -783,6 +884,12 @@ else:
                 xmlids = []
                 for p, record in zip(new, records):
                     name = f"cat_{slug(p['code'])}" if p['code'] else p['key']
+                    p['template'] = record
+                    if imported_ids.get(name) in retiring:  # the replaced product's key
+                        IMD.search([('module', '=', XMLID_MODULE), ('name', '=', name)]).write(
+                            {'res_id': record.id})
+                        imported_ids[name] = record.id
+                        continue
                     while name in taken:
                         name += '_x'
                     taken.add(name)
@@ -812,10 +919,17 @@ else:
                     raise SystemExit("Odoo asked to resolve an inventory conflict; nothing was saved. "
                                      "Check Inventory > Physical Inventory for this branch.")
         env.cr.commit()
-        retired = sum(1 for p in products if p.get('retire'))
+        retired = sum(len(p.get('retire', [])) for p in products)
         print(f"  {tab}: created {created}, updated {updated}, opening stock on {len(load)} products "
-              f"({sum(load.values()):g})" + (f", second copies archived {retired}" if retired else "")
+              f"({sum(load.values()):g})" + (f", copies/wrong-unit products archived {retired}" if retired else "")
               + f"  [{time.monotonic() - started:.0f}s]", flush=True)
+    if to_archive:
+        with env.cr.savepoint():
+            for t in to_archive:
+                retire(t)
+        env.cr.commit()
+        print(f"  no longer in the sheet: archived {len(to_archive)} never-sold products, stock zeroed",
+              flush=True)
     # An earlier run filed rows under a marker row ("NEW") as if it were a
     # category; once its products have moved back, the empty leftovers go.
     for marker in MARKER_HEADINGS:
