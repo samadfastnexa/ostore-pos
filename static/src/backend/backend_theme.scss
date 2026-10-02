@@ -272,6 +272,88 @@ $zx-muted: #6b6790;
         transform: translateY(-2px);
         box-shadow: 0 10px 20px -12px rgba(40, 20, 90, .4);
     }
+
+    .pos-retail-brand-badge {
+        background-color: #ede9fe;
+        color: #6d28d9;
+        border: 1px solid #ddd6fe;
+        font-size: 0.76rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+
+        i {
+            color: #7c3aed;
+        }
+    }
+
+    .pos-retail-size-badge {
+        background-color: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+        font-size: 0.76rem;
+        font-weight: 600;
+
+        i {
+            color: #0284c7;
+        }
+    }
+
+    .pos-retail-categ-badge {
+        background-color: #f8fafc;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        font-size: 0.74rem;
+    }
+
+    .pos-retail-stock-badge {
+        font-size: 0.74rem;
+        font-weight: 600;
+        padding: 0.2rem 0.55rem;
+
+        &.pos-retail-stock-in {
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+
+            i { color: #16a34a; }
+        }
+
+        &.pos-retail-stock-out {
+            background-color: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+
+            i { color: #d97706; }
+        }
+
+        &.pos-retail-stock-neg {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+
+            i { color: #dc2626; }
+        }
+    }
+
+    .pos-retail-product-placeholder {
+        width: 60px;
+        height: 60px;
+        min-width: 60px;
+        background-color: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+
+        &:hover {
+            background-color: #f1f5f9;
+            border-color: #94a3b8;
+            color: #64748b;
+        }
+    }
 }
 
 // Hide Enterprise-only upsells across every Settings screen (Accounting >

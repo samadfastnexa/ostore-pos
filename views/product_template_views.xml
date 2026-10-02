@@ -36,6 +36,106 @@
         </field>
     </record>
 
+    <record id="product_template_kanban_view_brand" model="ir.ui.view">
+        <field name="name">product.template.kanban.pos.retail</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_kanban_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//kanban" position="inside">
+                <field name="brand_id"/>
+                <field name="pos_retail_size"/>
+                <field name="barcode"/>
+                <field name="default_code"/>
+                <field name="mrp"/>
+                <field name="wholesale_price"/>
+                <field name="qty_available"/>
+            </xpath>
+            <xpath expr="//div[hasclass('mb-1')]" position="inside">
+                <div class="d-flex flex-wrap gap-1 align-items-center mt-1">
+                    <span t-if="record.brand_id.value" class="pos-retail-brand-badge badge rounded-pill px-2 py-1" title="Brand">
+                        <i class="fa fa-tag me-1"/>
+                        <field name="brand_id"/>
+                    </span>
+                    <span t-if="record.pos_retail_size.value" class="pos-retail-size-badge badge rounded-pill px-2 py-1" title="Size">
+                        <i class="fa fa-balance-scale me-1"/>
+                        <field name="pos_retail_size"/>
+                    </span>
+                    <span t-if="record.categ_id.value" class="pos-retail-categ-badge badge rounded-pill px-2 py-1" title="Category">
+                        <field name="categ_id"/>
+                    </span>
+                </div>
+            </xpath>
+            <xpath expr="//span[@t-if='record.default_code.value']" position="after">
+                <span t-if="record.barcode.value and record.barcode.value != record.default_code.value" class="text-muted small ms-1" title="Barcode">
+                    <i class="fa fa-barcode me-1"/><field name="barcode"/>
+                </span>
+            </xpath>
+            <xpath expr="//field[@name='list_price']/parent::span" position="replace">
+                <div class="mt-2 pt-1 border-top">
+                    <div class="d-flex align-items-baseline justify-content-between flex-wrap">
+                        <div>
+                            <span class="text-muted small me-1">Price:</span>
+                            <span class="fw-bold text-primary fs-6">
+                                <field name="list_price" widget="monetary" options="{'currency_field': 'currency_id', 'field_digits': True}"/>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 text-muted small mt-1" t-if="(record.mrp.raw_value and record.mrp.raw_value &gt; 0) or (record.wholesale_price.raw_value and record.wholesale_price.raw_value &gt; 0)">
+                        <span t-if="record.mrp.raw_value and record.mrp.raw_value &gt; 0" class="badge bg-light text-muted border">
+                            MRP: <field name="mrp" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                        </span>
+                        <span t-if="record.wholesale_price.raw_value and record.wholesale_price.raw_value &gt; 0" class="badge bg-light text-muted border">
+                            Wholesale: <field name="wholesale_price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                        </span>
+                    </div>
+                </div>
+            </xpath>
+            <xpath expr="//div[@t-if='record.show_on_hand_qty_status_button.raw_value']" position="replace">
+                <div groups="stock.group_stock_user" t-if="record.show_on_hand_qty_status_button.raw_value" class="mt-1">
+                    <span t-if="record.qty_available.raw_value &gt; 0" class="pos-retail-stock-badge pos-retail-stock-in badge rounded-pill" title="On Hand Stock">
+                        <i class="fa fa-check-circle me-1"/> On hand: <field name="qty_available"/> <field name="uom_id"/>
+                    </span>
+                    <span t-if="record.qty_available.raw_value == 0" class="pos-retail-stock-badge pos-retail-stock-out badge rounded-pill" title="Out of Stock">
+                        <i class="fa fa-exclamation-circle me-1"/> Out of Stock (0 <field name="uom_id"/>)
+                    </span>
+                    <span t-if="record.qty_available.raw_value &lt; 0" class="pos-retail-stock-badge pos-retail-stock-neg badge rounded-pill" title="Negative Stock Warning">
+                        <i class="fa fa-exclamation-triangle me-1"/> Negative: <field name="qty_available"/> <field name="uom_id"/>
+                    </span>
+                </div>
+            </xpath>
+            <xpath expr="//aside" position="inside">
+                <div invisible="image_128" class="pos-retail-product-placeholder" title="No image uploaded">
+                    <i class="fa fa-cube fa-2x opacity-25"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="product_product_kanban_view_brand" model="ir.ui.view">
+        <field name="name">product.product.kanban.pos.retail</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_kanban_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//kanban" position="inside">
+                <field name="brand_id"/>
+                <field name="pos_retail_size"/>
+                <field name="barcode"/>
+            </xpath>
+            <xpath expr="//div[hasclass('mb-1')]" position="inside">
+                <div class="d-flex flex-wrap gap-1 align-items-center mt-1">
+                    <span t-if="record.brand_id.value" class="pos-retail-brand-badge badge rounded-pill px-2 py-1" title="Brand">
+                        <i class="fa fa-tag me-1"/>
+                        <field name="brand_id"/>
+                    </span>
+                    <span t-if="record.pos_retail_size.value" class="pos-retail-size-badge badge rounded-pill px-2 py-1" title="Size">
+                        <i class="fa fa-balance-scale me-1"/>
+                        <field name="pos_retail_size"/>
+                    </span>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
     <record id="product_template_form_view_pricing" model="ir.ui.view">
         <field name="name">product.template.form.pos.retail.pricing</field>
         <field name="model">product.template</field>
@@ -254,6 +354,16 @@
             <filter name="group_by_categ_id" position="after">
                 <filter string="Brand" name="group_by_brand_id"
                         context="{'group_by': 'brand_id'}"/>
+                <filter string="Size" name="group_by_pos_retail_size"
+                        context="{'group_by': 'pos_retail_size'}"/>
+            </filter>
+            <filter name="filter_to_sell" position="after">
+                <separator/>
+                <filter string="With Brand" name="pos_retail_with_brand" domain="[('brand_id', '!=', False)]"/>
+                <filter string="Without Brand" name="pos_retail_without_brand" domain="[('brand_id', '=', False)]"/>
+                <separator/>
+                <filter string="In Stock" name="pos_retail_in_stock" domain="[('qty_available', '&gt;', 0)]"/>
+                <filter string="Out of Stock" name="pos_retail_out_of_stock" domain="[('qty_available', '&lt;=', 0)]"/>
             </filter>
         </field>
     </record>
