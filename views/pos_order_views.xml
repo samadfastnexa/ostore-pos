@@ -64,6 +64,12 @@
                        sum="Unpaid (Khata)" optional="show"
                        decoration-danger="pos_retail_on_account &gt; 0"
                        decoration-muted="pos_retail_on_account == 0"/>
+                <field name="pos_retail_order_status" string="Retail Status"
+                       widget="badge"
+                       decoration-success="pos_retail_order_status == 'paid'"
+                       decoration-warning="pos_retail_order_status == 'unpaid'"
+                       decoration-danger="pos_retail_order_status == 'return'"
+                       decoration-info="pos_retail_order_status == 'credit'"/>
                 <field name="state"/>
             </list>
         </field>
@@ -84,10 +90,17 @@
                 <separator/>
                 <filter name="invoiced" string="Invoiced" domain="[('account_move', '!=', False)]"/>
                 <filter name="refunds" string="Refunds" domain="[('amount_total', '&lt;', 0)]"/>
+                <separator/>
+                <filter name="status_paid" string="Paid" domain="[('pos_retail_order_status', '=', 'paid')]"/>
+                <filter name="status_unpaid" string="Unpaid" domain="[('pos_retail_order_status', '=', 'unpaid')]"/>
+                <filter name="status_credit" string="Credit / Khata" domain="[('pos_retail_order_status', '=', 'credit')]"/>
+                <filter name="status_active_customer" string="Active Customer" domain="[('pos_retail_has_active_customer', '=', True)]"/>
+                <filter name="status_return" string="Return / Refund" domain="[('pos_retail_order_status', '=', 'return')]"/>
                 <group>
                     <filter name="group_cashier" string="Cashier" context="{'group_by': 'employee_id'}"/>
                     <filter name="group_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
                     <filter name="group_terminal" string="Terminal" context="{'group_by': 'config_id'}"/>
+                    <filter name="group_retail_status" string="Retail Status" context="{'group_by': 'pos_retail_order_status'}"/>
                     <filter name="group_date" string="Date" context="{'group_by': 'date_order:day'}"/>
                 </group>
             </search>
@@ -188,6 +201,17 @@
                        sum="Unpaid (Khata)" optional="show"
                        decoration-danger="pos_retail_on_account &gt; 0"
                        decoration-muted="pos_retail_on_account == 0"/>
+                <field name="pos_retail_order_status" string="Retail Status"
+                       widget="badge"
+                       decoration-success="pos_retail_order_status == 'paid'"
+                       decoration-warning="pos_retail_order_status == 'unpaid'"
+                       decoration-danger="pos_retail_order_status == 'return'"
+                       decoration-info="pos_retail_order_status == 'credit'"/>
+                <field name="pos_retail_has_active_customer" string="Active Customer"
+                       optional="hide"/>
+            </xpath>
+            <xpath expr="//field[@name='partner_id']" position="attributes">
+                <attribute name="decoration-bf">pos_retail_has_active_customer</attribute>
             </xpath>
         </field>
     </record>
@@ -197,9 +221,26 @@
         <field name="model">pos.order</field>
         <field name="inherit_id" ref="point_of_sale.view_pos_order_filter"/>
         <field name="arch" type="xml">
-            <xpath expr="//search" position="inside">
+            <xpath expr="//search/group" position="before">
+                <separator/>
+                <filter name="filter_status_paid" string="Paid"
+                        domain="[('pos_retail_order_status', '=', 'paid')]"/>
+                <filter name="filter_status_unpaid" string="Unpaid"
+                        domain="[('pos_retail_order_status', '=', 'unpaid')]"/>
+                <filter name="filter_status_credit" string="Credit / Khata"
+                        domain="[('pos_retail_order_status', '=', 'credit')]"/>
+                <filter name="filter_status_active_customer" string="Active Customer"
+                        domain="[('pos_retail_has_active_customer', '=', True)]"/>
+                <filter name="filter_status_return" string="Return / Refund"
+                        domain="[('pos_retail_order_status', '=', 'return')]"/>
                 <filter name="pos_retail_on_account" string="Unpaid on Khata"
                         domain="[('pos_retail_on_account', '&gt;', 0)]"/>
+            </xpath>
+            <xpath expr="//search/group" position="inside">
+                <filter string="Retail Status" name="group_pos_retail_order_status"
+                        domain="[]" context="{'group_by': 'pos_retail_order_status'}"/>
+                <filter string="Has Active Customer" name="group_pos_retail_has_active_customer"
+                        domain="[]" context="{'group_by': 'pos_retail_has_active_customer'}"/>
             </xpath>
         </field>
     </record>

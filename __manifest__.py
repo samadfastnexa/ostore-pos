@@ -23,7 +23,7 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
     """,
     'author': "pos_retail",
     'category': 'Sales/Point of Sale',
-    'version': '19.0.7.60.0',
+    'version': '19.0.7.61.0',
     'license': 'LGPL-3',
     'depends': [
         # Core POS + the standard apps that deliver ~85% of the roadmap.
@@ -218,6 +218,9 @@ by the standard apps (stock, purchase, account, loyalty, pos_loyalty, hr).
             'pos_retail/static/src/overrides/back_office_button.js',
             'pos_retail/static/src/overrides/past_order_pdf.js',
             'pos_retail/static/src/overrides/past_order_pdf.xml',
+            'pos_retail/static/src/overrides/ticket_screen_status_filter.js',
+            'pos_retail/static/src/overrides/ticket_screen_status_filter.xml',
+            'pos_retail/static/src/overrides/ticket_screen_status_filter.scss',
             'pos_retail/static/src/overrides/order_discount.js',
             'pos_retail/static/src/overrides/order_discount.xml',
             'pos_retail/static/src/overrides/brand_campaign.js',

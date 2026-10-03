@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-inherit="point_of_sale.TicketScreen" t-inherit-mode="extension">
+
+        <!-- 1. Quick Filter Pills Bar directly below the controls / search bar -->
+        <xpath expr="//div[hasclass('controls')]" position="after">
+            <div class="pos-retail-order-filters d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-bottom bg-100">
+                <span class="small fw-bold text-muted text-uppercase me-1 d-none d-sm-inline">
+                    <i class="fa fa-filter me-1 text-primary"/>Status:
+                </span>
+                <button type="button" 
+                    class="btn btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                    t-attf-class="{{ (this.state.filter === 'ALL' || this.state.filter === 'ALL_ORDERS') ? 'btn-primary text-white' : 'btn-outline-secondary bg-white' }}"
+                    t-on-click="() => this.setPosRetailFilter('ALL')">
+                    <i class="fa fa-list"/> All <span class="badge rounded-pill text-bg-light ms-1" t-esc="this.getOrderCount('ALL')"/>
+                </button>
+                <button type="button" 
+                    class="btn btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                    t-attf-class="{{ (this.state.filter === 'PAID' || this.state.filter === 'SYNCED') ? 'btn-success text-white' : 'btn-outline-success bg-white' }}"
+                    t-on-click="() => this.setPosRetailFilter('PAID')">
+                    <i class="fa fa-check"/> Paid <span class="badge rounded-pill text-bg-light ms-1" t-esc="this.getOrderCount('PAID')"/>
+                </button>
+                <button type="button" 
+                    class="btn btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                    t-attf-class="{{ (this.state.filter === 'UNPAID' || this.state.filter === 'ACTIVE_ORDERS') ? 'btn-warning text-dark' : 'btn-outline-warning text-dark bg-white' }}"
+                    t-on-click="() => this.setPosRetailFilter('UNPAID')">
+                    <i class="fa fa-clock-o"/> Unpaid <span class="badge rounded-pill text-bg-light ms-1" t-esc="this.getOrderCount('UNPAID')"/>
+                </button>
+                <button type="button" 
+                    class="btn btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1 shadow-xs pos-retail-filter-credit"
+                    t-attf-class="{{ this.state.filter === 'CREDIT' ? 'btn-purple text-white active' : 'btn-outline-purple bg-white' }}"
+                    t-on-click="() => this.setPosRetailFilter('CREDIT')">
+                    <i class="fa fa-book"/> Credit <span class="badge rounded-pill text-bg-light ms-1" t-esc="this.getOrderCount('CREDIT')"/>
+                </button>
+                <button type="button" 
+                    class="btn btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                    t-attf-class="{{ this.state.filter === 'ACTIVE_CUSTOMER' ? 'btn-info text-white' : 'btn-outline-info bg-white' }}"
+                    t-on-click="() => this.setPosRetailFilter('ACTIVE_CUSTOMER')">
+                    <i class="fa fa-user"/> Active Customer <span class="badge rounded-pill text-bg-light ms-1" t-esc="this.getOrderCount('ACTIVE_CUSTOMER')"/>
+                </button>
+                <button type="button" 
+                    class="btn btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                    t-attf-class="{{ this.state.filter === 'RETURN' ? 'btn-danger text-white' : 'btn-outline-danger bg-white' }}"
+                    t-on-click="() => this.setPosRetailFilter('RETURN')">
+                    <i class="fa fa-undo"/> Return <span class="badge rounded-pill text-bg-light ms-1" t-esc="this.getOrderCount('RETURN')"/>
+                </button>
+            </div>
+        </xpath>
+
+        <!-- 2. Customer column: Add badges for Customer, Khata, Return -->
+        <xpath expr="//table[hasclass('table')]//div[@id='order-tags']" position="before">
+            <div class="pos-retail-order-meta-tags d-flex align-items-center gap-1 mt-1 flex-wrap">
+                <span t-if="this.hasActiveCustomer(order)" class="badge text-bg-info text-white rounded-pill px-2 py-0" style="font-size: 0.7rem;">
+                    <i class="fa fa-user me-1"/>Customer
+                </span>
+                <span t-if="this.isCreditOrder(order)" class="badge rounded-pill px-2 py-0" style="font-size: 0.7rem; background-color: #6f42c1; color: white;">
+                    <i class="fa fa-book me-1"/>Khata
+                </span>
+                <span t-if="this.isReturnOrder(order)" class="badge text-bg-danger text-white rounded-pill px-2 py-0" style="font-size: 0.7rem;">
+                    <i class="fa fa-undo me-1"/>Return
+                </span>
+            </div>
+        </xpath>
+
+        <!-- 3. Desktop Table Status column: Replace status cell with rich status badge -->
+        <xpath expr="//table[hasclass('table')]//td[t[@t-set='status']]" position="replace">
+            <td class="align-middle text-end pos-retail-status-cell">
+                <t t-set="statusInfo" t-value="this.getOrderStatusInfo(order)"/>
+                <span t-attf-class="badge rounded-pill fs-6 px-3 py-2 shadow-xs d-inline-flex align-items-center gap-1 {{ statusInfo.bgClass }}"
+                      t-att-style="statusInfo.style || ''">
+                    <i t-if="statusInfo.icon" t-attf-class="fa {{ statusInfo.icon }}"/>
+                    <span class="fw-bold"><t t-esc="statusInfo.label"/></span>
+                </span>
+            </td>
+        </xpath>
+
+        <!-- 4. Mobile view status badge -->
+        <xpath expr="//div[hasclass('mobileOrderList')]//div[hasclass('align-items-end')]" position="replace">
+            <div class="p-2 d-flex flex-column flex-grow-1 justify-content-center align-items-end">
+                <div class="fw-bolder"><t t-esc="getTotal(order)"/></div>
+                <t t-set="statusInfo" t-value="this.getOrderStatusInfo(order)"/>
+                <span t-attf-class="badge rounded-pill fs-6 px-2 py-1 mt-1 {{ statusInfo.bgClass }}"
+                      t-att-style="statusInfo.style || ''">
+                    <i t-if="statusInfo.icon" t-attf-class="fa {{ statusInfo.icon }} me-1"/>
+                    <span class="fw-bold"><t t-esc="statusInfo.label"/></span>
+                </span>
+            </div>
+        </xpath>
+
+    </t>
+
+</templates>

@@ -104,6 +104,40 @@ class PosOrder(models.Model):
                    any(k in (payment.payment_method_id.name or '').lower() for k in ('credit', 'khata', 'pay later', 'pay_later', 'udhar', 'customer account', 'on account'))
             )
 
+    pos_retail_order_status = fields.Selection([
+        ('paid', 'Paid'),
+        ('unpaid', 'Unpaid'),
+        ('credit', 'Credit'),
+        ('return', 'Return'),
+    ], string="Retail Status", compute="_compute_pos_retail_order_status", store=True, index=True)
+
+    pos_retail_has_active_customer = fields.Boolean(
+        string="Active Customer",
+        compute="_compute_pos_retail_has_active_customer",
+        store=True,
+        index=True,
+    )
+
+    @api.depends('state', 'amount_total', 'pos_retail_on_account', 'is_refund', 'return_reason_id', 'pos_retail_return_unlinked')
+    def _compute_pos_retail_order_status(self):
+        for order in self:
+            if order.is_refund or (order.amount_total and order.amount_total < -0.005) or order.return_reason_id or order.pos_retail_return_unlinked:
+                order.pos_retail_order_status = 'return'
+            elif order.pos_retail_on_account and order.pos_retail_on_account > 0.005:
+                order.pos_retail_order_status = 'credit'
+            elif order.state in ('paid', 'done'):
+                order.pos_retail_order_status = 'paid'
+            else:
+                order.pos_retail_order_status = 'unpaid'
+
+    @api.depends('partner_id', 'partner_id.name')
+    def _compute_pos_retail_has_active_customer(self):
+        for order in self:
+            partner_name = (order.partner_id.name or '').strip().lower() if order.partner_id else ''
+            order.pos_retail_has_active_customer = bool(
+                order.partner_id and partner_name and 'walk-in' not in partner_name and 'walk in' not in partner_name
+            )
+
     return_reason_id = fields.Many2one(
         'pos.retail.return.reason', string="Return Reason",
         help="Why the goods came back, picked by the cashier from the list your "
@@ -401,7 +435,8 @@ class PosOrder(models.Model):
                       'pos_retail_return_unlinked', 'pos_retail_return_manager_id',
                       'pos_retail_credit_manager_id', 'pos_retail_credit_over_amount',
                       'pos_retail_credit_before', 'pos_retail_credit_after',
-                      'pos_retail_credit_limit', 'pos_retail_on_account', 'is_refund'):
+                      'pos_retail_credit_limit', 'pos_retail_on_account', 'is_refund',
+                      'pos_retail_order_status', 'pos_retail_has_active_customer'):
             if field not in result:
                 result.append(field)
         return result
