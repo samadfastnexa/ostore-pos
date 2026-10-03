@@ -103,6 +103,8 @@
                 <field name="company_id" optional="hide" groups="base.group_multi_company"/>
                 <field name="origin" optional="hide"/>
                 <field name="reference" optional="show"/>
+                <button name="action_open_move" type="object" string="View Entry" icon="fa-file-text-o" title="View Journal Entry / Invoice"/>
+                <button name="action_adjust_balance" type="object" string="Adjust" icon="fa-sliders" title="Adjust Khata Balance"/>
             </list>
         </field>
     </record>
@@ -115,6 +117,8 @@
             <form string="Customer Ledger Entry" create="false" delete="false">
                 <header>
                     <button name="action_open_move" type="object" string="View Journal Entry / Invoice" class="btn-primary" icon="fa-file-text-o"/>
+                    <button name="action_edit_entry" type="object" string="Edit / Modify Entry" class="btn-outline-primary" icon="fa-pencil"
+                            invisible="transaction_type != 'adjustment'"/>
                     <button name="action_adjust_balance" type="object" string="Khata Adjustment" class="btn-secondary" icon="fa-sliders"/>
                     <button name="action_receive_payment" type="object" string="Receive Payment" class="btn-success" icon="fa-money"/>
                     <button name="action_reverse_entry" type="object" string="Reverse / Cancel Entry" class="btn-outline-danger" icon="fa-undo"
@@ -268,6 +272,8 @@
                 <field name="user_id" optional="show"/>
                 <field name="company_id" optional="hide" groups="base.group_multi_company"/>
                 <field name="reference" optional="show"/>
+                <button name="action_open_move" type="object" string="View Entry" icon="fa-file-text-o" title="View Journal Entry / Bill"/>
+                <button name="action_adjust_balance" type="object" string="Adjust" icon="fa-sliders" title="Adjust Vendor Khata Balance"/>
             </list>
         </field>
     </record>
@@ -280,6 +286,8 @@
             <form string="Vendor Ledger Entry" create="false" delete="false">
                 <header>
                     <button name="action_open_move" type="object" string="View Journal Entry / Bill" class="btn-primary" icon="fa-file-text-o"/>
+                    <button name="action_edit_entry" type="object" string="Edit / Modify Entry" class="btn-outline-primary" icon="fa-pencil"
+                            invisible="transaction_type != 'adjustment'"/>
                     <button name="action_adjust_balance" type="object" string="Vendor Khata Adjustment" class="btn-warning" icon="fa-sliders"/>
                     <button name="action_reverse_entry" type="object" string="Reverse / Cancel Entry" class="btn-outline-danger" icon="fa-undo"
                             invisible="transaction_type not in ('adjustment', 'payment')"/>

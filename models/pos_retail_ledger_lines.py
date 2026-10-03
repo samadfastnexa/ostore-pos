@@ -268,6 +268,25 @@ class PosRetailCustomerLedgerLine(models.Model):
             },
         }
 
+    def action_edit_entry(self):
+        """Open the journal entry for editing. For adjustments, resets to draft so amount/date/lines can be modified."""
+        self.ensure_one()
+        if not self.move_id:
+            raise UserError(_("No journal entry found for this line."))
+        if self.transaction_type == 'adjustment' and self.move_id.state == 'posted':
+            try:
+                self.move_id.button_draft()
+            except Exception:
+                pass
+        return {
+            'name': _("Edit Entry"),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move',
+            'res_id': self.move_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
     # Whether THIS ONE transaction has been settled, worked out from what has
     # actually been reconciled against it -- never typed in. A sale for
     # 10,000 with 6,000 reconciled against it is Balance, automatically, and
@@ -493,6 +512,25 @@ class PosRetailVendorLedgerLine(models.Model):
                 'active_model': 'account.move',
                 'default_journal_id': self.move_id.journal_id.id,
             },
+        }
+
+    def action_edit_entry(self):
+        """Open the journal entry for editing. For adjustments, resets to draft so amount/date/lines can be modified."""
+        self.ensure_one()
+        if not self.move_id:
+            raise UserError(_("No journal entry found for this line."))
+        if self.transaction_type == 'adjustment' and self.move_id.state == 'posted':
+            try:
+                self.move_id.button_draft()
+            except Exception:
+                pass
+        return {
+            'name': _("Edit Entry"),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move',
+            'res_id': self.move_id.id,
+            'view_mode': 'form',
+            'target': 'current',
         }
 
     total_amount = fields.Monetary(

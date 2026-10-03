@@ -50,7 +50,7 @@ class PosRetailLedgerAdjustment(models.TransientModel):
              "choose 'owes LESS' to waive an amount or correct one downwards.",
     )
     amount = fields.Monetary(
-        required=True, currency_field='currency_id',
+        required=True, default=0.0, currency_field='currency_id',
         help="How much to move the balance by, always typed in as a positive "
              "number. The direction above decides whether it is added to or "
              "taken off what the customer owes.",
@@ -141,6 +141,22 @@ class PosRetailLedgerAdjustment(models.TransientModel):
                      or Journal.search(base + [('name', 'not ilike', 'point of sale')], limit=1)
                      or Journal.search(base, limit=1))
             wizard.journal_id = match
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('adjustment_mode') == 'target' and 'target_balance' in vals:
+                partner = self.env['res.partner'].browse(vals.get('partner_id')) if vals.get('partner_id') else False
+                cur_bal = partner.pos_outstanding_balance or 0.0 if partner else 0.0
+                target = vals.get('target_balance') or 0.0
+                diff = round(target - cur_bal, 2)
+                if diff >= 0:
+                    vals['direction'] = 'increase'
+                    vals['amount'] = diff
+                else:
+                    vals['direction'] = 'decrease'
+                    vals['amount'] = abs(diff)
+        return super().create(vals_list)
 
     def action_confirm(self):
         self.ensure_one()
@@ -247,7 +263,7 @@ class PosRetailVendorLedgerAdjustment(models.TransientModel):
              "choose 'Shop owes MORE' to bring in unbilled deliveries or opening balances.",
     )
     amount = fields.Monetary(
-        required=True, currency_field='currency_id',
+        required=True, default=0.0, currency_field='currency_id',
         help="How much to adjust the payable by, always typed in as a positive number.",
     )
     currency_id = fields.Many2one(
@@ -336,6 +352,33 @@ class PosRetailVendorLedgerAdjustment(models.TransientModel):
                      or Journal.search(base + [('name', 'not ilike', 'point of sale')], limit=1)
                      or Journal.search(base, limit=1))
             wizard.journal_id = match
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('adjustment_mode') == 'target' and 'target_balance' in vals:
+                partner = self.env['res.partner'].browse(vals.get('partner_id')) if vals.get('partner_id') else False
+                cur_bal = 0.0
+                if partner:
+                    pay_grouped = self.env['account.move.line'].sudo()._read_group(
+                        domain=[
+                            ('partner_id', '=', partner.id),
+                            ('account_id.account_type', '=', 'liability_payable'),
+                            ('parent_state', '=', 'posted'),
+                        ],
+                        aggregates=('debit:sum', 'credit:sum'),
+                    )
+                    prev_debit, prev_credit = pay_grouped[0] if pay_grouped else (0.0, 0.0)
+                    cur_bal = round((prev_credit or 0.0) - (prev_debit or 0.0), 2)
+                target = vals.get('target_balance') or 0.0
+                diff = round(target - cur_bal, 2)
+                if diff >= 0:
+                    vals['direction'] = 'increase'
+                    vals['amount'] = diff
+                else:
+                    vals['direction'] = 'decrease'
+                    vals['amount'] = abs(diff)
+        return super().create(vals_list)
 
     def action_confirm(self):
         self.ensure_one()
