@@ -313,67 +313,153 @@
 .ticket-screen .leftpane {
     padding: 0.35rem 0.5rem !important;
     gap: 0.35rem !important;
+    min-height: 0 !important;
 
     /* Refund notice banner at top of right pane */
     > div:first-child {
         padding: 4px 8px !important;
-        font-size: 0.82rem !important;
+        font-size: 0.8rem !important;
         line-height: 1.2 !important;
         margin-bottom: 2px !important;
+        flex-shrink: 0 !important;
     }
 
-    /* Order lines container */
+    /* OrderDisplay outer wrapper */
+    > div:has(.order-container),
+    .d-flex.flex-column.flex-grow-1.overflow-hidden {
+        min-height: 0 !important;
+        flex: 1 1 0 !important;
+    }
+
+    /* Order lines container - scrolls naturally, flex items never squash */
     .order-container {
-        padding: 0 !important;
+        padding: 2px 4px !important;
+        min-height: 0 !important;
+        flex: 1 1 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
 
         .orderline {
-            padding: 4px 8px !important;
-            min-height: 28px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            flex-shrink: 0 !important; /* CRITICAL: Never compress orderlines vertically */
+            flex-grow: 0 !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            position: relative !important;
+            padding: 6px 8px !important;
+            margin-bottom: 3px !important;
+            border-radius: 4px !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+            background-color: #ffffff;
+            transition: background-color 0.15s ease;
 
-            .product-name {
-                font-size: 0.92rem !important;
+            &:hover {
+                background-color: #f8fafc !important;
+            }
+
+            &.selected {
+                background-color: #eff6ff !important;
+                border-left: 3px solid #2563eb !important;
+            }
+
+            /* Inner wrapper reset so it doesn't force huge padding */
+            > .d-flex.flex-column.w-100 {
+                padding: 0 !important;
+            }
+
+            .line-details {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: flex-start !important;
+                width: 100% !important;
                 line-height: 1.25 !important;
-                font-weight: 500 !important;
-            }
+                margin-bottom: 2px !important;
 
-            .product-price, .price {
-                font-size: 0.92rem !important;
-                line-height: 1.25 !important;
-                font-weight: 600 !important;
-            }
+                .product-name {
+                    font-size: 0.88rem !important;
+                    line-height: 1.25 !important;
+                    font-weight: 600 !important;
+                    color: #1e293b !important;
 
-            .refund-note {
-                font-size: 0.78rem !important;
-                margin-top: 1px !important;
-                line-height: 1.2 !important;
-            }
+                    .qty {
+                        font-weight: 700 !important;
+                        margin-right: 4px !important;
+                        color: #0f172a !important;
+                    }
+                }
 
-            .refund-qty-breakdown {
-                font-size: 0.75rem !important;
-                margin-top: 1px !important;
-                line-height: 1.15 !important;
+                .product-price, .price {
+                    font-size: 0.9rem !important;
+                    line-height: 1.25 !important;
+                    font-weight: 700 !important;
+                    color: #0f172a !important;
+                    white-space: nowrap !important;
+                }
             }
 
             .info-list {
-                font-size: 0.78rem !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 2px !important;
+                font-size: 0.75rem !important;
+                line-height: 1.2 !important;
+                margin: 2px 0 0 0 !important;
+                padding: 0 !important;
+                list-style: none !important;
+
+                li {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    line-height: 1.2 !important;
+                }
+
+                .price-per-unit {
+                    font-size: 0.75rem !important;
+                    color: #64748b !important;
+                }
+
+                .refund-note {
+                    font-size: 0.74rem !important;
+                    line-height: 1.2 !important;
+                    margin-top: 2px !important;
+                    display: block !important;
+                }
+
+                .refund-qty-breakdown {
+                    font-size: 0.74rem !important;
+                    line-height: 1.2 !important;
+                    margin-top: 2px !important;
+                    display: block !important;
+                    color: #475569 !important;
+
+                    strong {
+                        font-weight: 600 !important;
+                    }
+                }
             }
         }
     }
 
     /* Order summary / Total bar */
     .order-summary {
-        padding: 4px 8px !important;
-        gap: 2px !important;
+        padding: 3px 8px !important;
+        gap: 1px !important;
+        flex-shrink: 0 !important;
 
         .fs-3 {
-            font-size: 1.15rem !important;
+            font-size: 1.05rem !important;
             font-weight: 700 !important;
-            line-height: 1.25 !important;
+            line-height: 1.2 !important;
+            margin: 0 !important;
         }
 
         .tax-info, .subentry {
-            font-size: 0.8rem !important;
-            line-height: 1.2 !important;
+            font-size: 0.75rem !important;
+            line-height: 1.15 !important;
+            margin: 0 !important;
         }
     }
 
@@ -381,40 +467,42 @@
     .pads {
         margin: 0 !important;
         padding: 0 !important;
+        flex-shrink: 0 !important;
 
         .control-buttons {
-            gap: 4px !important;
-            padding-bottom: 4px !important;
+            gap: 3px !important;
+            padding-bottom: 3px !important;
 
             .btn, .control-button {
-                padding: 4px 6px !important;
-                font-size: 0.82rem !important;
-                line-height: 1.2 !important;
-                min-height: 32px !important;
-                max-height: 34px !important;
+                padding: 3px 5px !important;
+                font-size: 0.78rem !important;
+                line-height: 1.15 !important;
+                min-height: 28px !important;
+                max-height: 30px !important;
+                height: 29px !important;
                 border-radius: 4px !important;
 
                 i.fa {
-                    font-size: 0.82rem !important;
-                    margin-right: 4px !important;
+                    font-size: 0.78rem !important;
+                    margin-right: 3px !important;
                 }
             }
         }
 
         .subpads {
             .numpad {
-                padding-bottom: 4px !important;
+                padding-bottom: 2px !important;
                 gap: 2px !important;
 
                 .numpad-button {
-                    padding: 3px 2px !important;
-                    font-size: 1.05rem !important;
+                    padding: 2px !important;
+                    font-size: 0.95rem !important;
                     font-weight: 600 !important;
-                    line-height: 1.2 !important;
-                    min-height: 34px !important;
-                    max-height: 36px !important;
-                    height: 35px !important;
-                    border-radius: 4px !important;
+                    line-height: 1.1 !important;
+                    min-height: 28px !important;
+                    max-height: 30px !important;
+                    height: 29px !important;
+                    border-radius: 3px !important;
                 }
             }
 
@@ -426,13 +514,13 @@
                 }
 
                 .pay-order-button, .button.btn-primary {
-                    padding: 6px 12px !important;
-                    min-height: 36px !important;
-                    max-height: 38px !important;
-                    height: 37px !important;
-                    font-size: 1.05rem !important;
+                    padding: 4px 8px !important;
+                    min-height: 32px !important;
+                    max-height: 34px !important;
+                    height: 33px !important;
+                    font-size: 0.95rem !important;
                     font-weight: bold !important;
-                    line-height: 1.2 !important;
+                    line-height: 1.15 !important;
                     border-radius: 4px !important;
                     background-color: #198754 !important;
                     border-color: #198754 !important;
