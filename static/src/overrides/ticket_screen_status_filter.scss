@@ -1,29 +1,300 @@
-.btn-purple {
-    background-color: #6f42c1 !important;
-    border-color: #6f42c1 !important;
-    color: #ffffff !important;
-}
+/* ==========================================================================
+   POS Retail Ticket Screen Styles
+   1. Filter Buttons: High-contrast, non-fading hover & active states
+   2. Compact Right Pane: Squeezed numpad, actionpad & total to maximize products
+   ========================================================================== */
 
-.btn-purple:hover, .btn-purple:focus, .btn-purple.active {
-    background-color: #59359a !important;
-    border-color: #59359a !important;
-    color: #ffffff !important;
-}
-
-.btn-outline-purple {
-    color: #6f42c1 !important;
-    border-color: #6f42c1 !important;
-}
-
-.btn-outline-purple:hover, .btn-outline-purple.active, .btn-outline-purple:focus {
-    background-color: #6f42c1 !important;
-    border-color: #6f42c1 !important;
-    color: #ffffff !important;
-}
-
+/* --------------------------------------------------------------------------
+   1. Filter Buttons Bar
+   -------------------------------------------------------------------------- */
 .pos-retail-order-filters {
     background-color: #f8f9fa !important;
     border-bottom: 1px solid #dee2e6 !important;
+
+    .pos-filter-btn {
+        background-color: #ffffff;
+        border: 1.5px solid transparent;
+        border-radius: 50rem !important;
+        padding: 0.28rem 0.85rem !important;
+        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        cursor: pointer;
+        outline: none;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        transition: all 0.15s ease-in-out;
+
+        .badge {
+            font-size: 0.74rem !important;
+            padding: 0.15rem 0.45rem !important;
+            font-weight: 700 !important;
+            border-radius: 50rem !important;
+            transition: all 0.15s ease-in-out;
+        }
+
+        /* --- ALL Orders Filter --- */
+        &.filter-all {
+            border-color: #64748b;
+            color: #334155;
+
+            .badge {
+                background-color: #f1f5f9;
+                color: #334155;
+            }
+
+            &:hover, &:focus {
+                background-color: #e2e8f0 !important;
+                border-color: #334155 !important;
+                color: #0f172a !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #0f172a !important;
+                }
+            }
+
+            &.active {
+                background-color: #2563eb !important;
+                border-color: #2563eb !important;
+                color: #ffffff !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #2563eb !important;
+                }
+
+                &:hover, &:focus {
+                    background-color: #1d4ed8 !important;
+                    border-color: #1d4ed8 !important;
+                    color: #ffffff !important;
+
+                    .badge {
+                        background-color: #ffffff !important;
+                        color: #1d4ed8 !important;
+                    }
+                }
+            }
+        }
+
+        /* --- PAID Filter --- */
+        &.filter-paid {
+            border-color: #16a34a;
+            color: #15803d;
+
+            .badge {
+                background-color: #dcfce7;
+                color: #15803d;
+            }
+
+            &:hover, &:focus {
+                background-color: #bbf7d0 !important;
+                border-color: #15803d !important;
+                color: #14532d !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #14532d !important;
+                }
+            }
+
+            &.active {
+                background-color: #16a34a !important;
+                border-color: #16a34a !important;
+                color: #ffffff !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #16a34a !important;
+                }
+
+                &:hover, &:focus {
+                    background-color: #15803d !important;
+                    border-color: #15803d !important;
+                    color: #ffffff !important;
+
+                    .badge {
+                        background-color: #ffffff !important;
+                        color: #15803d !important;
+                    }
+                }
+            }
+        }
+
+        /* --- UNPAID Filter --- */
+        &.filter-unpaid {
+            border-color: #d97706;
+            color: #b45309;
+
+            .badge {
+                background-color: #fef3c7;
+                color: #b45309;
+            }
+
+            &:hover, &:focus {
+                background-color: #fde68a !important;
+                border-color: #b45309 !important;
+                color: #78350f !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #78350f !important;
+                }
+            }
+
+            &.active {
+                background-color: #d97706 !important;
+                border-color: #d97706 !important;
+                color: #ffffff !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #d97706 !important;
+                }
+
+                &:hover, &:focus {
+                    background-color: #b45309 !important;
+                    border-color: #b45309 !important;
+                    color: #ffffff !important;
+
+                    .badge {
+                        background-color: #ffffff !important;
+                        color: #b45309 !important;
+                    }
+                }
+            }
+        }
+
+        /* --- CREDIT (Khata) Filter --- */
+        &.filter-credit {
+            border-color: #7c3aed;
+            color: #6d28d9;
+
+            .badge {
+                background-color: #ede9fe;
+                color: #6d28d9;
+            }
+
+            &:hover, &:focus {
+                background-color: #ddd6fe !important;
+                border-color: #6d28d9 !important;
+                color: #4c1d95 !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #4c1d95 !important;
+                }
+            }
+
+            &.active {
+                background-color: #7c3aed !important;
+                border-color: #7c3aed !important;
+                color: #ffffff !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #7c3aed !important;
+                }
+
+                &:hover, &:focus {
+                    background-color: #6d28d9 !important;
+                    border-color: #6d28d9 !important;
+                    color: #ffffff !important;
+
+                    .badge {
+                        background-color: #ffffff !important;
+                        color: #6d28d9 !important;
+                    }
+                }
+            }
+        }
+
+        /* --- ACTIVE CUSTOMER Filter --- */
+        &.filter-active-customer {
+            border-color: #0284c7;
+            color: #0369a1;
+
+            .badge {
+                background-color: #e0f2fe;
+                color: #0369a1;
+            }
+
+            &:hover, &:focus {
+                background-color: #bae6fd !important;
+                border-color: #0369a1 !important;
+                color: #0c4a6e !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #0c4a6e !important;
+                }
+            }
+
+            &.active {
+                background-color: #0284c7 !important;
+                border-color: #0284c7 !important;
+                color: #ffffff !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #0284c7 !important;
+                }
+
+                &:hover, &:focus {
+                    background-color: #0369a1 !important;
+                    border-color: #0369a1 !important;
+                    color: #ffffff !important;
+
+                    .badge {
+                        background-color: #ffffff !important;
+                        color: #0369a1 !important;
+                    }
+                }
+            }
+        }
+
+        /* --- RETURN Filter --- */
+        &.filter-return {
+            border-color: #dc2626;
+            color: #b91c1c;
+
+            .badge {
+                background-color: #fee2e2;
+                color: #b91c1c;
+            }
+
+            &:hover, &:focus {
+                background-color: #fecaca !important;
+                border-color: #b91c1c !important;
+                color: #7f1d1d !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #7f1d1d !important;
+                }
+            }
+
+            &.active {
+                background-color: #dc2626 !important;
+                border-color: #dc2626 !important;
+                color: #ffffff !important;
+
+                .badge {
+                    background-color: #ffffff !important;
+                    color: #dc2626 !important;
+                }
+
+                &:hover, &:focus {
+                    background-color: #b91c1c !important;
+                    border-color: #b91c1c !important;
+                    color: #ffffff !important;
+
+                    .badge {
+                        background-color: #ffffff !important;
+                        color: #b91c1c !important;
+                    }
+                }
+            }
+        }
+    }
 }
 
 .pos-retail-status-cell .badge {
@@ -33,4 +304,146 @@
 
 .shadow-xs {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* --------------------------------------------------------------------------
+   2. Compact Right Pane (Pads / Numpad / Actions / Orderlines)
+   Reclaim ~200px vertical space so cashiers see maximum products in an order
+   -------------------------------------------------------------------------- */
+.ticket-screen .leftpane {
+    padding: 0.35rem 0.5rem !important;
+    gap: 0.35rem !important;
+
+    /* Refund notice banner at top of right pane */
+    > div:first-child {
+        padding: 4px 8px !important;
+        font-size: 0.82rem !important;
+        line-height: 1.2 !important;
+        margin-bottom: 2px !important;
+    }
+
+    /* Order lines container */
+    .order-container {
+        padding: 0 !important;
+
+        .orderline {
+            padding: 4px 8px !important;
+            min-height: 28px !important;
+
+            .product-name {
+                font-size: 0.92rem !important;
+                line-height: 1.25 !important;
+                font-weight: 500 !important;
+            }
+
+            .product-price, .price {
+                font-size: 0.92rem !important;
+                line-height: 1.25 !important;
+                font-weight: 600 !important;
+            }
+
+            .refund-note {
+                font-size: 0.78rem !important;
+                margin-top: 1px !important;
+                line-height: 1.2 !important;
+            }
+
+            .refund-qty-breakdown {
+                font-size: 0.75rem !important;
+                margin-top: 1px !important;
+                line-height: 1.15 !important;
+            }
+
+            .info-list {
+                font-size: 0.78rem !important;
+            }
+        }
+    }
+
+    /* Order summary / Total bar */
+    .order-summary {
+        padding: 4px 8px !important;
+        gap: 2px !important;
+
+        .fs-3 {
+            font-size: 1.15rem !important;
+            font-weight: 700 !important;
+            line-height: 1.25 !important;
+        }
+
+        .tax-info, .subentry {
+            font-size: 0.8rem !important;
+            line-height: 1.2 !important;
+        }
+    }
+
+    /* Pads container (Action buttons + Numpad + Refund) */
+    .pads {
+        margin: 0 !important;
+        padding: 0 !important;
+
+        .control-buttons {
+            gap: 4px !important;
+            padding-bottom: 4px !important;
+
+            .btn, .control-button {
+                padding: 4px 6px !important;
+                font-size: 0.82rem !important;
+                line-height: 1.2 !important;
+                min-height: 32px !important;
+                max-height: 34px !important;
+                border-radius: 4px !important;
+
+                i.fa {
+                    font-size: 0.82rem !important;
+                    margin-right: 4px !important;
+                }
+            }
+        }
+
+        .subpads {
+            .numpad {
+                padding-bottom: 4px !important;
+                gap: 2px !important;
+
+                .numpad-button {
+                    padding: 3px 2px !important;
+                    font-size: 1.05rem !important;
+                    font-weight: 600 !important;
+                    line-height: 1.2 !important;
+                    min-height: 34px !important;
+                    max-height: 36px !important;
+                    height: 35px !important;
+                    border-radius: 4px !important;
+                }
+            }
+
+            .actionpad {
+                gap: 2px !important;
+
+                .validation {
+                    padding: 0 !important;
+                }
+
+                .pay-order-button, .button.btn-primary {
+                    padding: 6px 12px !important;
+                    min-height: 36px !important;
+                    max-height: 38px !important;
+                    height: 37px !important;
+                    font-size: 1.05rem !important;
+                    font-weight: bold !important;
+                    line-height: 1.2 !important;
+                    border-radius: 4px !important;
+                    background-color: #198754 !important;
+                    border-color: #198754 !important;
+                    color: #ffffff !important;
+
+                    &:hover {
+                        background-color: #157347 !important;
+                        border-color: #146c43 !important;
+                    }
+                }
+            }
+        }
+    }
 }
