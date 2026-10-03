@@ -3,14 +3,23 @@
 import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 import { TicketScreen } from "@point_of_sale/app/screens/ticket_screen/ticket_screen";
-import { fuzzyLookup } from "@point_of_sale/app/utils/fuzzy_lookup";
+import { fuzzyLookup } from "@web/core/utils/search";
+import { Domain } from "@web/core/domain";
 
 patch(TicketScreen.prototype, {
+    setup() {
+        super.setup(...arguments);
+        if (!this.state.filter) {
+            this.state.filter = "ALL";
+        }
+    },
+
     /**
      * Determines whether an order is a Return/Refund.
      */
     isReturnOrder(order) {
         if (!order) return false;
+        if (order.pos_retail_order_status === "return") return true;
         if (order.is_refund === true || order.isRefund === true) return true;
         if (order.refunded_order_id) return true;
         if (order.return_reason_id) return true;
@@ -38,6 +47,7 @@ patch(TicketScreen.prototype, {
      */
     isCreditOrder(order) {
         if (!order) return false;
+        if (order.pos_retail_order_status === "credit") return true;
         if (order.pos_retail_on_account && order.pos_retail_on_account > 0.005) return true;
         if (order.pos_retail_credit_manager_id) return true;
 
@@ -62,6 +72,7 @@ patch(TicketScreen.prototype, {
         if (!order) return false;
         if (this.isReturnOrder(order)) return false;
         if (this.isCreditOrder(order)) return false;
+        if (order.pos_retail_order_status === "paid") return true;
         return Boolean(order.finalized || order.state === "paid" || order.state === "done");
     },
 
@@ -71,6 +82,7 @@ patch(TicketScreen.prototype, {
     isUnpaidOrder(order) {
         if (!order) return false;
         if (order.state === "cancel") return false;
+        if (order.pos_retail_order_status === "unpaid") return true;
         return !order.finalized && order.state !== "paid" && order.state !== "done";
     },
 
@@ -79,10 +91,13 @@ patch(TicketScreen.prototype, {
      */
     hasActiveCustomer(order) {
         if (!order) return false;
+        if (order.pos_retail_has_active_customer !== undefined && order.pos_retail_has_active_customer !== null) {
+            return Boolean(order.pos_retail_has_active_customer);
+        }
         const partner = order.partner_id || (typeof order.getPartner === "function" ? order.getPartner() : null);
         if (!partner) return false;
         const name = (partner.name || "").trim().toLowerCase();
-        if (!name || name === "walk-in customer" || name === "walk in customer") {
+        if (!name || name === "walk-in customer" || name === "walk in customer" || name.includes("walk-in") || name.includes("walk in")) {
             return false;
         }
         return true;
@@ -194,28 +209,23 @@ patch(TicketScreen.prototype, {
      * Domain filtering for backend search_paid_order_ids.
      */
     _computeSyncedOrdersDomain() {
-        const domain = super._computeSyncedOrdersDomain();
+        const baseDomain = super._computeSyncedOrdersDomain();
         let condition = null;
 
         if (this.state.filter === "RETURN") {
-            condition = ["is_refund", "=", true];
+            condition = ["pos_retail_order_status", "=", "return"];
         } else if (this.state.filter === "CREDIT") {
-            condition = ["pos_retail_on_account", ">", 0];
+            condition = ["pos_retail_order_status", "=", "credit"];
         } else if (this.state.filter === "ACTIVE_CUSTOMER") {
-            condition = ["partner_id", "!=", false];
+            condition = ["pos_retail_has_active_customer", "=", true];
         } else if (this.state.filter === "PAID") {
-            condition = ["pos_retail_on_account", "=", 0];
+            condition = ["pos_retail_order_status", "=", "paid"];
         }
 
         if (condition) {
-            if (domain.length > 0) {
-                domain.unshift("&");
-                domain.splice(1, 0, condition);
-            } else {
-                domain.push(condition);
-            }
+            return Domain.and([baseDomain, [condition]]).toList();
         }
-        return domain;
+        return baseDomain;
     },
 
     /**
@@ -268,7 +278,7 @@ patch(TicketScreen.prototype, {
         let orders = [];
         const filter = this.state.filter;
 
-        if (filter === "ALL" || filter === "ALL_ORDERS") {
+        if (!filter || filter === "ALL" || filter === "ALL_ORDERS") {
             orders = orderModel.filter((o) => o.uiState?.displayed !== false && o.state !== "cancel");
         } else if (filter === "PAID" || filter === "SYNCED") {
             orders = orderModel.filter((o) => o.uiState?.displayed !== false && this.isPaidOrder(o));
