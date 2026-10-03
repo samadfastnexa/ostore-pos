@@ -3,14 +3,19 @@
 import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 import { TicketScreen } from "@point_of_sale/app/screens/ticket_screen/ticket_screen";
+import { SearchBar } from "@point_of_sale/app/screens/ticket_screen/search_bar/search_bar";
 import { fuzzyLookup } from "@web/core/utils/search";
 import { Domain } from "@web/core/domain";
 
 patch(TicketScreen.prototype, {
     setup() {
         super.setup(...arguments);
-        if (!this.state.filter) {
+        if (!this.state.filter || this.state.filter === "") {
             this.state.filter = "ALL";
+        } else if (this.state.filter === "SYNCED") {
+            this.state.filter = "PAID";
+        } else if (this.state.filter === "ACTIVE_ORDERS") {
+            this.state.filter = "UNPAID";
         }
     },
 
@@ -193,6 +198,7 @@ patch(TicketScreen.prototype, {
 
     /**
      * Extended filter options for SearchBar dropdown.
+     * Includes all custom filters and standard Odoo filter aliases so SearchBar never encounters an undefined option.
      */
     _getFilterOptions() {
         const states = new Map();
@@ -202,7 +208,33 @@ patch(TicketScreen.prototype, {
         states.set("CREDIT", { text: _t("Credit / Khata Orders") });
         states.set("ACTIVE_CUSTOMER", { text: _t("Active Customer Orders") });
         states.set("RETURN", { text: _t("Return / Refund Orders") });
+
+        // Compatibility aliases for standard Odoo states
+        states.set("SYNCED", { text: _t("Paid Orders") });
+        states.set("ACTIVE_ORDERS", { text: _t("Unpaid Orders") });
+        states.set("ONGOING", { text: _t("Ongoing"), indented: true });
+        states.set("PAYMENT", { text: _t("Payment"), indented: true });
+        states.set("RECEIPT", { text: _t("Receipt"), indented: true });
+        states.set("", { text: _t("All Orders") });
         return states;
+    },
+
+    /**
+     * Ensure search bar configuration always has a safe, valid defaultFilter key.
+     */
+    getSearchBarConfig() {
+        const config = super.getSearchBarConfig();
+        const options = this._getFilterOptions();
+        config.filter.options = options;
+
+        let activeFilter = this.state.filter;
+        if (!activeFilter || activeFilter === "") {
+            activeFilter = "ALL";
+        } else if (!options.has(activeFilter)) {
+            activeFilter = "ALL";
+        }
+        config.defaultFilter = activeFilter;
+        return config;
     },
 
     /**
@@ -218,7 +250,7 @@ patch(TicketScreen.prototype, {
             condition = ["pos_retail_order_status", "=", "credit"];
         } else if (this.state.filter === "ACTIVE_CUSTOMER") {
             condition = ["pos_retail_has_active_customer", "=", true];
-        } else if (this.state.filter === "PAID") {
+        } else if (this.state.filter === "PAID" || this.state.filter === "SYNCED") {
             condition = ["pos_retail_order_status", "=", "paid"];
         }
 
@@ -229,14 +261,22 @@ patch(TicketScreen.prototype, {
     },
 
     /**
-     * On filter change: fetch from server if necessary.
+     * On filter change: normalize filter key and fetch from server if necessary.
      */
     async onFilterSelected(selectedFilter) {
-        this.state.filter = selectedFilter;
+        let normFilter = selectedFilter;
+        if (!normFilter || normFilter === "") {
+            normFilter = "ALL";
+        } else if (normFilter === "SYNCED") {
+            normFilter = "PAID";
+        } else if (normFilter === "ACTIVE_ORDERS") {
+            normFilter = "UNPAID";
+        }
+        this.state.filter = normFilter;
         this.pos.screenState.ticketSCreen.totalCount = 0;
         this.pos.screenState.ticketSCreen.offsetByDomain = {};
 
-        if (this._isServerFilter(selectedFilter)) {
+        if (this._isServerFilter(normFilter)) {
             await this._fetchSyncedOrders();
         }
     },
@@ -341,3 +381,14 @@ patch(TicketScreen.prototype, {
         );
     },
 });
+
+patch(SearchBar.prototype, {
+    setup() {
+        super.setup(...arguments);
+        if (!this.props.config?.filter?.options?.has(this.state.selectedFilter)) {
+            const firstOptionKey = this.props.config?.filter?.options?.keys()?.next()?.value || "ALL";
+            this.state.selectedFilter = firstOptionKey;
+        }
+    },
+});
+

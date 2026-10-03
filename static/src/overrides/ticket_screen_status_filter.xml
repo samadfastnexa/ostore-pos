@@ -90,4 +90,14 @@
 
     </t>
 
+    <!-- 5. Safe fallback for SearchBar filter text to prevent undefined.text errors -->
+    <t t-inherit="point_of_sale.SearchBar" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('filter')]/span" position="replace">
+            <span>
+                <t t-set="_selOpt" t-value="props.config.filter.options.get(state.selectedFilter) || props.config.filter.options.get('ALL') || props.config.filter.options.values().next().value" />
+                <t t-esc="_selOpt ? _selOpt.text : ''" />
+            </span>
+        </xpath>
+    </t>
+
 </templates>
