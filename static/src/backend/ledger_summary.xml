@@ -15,17 +15,59 @@
     </t>
 
     <t t-name="pos_retail.LedgerSummary">
-        <div class="pos-retail-ledger-summary d-flex flex-wrap gap-2 px-3 pt-3 pb-2">
-            <t t-foreach="props.cards" t-as="card" t-key="card.key">
-                <div class="pos-retail-ledger-card bg-white border rounded-3 shadow-sm px-3 py-2 flex-grow-1"
-                     t-att-title="card.hint or ''">
-                    <div class="text-muted small text-uppercase fw-semibold" t-esc="card.label"/>
-                    <div t-attf-class="fs-4 fw-bold text-nowrap text-{{ card.tone }}">
-                        <t t-if="state.loading"><i class="fa fa-circle-o-notch fa-spin text-muted"/></t>
-                        <t t-else="" t-esc="display(card)"/>
-                    </div>
+        <div class="pos-retail-ledger-summary px-3 pt-3 pb-2">
+            <!-- Action Toolbar for Quick Actions / Balance Edits -->
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark fs-6">
+                        <i class="fa fa-book me-1 text-primary"/>
+                        <t t-if="isCustomerLedger">Customer Khata &amp; Ledger</t>
+                        <t t-elif="isVendorLedger">Vendor Khata &amp; Ledger</t>
+                        <t t-else="">Ledger Summary</t>
+                    </span>
+                    <span class="badge bg-light text-muted border" t-if="state.totals.partner_count">
+                        <t t-esc="state.totals.partner_count"/> Partners
+                    </span>
                 </div>
-            </t>
+                <div class="d-flex align-items-center gap-2">
+                    <t t-if="isCustomerLedger">
+                        <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm d-flex align-items-center gap-1"
+                                t-on-click="onClickAdjustCustomerKhata"
+                                title="Adjust customer khata, enter opening balance, or waive debt">
+                            <i class="fa fa-sliders"/>
+                            <span>Khata Adjustment / Edit Balance</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm d-flex align-items-center gap-1"
+                                t-on-click="onClickReceiveCustomerPayment"
+                                title="Receive khata payment from customer">
+                            <i class="fa fa-money"/>
+                            <span>Receive Payment</span>
+                        </button>
+                    </t>
+                    <t t-elif="isVendorLedger">
+                        <button type="button" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm d-flex align-items-center gap-1"
+                                t-on-click="onClickAdjustVendorKhata"
+                                title="Adjust vendor khata balance, volume rebate, or enter opening payable">
+                            <i class="fa fa-sliders"/>
+                            <span>Vendor Khata Adjustment</span>
+                        </button>
+                    </t>
+                </div>
+            </div>
+
+            <!-- Cards -->
+            <div class="d-flex flex-wrap gap-2">
+                <t t-foreach="props.cards" t-as="card" t-key="card.key">
+                    <div class="pos-retail-ledger-card bg-white border rounded-3 shadow-sm px-3 py-2 flex-grow-1"
+                         t-att-title="card.hint or ''">
+                        <div class="text-muted small text-uppercase fw-semibold" t-esc="card.label"/>
+                        <div t-attf-class="fs-4 fw-bold text-nowrap text-{{ card.tone }}">
+                            <t t-if="state.loading"><i class="fa fa-circle-o-notch fa-spin text-muted"/></t>
+                            <t t-else="" t-esc="display(card)"/>
+                        </div>
+                    </div>
+                </t>
+            </div>
         </div>
     </t>
 

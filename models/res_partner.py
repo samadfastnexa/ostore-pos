@@ -1192,6 +1192,18 @@ class ResPartner(models.Model):
             'context': {'default_partner_id': self.id},
         }
 
+    def action_open_vendor_ledger_adjustment(self):
+        """Vendor khata adjustment dialog."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Vendor Khata Adjustment"),
+            'res_model': 'pos.retail.vendor.ledger.adjustment',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_partner_id': self.id},
+        }
+
     def action_view_outstanding_bills(self):
         self.ensure_one()
         return {
@@ -1335,4 +1347,128 @@ class ResPartner(models.Model):
         """Download Customer Ledger PDF file."""
         self.ensure_one()
         return self.env.ref('pos_retail.action_report_customer_ledger').report_action(self)
+
+    @api.model
+    def pos_retail_adjust_customer_khata(self, partner_id, amount, direction, reason,
+                                         config_id, employee_id, date=False):
+        """Adjust a customer's khata balance from till or backend.
+
+        - 'increase': Customer owes MORE (old khata debt, opening balance, debit charge).
+          Debit receivable account, Credit equity/income account.
+        - 'decrease': Customer owes LESS (discount, waiver, return deduction, correction).
+          Credit receivable account, Debit expense/equity account.
+        """
+        amt = float(amount or 0.0)
+        if amt <= 0:
+            raise UserError(_("The adjustment amount must be greater than zero."))
+
+        if direction not in ('increase', 'decrease'):
+            raise UserError(_("Invalid adjustment direction."))
+
+        reason_text = (reason or '').strip()
+        if not reason_text:
+            raise UserError(_("Please enter an adjustment reason / explanation."))
+
+        partner = self.sudo().browse(int(partner_id)).exists()
+        if not partner:
+            raise UserError(_("Customer record not found."))
+
+        config = self.env['pos.config'].sudo().browse(int(config_id)).exists() if config_id else False
+        company = config.company_id if config else (partner.company_id or self.env.company)
+        currency = company.currency_id
+
+        employee = self.env['hr.employee'].sudo().browse(int(employee_id)).exists() if employee_id else False
+        cashier_name = employee.name if employee else self.env.user.name
+
+        receivable_acc = partner.property_account_receivable_id
+        if not receivable_acc:
+            raise UserError(_("Customer %s has no receivable account configured.", partner.name))
+
+        # Counterpart account resolution
+        Account = self.env['account.account'].with_company(company)
+        if direction == 'increase':
+            counterpart = Account.search([('account_type', '=', 'equity')], limit=1) or \
+                          Account.search([('account_type', '=', 'income')], limit=1)
+        else:
+            counterpart = Account.search([('account_type', '=', 'expense')], limit=1) or \
+                          Account.search([('account_type', '=', 'equity')], limit=1)
+
+        if not counterpart:
+            counterpart = Account.search([
+                ('account_type', 'not in', ('asset_receivable', 'liability_payable'))
+            ], limit=1)
+
+        Journal = self.env['account.journal'].sudo()
+        base = [('type', '=', 'general'), ('company_id', '=', company.id)]
+        misc_journal = (Journal.search(base + [('code', '=', 'MISC')], limit=1)
+                        or Journal.search(base + [('name', 'ilike', 'miscellaneous')], limit=1)
+                        or Journal.search(base + [('name', 'not ilike', 'point of sale')], limit=1)
+                        or Journal.search(base, limit=1))
+        if not misc_journal:
+            misc_journal = Journal.search([('type', '=', 'general')], limit=1)
+
+        previous_balance = round(partner.pos_outstanding_balance or 0.0, 2)
+        entry_ref = f"{reason_text} (Till: {cashier_name})" if config else reason_text
+        adj_date = date or fields.Date.context_today(self)
+
+        inc = direction == 'increase'
+        move = self.env['account.move'].sudo().with_company(company).create({
+            'move_type': 'entry',
+            'journal_id': misc_journal.id,
+            'company_id': company.id,
+            'date': adj_date,
+            'ref': entry_ref,
+            'line_ids': [
+                (0, 0, {
+                    'partner_id': partner.id,
+                    'account_id': receivable_acc.id,
+                    'name': entry_ref,
+                    'debit': amt if inc else 0.0,
+                    'credit': 0.0 if inc else amt,
+                }),
+                (0, 0, {
+                    'partner_id': partner.id,
+                    'account_id': counterpart.id,
+                    'name': entry_ref,
+                    'debit': 0.0 if inc else amt,
+                    'credit': amt if inc else 0.0,
+                }),
+            ],
+        })
+        move.action_post()
+
+        if direction == 'decrease':
+            open_lines = self.env['account.move.line'].sudo().search([
+                ('partner_id', '=', partner.id),
+                ('account_id', '=', receivable_acc.id),
+                ('parent_state', '=', 'posted'),
+                ('reconciled', '=', False),
+                ('company_id', '=', company.id),
+            ], order='date asc, id asc')
+            if len(open_lines) >= 2 and any(l.debit > 0 for l in open_lines) and any(l.credit > 0 for l in open_lines):
+                try:
+                    open_lines.reconcile()
+                except Exception:
+                    pass
+
+        self.env.flush_all()
+        new_balance = round(previous_balance + (amt if inc else -amt), 2)
+
+        return {
+            'move_id': move.id,
+            'move_name': move.name,
+            'partner_id': partner.id,
+            'partner_name': partner.name,
+            'direction': direction,
+            'direction_label': _("Owes More") if inc else _("Owes Less"),
+            'amount': amt,
+            'amount_formatted': currency.format(amt),
+            'previous_balance': previous_balance,
+            'previous_balance_formatted': currency.format(previous_balance),
+            'new_balance': new_balance,
+            'new_balance_formatted': currency.format(new_balance),
+            'reason': reason_text,
+            'date': str(adj_date),
+            'cashier_name': cashier_name,
+        }
 

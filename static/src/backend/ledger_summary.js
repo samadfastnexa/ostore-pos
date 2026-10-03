@@ -28,6 +28,7 @@ export class PosRetailLedgerSummary extends Component {
 
     setup() {
         this.orm = useService("orm");
+        this.action = useService("action");
         this.state = useState({ loading: true, totals: {} });
         onWillStart(() => this.load(this.props.domain));
         onWillUpdateProps((next) => {
@@ -55,6 +56,77 @@ export class PosRetailLedgerSummary extends Component {
             return String(value);
         }
         return formatMonetary(value, { currencyId: this.state.totals.currency_id });
+    }
+
+    get isCustomerLedger() {
+        return this.props.resModel === "pos.retail.customer.ledger.line" ||
+               this.props.resModel === "pos.retail.outstanding.customer";
+    }
+
+    get isVendorLedger() {
+        return this.props.resModel === "pos.retail.vendor.ledger.line" ||
+               this.props.resModel === "pos.retail.outstanding.vendor";
+    }
+
+    get partnerIdFromDomain() {
+        if (!Array.isArray(this.props.domain)) {
+            return false;
+        }
+        for (const leaf of this.props.domain) {
+            if (Array.isArray(leaf) && leaf.length === 3 && leaf[0] === "partner_id" && (leaf[1] === "=" || leaf[1] === "in")) {
+                const val = leaf[2];
+                return Array.isArray(val) ? val[0] : val;
+            }
+        }
+        return false;
+    }
+
+    onClickAdjustCustomerKhata() {
+        const context = {};
+        const pid = this.partnerIdFromDomain;
+        if (pid) {
+            context.default_partner_id = pid;
+        }
+        this.action.doAction({
+            name: "Khata Adjustment",
+            type: "ir.actions.act_window",
+            res_model: "pos.retail.ledger.adjustment",
+            views: [[false, "form"]],
+            target: "new",
+            context: context,
+        });
+    }
+
+    onClickReceiveCustomerPayment() {
+        const context = {};
+        const pid = this.partnerIdFromDomain;
+        if (pid) {
+            context.default_partner_id = pid;
+        }
+        this.action.doAction({
+            name: "Receive Khata Payment",
+            type: "ir.actions.act_window",
+            res_model: "pos.retail.khata.payment",
+            views: [[false, "form"]],
+            target: "new",
+            context: context,
+        });
+    }
+
+    onClickAdjustVendorKhata() {
+        const context = {};
+        const pid = this.partnerIdFromDomain;
+        if (pid) {
+            context.default_partner_id = pid;
+        }
+        this.action.doAction({
+            name: "Vendor Khata Adjustment",
+            type: "ir.actions.act_window",
+            res_model: "pos.retail.vendor.ledger.adjustment",
+            views: [[false, "form"]],
+            target: "new",
+            context: context,
+        });
     }
 }
 

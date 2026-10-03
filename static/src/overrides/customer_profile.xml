@@ -272,6 +272,14 @@
                                 <span>Print</span>
                             </button>
                             <button type="button"
+                                    class="btn btn-sm btn-primary fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
+                                    style="font-size: 0.78rem;"
+                                    t-on-click="onClickAdjustCustomerKhata"
+                                    title="Adjust Customer Khata (Old Balance / Waiver / Correction)">
+                                <i class="fa fa-sliders"/>
+                                <span>Adjust Khata</span>
+                            </button>
+                            <button type="button"
                                     class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 py-1 px-3 shadow-sm"
                                     style="font-size: 0.78rem;"
                                     t-on-click="onClickReceivePayment"

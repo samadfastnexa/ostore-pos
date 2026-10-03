@@ -1,4 +1,5 @@
-from odoo import api, fields, models, tools
+from odoo import _, api, fields, models, tools
+from odoo.exceptions import UserError
 
 # SQL shared between the two ledgers for the columns the shop asked for on
 # top of the running balance: Total Amount, Paid Amount, Remaining Balance,
@@ -192,7 +193,80 @@ class PosRetailCustomerLedgerLine(models.Model):
     user_id = fields.Many2one('res.users', string="Cashier / User", readonly=True)
     salesperson_id = fields.Many2one('res.users', string="Salesperson", readonly=True)
     company_id = fields.Many2one('res.company', string="Branch", readonly=True)
-    reference = fields.Char(string="Reference / Notes", readonly=True)
+    reference = fields.Char(string="Reference / Notes", readonly=False)
+
+    def write(self, vals):
+        """Allow updating reference/notes on customer ledger lines, propagating to journal entry."""
+        if 'reference' in vals:
+            ref_val = vals['reference'] or ''
+            for line in self:
+                if line.move_id:
+                    line.move_id.sudo().ref = ref_val
+                ml = self.env['account.move.line'].sudo().browse(line.id)
+                if ml.exists():
+                    ml.name = ref_val
+        return True
+
+    def action_open_move(self):
+        """Open the underlying account.move (Invoice, POS Entry, Journal Entry, Payment)."""
+        self.ensure_one()
+        if not self.move_id:
+            raise UserError(_("No underlying journal entry found for this line."))
+        return {
+            'type': 'ir.actions.act_window',
+            'name': self.move_name or _("Entry"),
+            'res_model': 'account.move',
+            'res_id': self.move_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_adjust_balance(self):
+        """Open customer ledger adjustment wizard for this line's customer."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Khata Adjustment"),
+            'res_model': 'pos.retail.ledger.adjustment',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_partner_id': self.partner_id.id,
+            },
+        }
+
+    def action_receive_payment(self):
+        """Open khata payment wizard for this line's customer."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Receive Payment"),
+            'res_model': 'pos.retail.khata.payment',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_partner_id': self.partner_id.id,
+            },
+        }
+
+    def action_reverse_entry(self):
+        """Reverse or cancel an adjustment or manual entry."""
+        self.ensure_one()
+        if not self.move_id:
+            raise UserError(_("No journal entry found for this line."))
+        return {
+            'name': _("Reverse Entry"),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move.reversal',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'active_ids': [self.move_id.id],
+                'active_id': self.move_id.id,
+                'active_model': 'account.move',
+                'default_journal_id': self.move_id.journal_id.id,
+            },
+        }
 
     # Whether THIS ONE transaction has been settled, worked out from what has
     # actually been reconciled against it -- never typed in. A sale for
@@ -360,7 +434,66 @@ class PosRetailVendorLedgerLine(models.Model):
              "bills and credit notes.")
     user_id = fields.Many2one('res.users', string="Staff / User", readonly=True)
     company_id = fields.Many2one('res.company', string="Branch", readonly=True)
-    reference = fields.Char(string="Reference / Notes", readonly=True)
+    reference = fields.Char(string="Reference / Notes", readonly=False)
+
+    def write(self, vals):
+        """Allow updating reference/notes on vendor ledger lines, propagating to journal entry."""
+        if 'reference' in vals:
+            ref_val = vals['reference'] or ''
+            for line in self:
+                if line.move_id:
+                    line.move_id.sudo().ref = ref_val
+                ml = self.env['account.move.line'].sudo().browse(line.id)
+                if ml.exists():
+                    ml.name = ref_val
+        return True
+
+    def action_open_move(self):
+        """Open the underlying account.move (Vendor Bill, Payment, Refund, Journal Entry)."""
+        self.ensure_one()
+        if not self.move_id:
+            raise UserError(_("No underlying journal entry found for this line."))
+        return {
+            'type': 'ir.actions.act_window',
+            'name': self.move_name or _("Entry"),
+            'res_model': 'account.move',
+            'res_id': self.move_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_adjust_balance(self):
+        """Open vendor ledger adjustment wizard for this line's vendor."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Vendor Khata Adjustment"),
+            'res_model': 'pos.retail.vendor.ledger.adjustment',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_partner_id': self.partner_id.id,
+            },
+        }
+
+    def action_reverse_entry(self):
+        """Reverse or cancel an adjustment or manual entry."""
+        self.ensure_one()
+        if not self.move_id:
+            raise UserError(_("No journal entry found for this line."))
+        return {
+            'name': _("Reverse Entry"),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move.reversal',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'active_ids': [self.move_id.id],
+                'active_id': self.move_id.id,
+                'active_model': 'account.move',
+                'default_journal_id': self.move_id.journal_id.id,
+            },
+        }
 
     total_amount = fields.Monetary(
         string="Total Amount", readonly=True, currency_field='currency_id',

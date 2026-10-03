@@ -12,6 +12,7 @@ import { ReceivePaymentPopup } from "./receive_payment_popup";
 import { PaymentReceiptPopup } from "./payment_receipt_popup";
 import { PosRetailVendorPaymentPopup } from "./vendor_payment_popup";
 import { PosRetailVendorAdjustPopup } from "./vendor_adjust_popup";
+import { PosRetailCustomerAdjustPopup } from "./customer_adjust_popup";
 import { openWhatsAppChoice } from "../backend/whatsapp_choice_dialog";
 
 
@@ -385,6 +386,34 @@ export class PosRetailCustomerProfile extends Component {
         await makeAwaitable(this.dialog, PosRetailVendorPaymentPopup, {
             vendor: vendorData,
             onPaymentDone: async () => {
+                await this.loadPartnerData(partner);
+            },
+        });
+        await this.loadPartnerData(partner);
+    }
+
+    /** Adjust customer khata directly from within the customer view of profile/ledger dialog. */
+    async onClickAdjustCustomerKhata() {
+        const partner = this.partner;
+        if (!partner) return;
+        const bal = typeof this.state.data?.customer_balance === "object"
+            ? (this.state.data.customer_balance.amount ?? 0)
+            : (parseFloat(this.state.data?.customer_balance) || partner.pos_outstanding_balance || partner.credit || 0);
+        const balFormatted = typeof this.state.data?.customer_balance === "object"
+            ? (this.state.data.customer_balance.formatted || "")
+            : this.formatCurrency(bal);
+
+        const customerData = {
+            id: partner.id,
+            name: partner.name,
+            balance: bal,
+            balance_formatted: balFormatted,
+            phone: partner.phone || partner.mobile || (this.state.data?.phone) || "",
+        };
+
+        await makeAwaitable(this.dialog, PosRetailCustomerAdjustPopup, {
+            partner: customerData,
+            onAdjustDone: async () => {
                 await this.loadPartnerData(partner);
             },
         });

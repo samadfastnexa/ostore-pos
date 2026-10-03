@@ -165,9 +165,12 @@
                 <group>
                     <group>
                         <field name="partner_id" readonly="context.get('default_partner_id')"/>
-                        <field name="direction" widget="radio"/>
+                        <field name="current_balance" readonly="1" widget="monetary"/>
+                        <field name="adjustment_mode" widget="radio"/>
+                        <field name="target_balance" invisible="adjustment_mode != 'target'" widget="monetary"/>
+                        <field name="direction" widget="radio" invisible="adjustment_mode == 'target'"/>
                         <field name="currency_id" invisible="1"/>
-                        <field name="amount"/>
+                        <field name="amount" widget="monetary" readonly="adjustment_mode == 'target'"/>
                     </group>
                     <group>
                         <field name="date"/>
@@ -189,6 +192,53 @@
                 </footer>
             </form>
         </field>
+    </record>
+
+
+    <!-- Vendor Khata Adjustment dialog -->
+    <record id="pos_retail_vendor_ledger_adjustment_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.ledger.adjustment.form</field>
+        <field name="model">pos.retail.vendor.ledger.adjustment</field>
+        <field name="arch" type="xml">
+            <form string="Vendor Khata Adjustment">
+                <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                    <i class="fa fa-sliders mt-1" role="img" aria-label="Info" title="Info"/>
+                    <div>Adjusts the amount payable to this vendor by posting a transparent journal entry:
+                         supplier rebates, volume discounts, return deductions, waivers, or opening balances.</div>
+                </div>
+                <group>
+                    <group>
+                        <field name="partner_id" readonly="context.get('default_partner_id')"/>
+                        <field name="current_balance" readonly="1" widget="monetary"/>
+                        <field name="adjustment_mode" widget="radio"/>
+                        <field name="target_balance" invisible="adjustment_mode != 'target'" widget="monetary"/>
+                        <field name="direction" widget="radio" invisible="adjustment_mode == 'target'"/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="amount" widget="monetary" readonly="adjustment_mode == 'target'"/>
+                    </group>
+                    <group>
+                        <field name="date"/>
+                        <field name="reason" placeholder="e.g. Vendor rebate / Volume discount"/>
+                        <field name="company_id" invisible="1"/>
+                    </group>
+                </group>
+                <group string="Accounting" groups="account.group_account_readonly">
+                    <field name="counterpart_account_id"/>
+                    <field name="journal_id"/>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Post Adjustment" class="btn-primary"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_pos_retail_vendor_ledger_adjustment" model="ir.actions.act_window">
+        <field name="name">Vendor Khata Adjustment</field>
+        <field name="res_model">pos.retail.vendor.ledger.adjustment</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
     </record>
 
     <record id="pos_retail_customer_ledger_report_view_list" model="ir.ui.view">
