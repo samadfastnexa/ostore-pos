@@ -37,12 +37,26 @@ patch(PosStore.prototype, {
      * this is a documented path, not a way around the model layer.
      */
     posRetailDiscountProduct() {
-        return (
-            this.config.discount_product_id ||
-            (this.config.raw?.discount_product_id
-                ? this.models["product.product"].get(this.config.raw.discount_product_id)
-                : undefined)
-        );
+        const prod = this.config?.discount_product_id;
+        if (prod && typeof prod === "object" && prod.id) {
+            return prod;
+        }
+        const id = typeof prod === "number" ? prod : (this.config?.raw?.discount_product_id || prod?.id);
+        if (id && this.models?.["product.product"]) {
+            const found = this.models["product.product"].get(id);
+            if (found) {
+                return found;
+            }
+        }
+        if (this.models?.["product.product"]) {
+            const disc = this.models["product.product"].getAll().find(
+                (p) => (p.name === "Discount" || p.default_code === "DISC" || p.default_code === "pos_discount") && p.type === "service"
+            );
+            if (disc) {
+                return disc;
+            }
+        }
+        return prod || undefined;
     },
 
     /**

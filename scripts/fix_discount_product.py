@@ -33,10 +33,12 @@ Config = env['pos.config'].sudo().with_context(active_test=False)
 Product = env['product.product'].sudo()
 
 shipped = env.ref('pos_discount.product_product_consumable', raise_if_not_found=False)
+if not shipped or not shipped.exists():
+    shipped = Product.search([('name', '=', 'Discount'), ('type', '=', 'service')], limit=1)
 
 missing, present = [], []
 for config in Config.search([]):
-    (present if config.discount_product_id else missing).append(config)
+    (present if config.discount_product_id and config.discount_product_id.exists() else missing).append(config)
 
 print()
 print("=" * 78)
@@ -76,21 +78,32 @@ for config in present:
         # empty list loads every model: product.template's loader reads
         # data['pos.config'], so it cannot be fetched on its own
         payload = session.load_data([])
-        tmpl_ids = {row['id'] for row in payload.get('product.template', [])}
-        reached = product.product_tmpl_id.id in tmpl_ids
+        prods = {row['id'] for row in payload.get('product.product', [])}
+        reached = product.id in prods
         print("      IN THE TILL'S PAYLOAD: %s   (%s products sent)"
-              % ("YES" if reached else "NO -- this is the fault", len(tmpl_ids)))
+              % ("YES" if reached else "NO -- this is the fault", len(prods)))
     except Exception as exc:
         print("      loader could not run here: %s" % str(exc)[:110])
 
 if not missing:
     print("  every register already has one -- nothing to do")
 else:
-    if not shipped:
-        print("  Cannot repair: the product pos_discount ships is not in this")
-        print("  database. Set a discount product by hand on each register under")
-        print("  Point of Sale > Configuration > Settings.")
-    else:
+    if not shipped or not shipped.exists():
+        print("  shipped discount product is missing from this database; creating a shared service product")
+        if APPLY:
+            shipped = Product.create({
+                'name': 'Discount',
+                'type': 'service',
+                'list_price': 0.0,
+                'standard_price': 0.0,
+                'sale_ok': True,
+                'active': True,
+                'available_in_pos': False,
+                'company_id': False,
+            })
+            shipped.write({'taxes_id': [(5, 0, 0)]})
+
+    if shipped and shipped.exists():
         # sale_ok and active matter (an archived or unsellable product cannot be
         # put on an order line); available_in_pos deliberately does not.
         repairs = {}
@@ -98,16 +111,44 @@ else:
             repairs['sale_ok'] = True
         if not shipped.active:
             repairs['active'] = True
+        if shipped.company_id:
+            repairs['company_id'] = False
 
         for config in missing:
-            print("  [FIX]  %-28s has none; would use %r"
-                  % (config.name, shipped.display_name))
+            print("  [FIX]  %-28s has none; will use %r (id=%s)"
+                  % (config.name, shipped.display_name, shipped.id))
         if repairs:
             print("  the product also needs: %s" % repairs)
 
         if APPLY:
             if repairs:
                 shipped.write(repairs)
+
+            imd = env['ir.model.data'].sudo()
+            rec = imd.search([('module', '=', 'pos_discount'), ('name', '=', 'product_product_consumable')], limit=1)
+            if rec:
+                rec.write({'res_id': shipped.id, 'noupdate': True})
+            else:
+                imd.create({
+                    'module': 'pos_discount',
+                    'name': 'product_product_consumable',
+                    'model': 'product.product',
+                    'res_id': shipped.id,
+                    'noupdate': True,
+                })
+
+            tmpl_rec = imd.search([('module', '=', 'pos_discount'), ('name', '=', 'product_product_consumable_product_template')], limit=1)
+            if tmpl_rec:
+                tmpl_rec.write({'res_id': shipped.product_tmpl_id.id, 'noupdate': True})
+            else:
+                imd.create({
+                    'module': 'pos_discount',
+                    'name': 'product_product_consumable_product_template',
+                    'model': 'product.template',
+                    'res_id': shipped.product_tmpl_id.id,
+                    'noupdate': True,
+                })
+
             for config in missing:
                 config.discount_product_id = shipped.id
             env.cr.commit()

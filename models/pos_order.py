@@ -401,7 +401,7 @@ class PosOrder(models.Model):
                       'pos_retail_return_unlinked', 'pos_retail_return_manager_id',
                       'pos_retail_credit_manager_id', 'pos_retail_credit_over_amount',
                       'pos_retail_credit_before', 'pos_retail_credit_after',
-                      'pos_retail_credit_limit'):
+                      'pos_retail_credit_limit', 'pos_retail_on_account', 'is_refund'):
             if field not in result:
                 result.append(field)
         return result

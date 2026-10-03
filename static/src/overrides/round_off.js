@@ -77,9 +77,26 @@ patch(PaymentScreen.prototype, {
     },
 
     posRetailDiscountProduct() {
-        return this.pos.posRetailDiscountProduct
-            ? this.pos.posRetailDiscountProduct()
-            : (this.pos.config?.discount_product_id || undefined);
+        if (this.pos?.posRetailDiscountProduct) {
+            const p = this.pos.posRetailDiscountProduct();
+            if (p) return p;
+        }
+        const prod = this.pos?.config?.discount_product_id;
+        if (prod && typeof prod === "object" && prod.id) {
+            return prod;
+        }
+        const id = typeof prod === "number" ? prod : (this.pos?.config?.raw?.discount_product_id || prod?.id);
+        if (id && this.pos?.models?.["product.product"]) {
+            const found = this.pos.models["product.product"].get(id);
+            if (found) return found;
+        }
+        if (this.pos?.models?.["product.product"]) {
+            const disc = this.pos.models["product.product"].getAll().find(
+                (p) => (p.name === "Discount" || p.default_code === "DISC" || p.default_code === "pos_discount") && p.type === "service"
+            );
+            if (disc) return disc;
+        }
+        return prod || undefined;
     },
 
     async posRetailRoundTo(target) {

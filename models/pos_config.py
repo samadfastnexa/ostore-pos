@@ -450,6 +450,16 @@ class PosConfig(models.Model):
         for config in broken:
             config.limit_categories = False
 
+    def _get_special_products(self):
+        res = super()._get_special_products()
+        for config in self:
+            if config.discount_product_id and config.discount_product_id.exists():
+                res |= config.discount_product_id
+        default_disc = self.env.ref('pos_discount.product_product_consumable', raise_if_not_found=False)
+        if default_disc and default_disc.exists():
+            res |= default_disc
+        return res
+
     @api.model
     def _pos_retail_ensure_discount_product(self):
         """Guarantee every register has a product to carry order discounts.
@@ -463,8 +473,9 @@ class PosConfig(models.Model):
         module_pos_discount toggle is on -- ours is a separate feature, so on a
         register where that toggle was never enabled the field stays empty and
         the panel can only report that the discount product is misconfigured.
-        The shipped product is also archived on some databases, and an archived
-        product never reaches the POS client.
+        The shipped product is also archived or deleted on some databases; this
+        pass ensures that a valid shared service discount product exists, binds
+        it to pos_discount XML IDs, and links it to every register.
 
         available_in_pos is deliberately left alone: pos_discount already loads
         this product through _get_special_products, and flagging it would put a
@@ -472,8 +483,49 @@ class PosConfig(models.Model):
         """
         product = self.env.ref(
             'pos_discount.product_product_consumable', raise_if_not_found=False)
-        if not product:
-            return
+        if not product or not product.exists():
+            product = self.env['product.product'].sudo().search([
+                ('name', '=', 'Discount'),
+                ('type', '=', 'service'),
+            ], limit=1)
+        if not product or not product.exists():
+            product = self.env['product.product'].sudo().create({
+                'name': 'Discount',
+                'type': 'service',
+                'list_price': 0.0,
+                'standard_price': 0.0,
+                'sale_ok': True,
+                'active': True,
+                'available_in_pos': False,
+                'company_id': False,
+            })
+            product.sudo().write({'taxes_id': [(5, 0, 0)]})
+
+        # Ensure pos_discount XML IDs point to this valid product and template
+        imd = self.env['ir.model.data'].sudo()
+        rec = imd.search([('module', '=', 'pos_discount'), ('name', '=', 'product_product_consumable')], limit=1)
+        if rec:
+            rec.write({'res_id': product.id, 'noupdate': True})
+        else:
+            imd.create({
+                'module': 'pos_discount',
+                'name': 'product_product_consumable',
+                'model': 'product.product',
+                'res_id': product.id,
+                'noupdate': True,
+            })
+
+        tmpl_rec = imd.search([('module', '=', 'pos_discount'), ('name', '=', 'product_product_consumable_product_template')], limit=1)
+        if tmpl_rec:
+            tmpl_rec.write({'res_id': product.product_tmpl_id.id, 'noupdate': True})
+        else:
+            imd.create({
+                'module': 'pos_discount',
+                'name': 'product_product_consumable_product_template',
+                'model': 'product.template',
+                'res_id': product.product_tmpl_id.id,
+                'noupdate': True,
+            })
 
         repairs = {}
         if not product.active:
@@ -491,8 +543,9 @@ class PosConfig(models.Model):
         # lines on an order; this pass only ever fills a field that is empty, so
         # there is no in-flight discount to disturb -- and skipping would leave
         # the panel broken on exactly the register someone is standing at.
-        for config in self.sudo().search([('discount_product_id', '=', False)]):
-            config.discount_product_id = product.id
+        for config in self.sudo().search([]):
+            if not config.discount_product_id or not config.discount_product_id.exists():
+                config.discount_product_id = product.id
 
     @api.model
     def _pos_retail_ensure_branch_scoping_and_cleanup(self):
