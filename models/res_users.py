@@ -618,8 +618,16 @@ class ResUsers(models.Model):
         if pos_user_group and pos_user_group not in self.group_ids:
             updates["group_ids"] = [(4, pos_user_group.id)]
 
-        # Never restrict administrators from backend access
-        if (self.has_group("base.group_system") or self.has_group("base.group_erp_manager")) and self.pos_restrict_backend:
+        # Never restrict administrators or managers from backend access
+        is_admin_or_mgr = (
+            self.id in (1, 2)
+            or (self.login or '').lower() in ('admin', 'administrator', 'root')
+            or self.has_group("base.group_system")
+            or self.has_group("base.group_erp_manager")
+            or self.has_group("point_of_sale.group_pos_manager")
+            or self.has_group("sales_team.group_sale_manager")
+        )
+        if is_admin_or_mgr and self.pos_restrict_backend:
             updates["pos_restrict_backend"] = False
 
         if self.pos_config_id and self.pos_config_id.company_id:

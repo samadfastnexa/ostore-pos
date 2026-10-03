@@ -223,21 +223,21 @@ class PosRetailCustomerLedgerLine(models.Model):
 
     def action_adjust_balance(self):
         """Open customer ledger adjustment wizard for this line's customer."""
-        self.ensure_one()
+        partner = self.partner_id if len(self) == 1 else (self.mapped('partner_id')[:1] if self else False)
         return {
             'type': 'ir.actions.act_window',
-            'name': _("Khata Adjustment"),
+            'name': _("Adjust Khata / Edit Ledger"),
             'res_model': 'pos.retail.ledger.adjustment',
             'view_mode': 'form',
             'target': 'new',
             'context': {
-                'default_partner_id': self.partner_id.id,
+                'default_partner_id': partner.id if partner else False,
             },
         }
 
     def action_receive_payment(self):
         """Open khata payment wizard for this line's customer."""
-        self.ensure_one()
+        partner = self.partner_id if len(self) == 1 else (self.mapped('partner_id')[:1] if self else False)
         return {
             'type': 'ir.actions.act_window',
             'name': _("Receive Payment"),
@@ -245,7 +245,7 @@ class PosRetailCustomerLedgerLine(models.Model):
             'view_mode': 'form',
             'target': 'new',
             'context': {
-                'default_partner_id': self.partner_id.id,
+                'default_partner_id': partner.id if partner else False,
             },
         }
 
@@ -483,7 +483,7 @@ class PosRetailVendorLedgerLine(models.Model):
 
     def action_adjust_balance(self):
         """Open vendor ledger adjustment wizard for this line's vendor."""
-        self.ensure_one()
+        partner = self.partner_id if len(self) == 1 else (self.mapped('partner_id')[:1] if self else False)
         return {
             'type': 'ir.actions.act_window',
             'name': _("Vendor Khata Adjustment"),
@@ -491,7 +491,7 @@ class PosRetailVendorLedgerLine(models.Model):
             'view_mode': 'form',
             'target': 'new',
             'context': {
-                'default_partner_id': self.partner_id.id,
+                'default_partner_id': partner.id if partner else False,
             },
         }
 

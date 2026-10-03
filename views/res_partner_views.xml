@@ -256,12 +256,19 @@
                          narrower "Adjust Customer Khata" permission, so the
                          person who settles udhaar at the counter can do it
                          without also being handed the books. -->
+                    <button name="action_open_ledger_adjustment" type="object"
+                            string="Adjust Khata / Edit Ledger" class="btn-primary" icon="fa-sliders"
+                            groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups,point_of_sale.group_pos_user,point_of_sale.group_pos_manager"/>
                     <button name="action_open_khata_payment" type="object"
-                            string="Receive Payment" class="btn-primary"
-                            groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups"/>
+                            string="Receive Payment" class="btn-success" icon="fa-money"
+                            groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups,point_of_sale.group_pos_user,point_of_sale.group_pos_manager"/>
+                    <button name="action_open_vendor_ledger_adjustment" type="object"
+                            string="Vendor Khata Adjustment" class="btn-warning text-dark" icon="fa-sliders"
+                            invisible="not supplier_rank"
+                            groups="account.group_account_invoice,purchase.group_purchase_manager,point_of_sale.group_pos_manager"/>
                     <button name="action_view_outstanding_invoices" type="object"
                             string="Outstanding Invoices"
-                            groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups"
+                            groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups,point_of_sale.group_pos_user,point_of_sale.group_pos_manager"
                             invisible="not pos_outstanding_balance"/>
                     <button name="action_print_customer_ledger" type="object"
                             string="Print Ledger" icon="fa-print" class="btn-secondary"
@@ -269,13 +276,6 @@
                     <button name="action_download_customer_ledger_pdf" type="object"
                             string="Download Ledger PDF" icon="fa-file-pdf-o" class="btn-secondary"
                             groups="account.group_account_invoice,account.group_account_readonly,point_of_sale.group_pos_user,pos_retail.perm_customer_ledger_view_res_groups"/>
-                    <button name="action_open_ledger_adjustment" type="object"
-                            string="Khata Adjustment"
-                            groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups"/>
-                    <button name="action_open_vendor_ledger_adjustment" type="object"
-                            string="Vendor Khata Adjustment"
-                            invisible="not supplier_rank"
-                            groups="account.group_account_invoice,purchase.group_purchase_manager"/>
 
                 </header>
             </sheet>
@@ -314,6 +314,17 @@
                         <group string="Balances &amp; Rewards">
                             <field name="pos_refund_total"/>
                             <field name="pos_outstanding_balance" widget="monetary"/>
+                            <div class="d-flex align-items-center gap-2 mt-2 mb-2" colspan="2">
+                                <button name="action_open_ledger_adjustment" type="object"
+                                        string="Adjust Khata / Edit Ledger" class="btn btn-sm btn-primary" icon="fa-sliders"
+                                        groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups,point_of_sale.group_pos_user,point_of_sale.group_pos_manager"/>
+                                <button name="action_open_khata_payment" type="object"
+                                        string="Receive Payment" class="btn btn-sm btn-success" icon="fa-money"
+                                        groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups,point_of_sale.group_pos_user,point_of_sale.group_pos_manager"/>
+                                <button name="action_view_customer_ledger" type="object"
+                                        string="View Full Ledger" class="btn btn-sm btn-outline-secondary" icon="fa-book"
+                                        groups="account.group_account_invoice,account.group_account_readonly,point_of_sale.group_pos_user,pos_retail.perm_customer_ledger_view_res_groups"/>
+                            </div>
                             <field name="credit_limit" string="Credit Limit" widget="monetary"
                                    groups="account.group_account_invoice,account.group_account_readonly"
                                    help="How much this customer may owe at once. Zero means no limit. Checked at the till when paying by Customer Credit."/>

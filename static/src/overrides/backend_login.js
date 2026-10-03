@@ -3,30 +3,22 @@
 import { patch } from "@web/core/utils/patch";
 import { LoginScreen } from "@point_of_sale/app/screens/login_screen/login_screen";
 
-// Navigate back to the Admin Panel / Control Center cleanly.
+// Navigate to Admin Panel / Login from the till lock screen.
 //
-// Previously, if module_pos_hr was enabled and !this.pos.login, it forcibly logged
-// the user out to /web/session/logout. That destroyed the admin session.
-// Instead, if the browser is already signed into a user account with backend access,
-// we navigate directly back to /odoo with active branch scoping preserved.
+// When the cashier closes or locks the register, clicking "Admin Panel / Control Center"
+// should cleanly log out the cashier's till session and redirect to the backend login page
+// (/web/session/logout?redirect=/web/login) so the administrator can enter their credentials
+// and securely log into the Admin Panel.
 patch(LoginScreen.prototype, {
     async clickBack() {
-        const kioskUserId = this.pos.config.pos_retail_kiosk_user_id?.[0] || this.pos.config.pos_retail_kiosk_user_id;
-        const isKiosk = kioskUserId && this.pos.user?.id === kioskUserId;
-        if (isKiosk) {
-            window.location.href = "/web/login";
+        // If currently in PIN entry mode (button says "Discard"), simply cancel PIN mode.
+        if (this.pos?.login && this.pos?.config?.module_pos_hr) {
+            this.state.pin = "";
+            this.pos.login = false;
             return;
         }
-        if (typeof this.pos.redirectToBackend === "function") {
-            this.pos.redirectToBackend();
-            return;
-        }
-        const companyId =
-            this.pos.company?.id ||
-            this.pos.config?.company_id?.[0] ||
-            this.pos.config?.company_id?.id ||
-            this.pos.config?.company_id;
-        const cidsParam = companyId ? `?cids=${companyId}` : "";
-        window.location.href = `/odoo${cidsParam}`;
+
+        // Redirect to login page for the administrator, logging out any active cashier session.
+        window.location.href = "/web/session/logout?redirect=/web/login";
     },
 });

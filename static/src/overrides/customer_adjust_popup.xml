@@ -2,7 +2,7 @@
 <templates xml:space="preserve">
 
     <t t-name="pos_retail.CustomerAdjustPopup">
-        <Dialog size="'md'" title="'Adjust Customer Khata: ' + (partner ? partner.name : '')" bodyClass="'pos-retail-customer-adjust-modal'">
+        <Dialog size="'md'" title="'Adjust / Edit Customer Ledger: ' + (partner ? partner.name : '')" bodyClass="'pos-retail-customer-adjust-modal'">
             <div class="pos-retail-customer-adjust-popup p-1">
 
                 <!-- Customer Quick Header Info -->

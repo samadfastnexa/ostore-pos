@@ -39,7 +39,7 @@
                     </div>
                 </div>
 
-                <!-- Right Header Actions: Switch/Change partner & Cart sync -->
+                <!-- Right Header Actions: Switch/Change partner & Cart sync & Quick Adjust -->
                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
                     <span t-if="isCurrentOrderPartner" class="badge text-bg-success py-1 px-2" style="font-size: 0.75rem;">
                         <i class="fa fa-check-circle me-1"/>In Current Cart
@@ -51,6 +51,25 @@
                             t-on-click="setAsCurrentOrderCustomer"
                             title="Set this partner to active POS Cart">
                         <i class="fa fa-shopping-cart"/> Set to Cart
+                    </button>
+                    <!-- Quick Adjust Khata Button in Header -->
+                    <button t-if="state.activeSide === 'customer'"
+                            type="button"
+                            class="btn btn-sm btn-primary fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
+                            style="font-size: 0.78rem;"
+                            t-on-click="onClickAdjustCustomerKhata"
+                            title="Adjust Customer Khata / Edit Ledger Balance">
+                        <i class="fa fa-sliders"/>
+                        <span>Adjust Khata</span>
+                    </button>
+                    <button t-elif="state.activeSide === 'vendor'"
+                            type="button"
+                            class="btn btn-sm btn-warning text-dark fw-bold d-flex align-items-center gap-1 py-1 px-2 shadow-sm"
+                            style="font-size: 0.78rem;"
+                            t-on-click="onClickAdjustVendorKhata"
+                            title="Adjust Vendor Khata / Edit Ledger Balance">
+                        <i class="fa fa-sliders"/>
+                        <span>Adjust Khata</span>
                     </button>
                     <div class="btn-group shadow-sm">
                         <button type="button"
@@ -277,7 +296,7 @@
                                     t-on-click="onClickAdjustCustomerKhata"
                                     title="Adjust Customer Khata (Old Balance / Waiver / Correction)">
                                 <i class="fa fa-sliders"/>
-                                <span>Adjust Khata</span>
+                                <span>Adjust Khata / Edit Ledger</span>
                             </button>
                             <button type="button"
                                     class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 py-1 px-3 shadow-sm"
@@ -311,18 +330,28 @@
                             </div>
                             <!-- 3. Total Outstanding -->
                             <div class="col-6 col-md-4">
-                                <div class="p-2 border rounded h-100"
+                                <div class="p-2 border rounded h-100 d-flex flex-column justify-content-between"
                                      t-att-class="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0 ? 'bg-danger-subtle border-danger' : 'bg-success-subtle border-success'">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">3. Total Outstanding</span>
-                                        <span t-if="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0"
-                                              class="badge text-bg-danger" style="font-size: 0.65rem;">Owed</span>
-                                        <span t-else="" class="badge text-bg-success" style="font-size: 0.65rem;">Clear</span>
+                                    <div>
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">3. Total Outstanding</span>
+                                            <span t-if="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0"
+                                                  class="badge text-bg-danger" style="font-size: 0.65rem;">Owed</span>
+                                            <span t-else="" class="badge text-bg-success" style="font-size: 0.65rem;">Clear</span>
+                                        </div>
+                                        <div class="fs-6 fw-bold"
+                                             t-att-class="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0 ? 'text-danger' : 'text-success'"
+                                             t-esc="state.data ? (state.data.total_outstanding_formatted || state.data.customer_balance.formatted) : formatCurrency(partner.pos_outstanding_balance)"/>
+                                        <div class="small text-muted" style="font-size: 0.72rem;">Across all unpaid transactions</div>
                                     </div>
-                                    <div class="fs-6 fw-bold"
-                                         t-att-class="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0 ? 'text-danger' : 'text-success'"
-                                         t-esc="state.data ? (state.data.total_outstanding_formatted || state.data.customer_balance.formatted) : formatCurrency(partner.pos_outstanding_balance)"/>
-                                    <div class="small text-muted" style="font-size: 0.72rem;">Across all unpaid transactions</div>
+                                    <button type="button"
+                                            class="btn btn-xs btn-outline-primary mt-2 w-100 py-1 fw-bold d-flex align-items-center justify-content-center gap-1 shadow-sm"
+                                            style="font-size: 0.74rem;"
+                                            t-on-click="onClickAdjustCustomerKhata"
+                                            title="Edit or adjust this customer's khata balance">
+                                        <i class="fa fa-sliders"/>
+                                        <span>Edit / Adjust Balance</span>
+                                    </button>
                                 </div>
                             </div>
                             <!-- 4. Outstanding Invoices Count -->
@@ -442,6 +471,34 @@
                 <div class="pos-retail-history__body border rounded p-2 bg-light">
                     <!-- 1. Sales & Orders -->
                     <t t-if="state.customerTab === 'sales'">
+                        <div class="d-flex align-items-center justify-content-between mb-2 p-2 bg-white rounded border flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="small text-muted">
+                                    Total Orders: <strong class="text-dark" t-esc="state.data ? state.data.sales_count : 0"/>
+                                </span>
+                                <span class="badge" t-att-class="(state.data ? state.data.customer_balance.amount : partner.pos_outstanding_balance) > 0 ? 'text-bg-danger' : 'text-bg-success'">
+                                    Khata Balance: <t t-esc="state.data ? state.data.customer_balance.formatted : formatCurrency(partner.pos_outstanding_balance)"/>
+                                </span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button"
+                                        class="btn btn-sm btn-primary fw-bold d-flex align-items-center gap-1 py-1 px-3 shadow-sm"
+                                        style="font-size: 0.78rem;"
+                                        t-on-click="onClickAdjustCustomerKhata"
+                                        title="Adjust Customer Khata / Edit Ledger Balance">
+                                    <i class="fa fa-sliders"/>
+                                    <span>Adjust Khata / Edit Ledger</span>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 py-1 px-3 shadow-sm"
+                                        style="font-size: 0.78rem;"
+                                        t-on-click="onClickReceivePayment"
+                                        title="Receive Payment from Customer">
+                                    <i class="fa fa-money"/>
+                                    <span>Receive Payment</span>
+                                </button>
+                            </div>
+                        </div>
                         <div t-if="!state.data or !state.data.sales.length" class="text-muted p-3 text-center">
                             No sales orders recorded for this customer.
                         </div>
@@ -566,6 +623,33 @@
 
                     <!-- 5. Credit Sales -->
                     <t t-if="state.customerTab === 'credit'">
+                        <div class="d-flex align-items-center justify-content-between mb-2 p-2 bg-white rounded border flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa fa-book text-primary fs-5"/>
+                                <div>
+                                    <div class="fw-bold small text-dark">Customer Khata &amp; Credit Ledger</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">Recorded credit sales, payments, and balance adjustments</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button"
+                                        class="btn btn-sm btn-primary fw-bold d-flex align-items-center gap-1 py-1 px-3 shadow-sm"
+                                        style="font-size: 0.78rem;"
+                                        t-on-click="onClickAdjustCustomerKhata"
+                                        title="Adjust Customer Khata (Add Old Debt / Waive / Set Exact Balance)">
+                                    <i class="fa fa-sliders"/>
+                                    <span>Adjust Khata / Edit Balance</span>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 py-1 px-3 shadow-sm"
+                                        style="font-size: 0.78rem;"
+                                        t-on-click="onClickReceivePayment"
+                                        title="Receive Khata Payment from this Customer">
+                                    <i class="fa fa-money"/>
+                                    <span>Receive Payment</span>
+                                </button>
+                            </div>
+                        </div>
                         <div t-if="!state.data or !state.data.credit_sales.length" class="text-muted p-3 text-center">
                             No credit sales recorded for this customer.
                         </div>
@@ -948,11 +1032,35 @@
                         </button>
                         <button t-if="state.activeSide === 'customer'"
                                 type="button"
+                                class="btn btn-primary fw-bold d-flex align-items-center gap-1 px-3 shadow-sm"
+                                t-on-click="onClickAdjustCustomerKhata"
+                                title="Adjust Customer Khata (Edit Balance / Waiver / Opening Balance / Debt Correction)">
+                            <i class="fa fa-sliders me-1"/>
+                            <span>Adjust Khata / Edit Ledger</span>
+                        </button>
+                        <button t-if="state.activeSide === 'customer'"
+                                type="button"
                                 class="btn btn-success fw-bold d-flex align-items-center gap-1 px-3 shadow-sm"
                                 t-on-click="onClickReceivePayment"
                                 title="Receive Khata payment from this customer">
                             <i class="fa fa-money me-1"/>
                             <span>Receive Payment</span>
+                        </button>
+                        <button t-elif="state.activeSide === 'vendor'"
+                                type="button"
+                                class="btn btn-warning text-dark fw-bold d-flex align-items-center gap-1 px-3 shadow-sm"
+                                t-on-click="onClickAdjustVendorKhata"
+                                title="Adjust Vendor Khata (Edit Balance / Rebate / Opening Balance)">
+                            <i class="fa fa-sliders me-1"/>
+                            <span>Adjust Vendor Khata</span>
+                        </button>
+                        <button t-if="state.activeSide === 'vendor'"
+                                type="button"
+                                class="btn btn-success fw-bold d-flex align-items-center gap-1 px-3 shadow-sm"
+                                t-on-click="onClickPayVendor"
+                                title="Pay Vendor from Till">
+                            <i class="fa fa-money me-1"/>
+                            <span>Pay Vendor</span>
                         </button>
                         <button type="button" class="btn btn-secondary px-4" t-on-click="() => this.props.close()">
                             Close

@@ -165,6 +165,14 @@ export class PosRetailCustomerAdjustPopup extends Component {
             this.partner.pos_outstanding_balance = result.new_balance;
             this.partner.balance_formatted = result.new_balance_formatted;
 
+            if (this.pos?.models?.["res.partner"]) {
+                const loadedPartner = this.pos.models["res.partner"].get(this.partner.id);
+                if (loadedPartner) {
+                    loadedPartner.pos_outstanding_balance = result.new_balance;
+                    loadedPartner.credit = result.new_balance;
+                }
+            }
+
             this.notification.add(
                 _t("Customer Khata adjusted (%(dir)s %(amt)s). New balance: %(bal)s", {
                     dir: result.direction_label,

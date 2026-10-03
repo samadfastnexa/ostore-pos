@@ -65,6 +65,10 @@
                  owner reads. -->
             <list string="Customer Ledger" js_class="pos_retail_ledger_list"
                   create="false" delete="false">
+                <header>
+                    <button name="action_adjust_balance" type="object" string="Adjust Khata / Edit Balance" class="btn-primary" icon="fa-sliders"/>
+                    <button name="action_receive_payment" type="object" string="Receive Payment" class="btn-success" icon="fa-money"/>
+                </header>
                 <field name="currency_id" column_invisible="True"/>
                 <field name="datetime" optional="show"/>
                 <field name="partner_id" optional="show"/>
@@ -103,8 +107,13 @@
                 <field name="company_id" optional="hide" groups="base.group_multi_company"/>
                 <field name="origin" optional="hide"/>
                 <field name="reference" optional="show"/>
-                <button name="action_open_move" type="object" string="View Entry" icon="fa-file-text-o" title="View Journal Entry / Invoice"/>
+                <button name="action_open_move" type="object" string="View" icon="fa-file-text-o" title="View Journal Entry / Invoice"/>
+                <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil" title="Edit / Modify Entry"
+                        invisible="transaction_type != 'adjustment'"/>
                 <button name="action_adjust_balance" type="object" string="Adjust" icon="fa-sliders" title="Adjust Khata Balance"/>
+                <button name="action_receive_payment" type="object" string="Pay" icon="fa-money" title="Receive Khata Payment"/>
+                <button name="action_reverse_entry" type="object" string="Reverse" icon="fa-undo" title="Reverse / Cancel Entry"
+                        invisible="transaction_type not in ('adjustment', 'payment')"/>
             </list>
         </field>
     </record>
@@ -239,6 +248,9 @@
         <field name="arch" type="xml">
             <list string="Vendor Ledger" js_class="pos_retail_ledger_list"
                   create="false" delete="false">
+                <header>
+                    <button name="action_adjust_balance" type="object" string="Adjust Vendor Khata" class="btn-warning text-dark" icon="fa-sliders"/>
+                </header>
                 <field name="currency_id" column_invisible="True"/>
                 <field name="datetime" optional="show"/>
                 <field name="partner_id" optional="show"/>
@@ -272,8 +284,12 @@
                 <field name="user_id" optional="show"/>
                 <field name="company_id" optional="hide" groups="base.group_multi_company"/>
                 <field name="reference" optional="show"/>
-                <button name="action_open_move" type="object" string="View Entry" icon="fa-file-text-o" title="View Journal Entry / Bill"/>
+                <button name="action_open_move" type="object" string="View" icon="fa-file-text-o" title="View Journal Entry / Bill"/>
+                <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil" title="Edit / Modify Entry"
+                        invisible="transaction_type != 'adjustment'"/>
                 <button name="action_adjust_balance" type="object" string="Adjust" icon="fa-sliders" title="Adjust Vendor Khata Balance"/>
+                <button name="action_reverse_entry" type="object" string="Reverse" icon="fa-undo" title="Reverse / Cancel Entry"
+                        invisible="transaction_type not in ('adjustment', 'payment')"/>
             </list>
         </field>
     </record>

@@ -110,13 +110,17 @@ class PosRetailSession(Session):
 class PosRetailHome(Home):
     """Signing in with a password trusts this browser again."""
 
-    @http.route()
+    @http.route('/web/login', type='http', auth="none", csrf=False)
     def web_login(self, redirect=None, **kw):
         response = super().web_login(redirect=redirect, **kw)
         # request.session.uid is set only once credentials actually passed,
         # so this clears the marker on a successful sign-in and leaves it
         # alone when someone merely loaded the login page or got the password
         # wrong.
-        if request.session.uid:
-            response.set_cookie(KIOSK_BLOCK_COOKIE, '', max_age=0)
+        if request.session.uid and hasattr(response, 'set_cookie'):
+            try:
+                response.set_cookie(KIOSK_BLOCK_COOKIE, '', max_age=0)
+            except Exception:
+                pass
         return response
+

@@ -85,6 +85,21 @@ def _ensure_active_pos_session(user, env=None):
     return pos_config
 
 
+def _is_manager_or_admin(user):
+    """Check if the user is a system administrator, POS manager, or general manager."""
+    if not user or not user.exists():
+        return False
+    return bool(
+        user.id in (1, 2)
+        or (user.login or '').lower() in ('admin', 'administrator', 'root')
+        or user.has_group('base.group_system')
+        or user.has_group('base.group_erp_manager')
+        or user.has_group('point_of_sale.group_pos_manager')
+        or user.has_group('sales_team.group_sale_manager')
+        or user.has_group('account.group_account_manager')
+    )
+
+
 class PosDirectLoginHome(Home):
 
     def _login_redirect(self, uid, redirect=None, env=None):
@@ -100,17 +115,22 @@ class PosDirectLoginHome(Home):
             if env:
                 user = env["res.users"].sudo().browse(uid)
 
-            if user and user.exists() and user.pos_direct_login and user.pos_config_id:
-                if not redirect or redirect in ("/odoo", "/web", "/odoo/", "/web/", "/", "/web/login"):
-                    pos_config = _ensure_active_pos_session(user, env=env)
-                    if pos_config:
-                        return f"/pos/ui/{pos_config.id}?from_backend=True"
-                elif redirect and "/pos/ui" in redirect:
-                    _ensure_active_pos_session(user, env=env)
-                    if "from_backend=True" not in redirect:
-                        delimiter = "&" if "?" in redirect else "?"
-                        redirect = f"{redirect}{delimiter}from_backend=True"
-                    return redirect
+            if user and user.exists():
+                # Administrators and managers should never be forced into POS on login unless explicitly heading to /pos/ui
+                if _is_manager_or_admin(user) and not (redirect and "/pos/ui" in redirect):
+                    return super()._login_redirect(uid, redirect=redirect)
+
+                if user.pos_direct_login and user.pos_restrict_backend and user.pos_config_id:
+                    if not redirect or redirect in ("/odoo", "/web", "/odoo/", "/web/", "/", "/web/login"):
+                        pos_config = _ensure_active_pos_session(user, env=env)
+                        if pos_config:
+                            return f"/pos/ui/{pos_config.id}?from_backend=True"
+                    elif redirect and "/pos/ui" in redirect:
+                        _ensure_active_pos_session(user, env=env)
+                        if "from_backend=True" not in redirect:
+                            delimiter = "&" if "?" in redirect else "?"
+                            redirect = f"{redirect}{delimiter}from_backend=True"
+                        return redirect
         return super()._login_redirect(uid, redirect=redirect)
 
     @http.route(["/web", "/odoo", "/odoo/<path:subpath>", "/scoped_app/<path:subpath>"], type="http", auth="none")
@@ -118,11 +138,14 @@ class PosDirectLoginHome(Home):
         """Restrict backend access for direct-login cashiers and redirect appropriately."""
         if request.session.uid:
             user = request.env["res.users"].sudo().browse(request.session.uid)
-            # Super-administrators must NEVER be restricted from backend access
-            if user.exists() and (user.has_group("base.group_system") or user.has_group("base.group_erp_manager")):
+            if not user.exists():
                 return super().web_client(s_action=s_action, **kw)
 
-            if user.exists() and user.pos_direct_login and user.pos_restrict_backend and user.pos_config_id:
+            # Administrators, Managers, unrestricted users, or requests from POS must ALWAYS have full backend access
+            if _is_manager_or_admin(user) or not user.pos_restrict_backend or request.params.get('from_pos') or kw.get('from_pos'):
+                return super().web_client(s_action=s_action, **kw)
+
+            if user.pos_direct_login and user.pos_restrict_backend and user.pos_config_id:
                 pos_config = user.sudo().pos_config_id
                 active_session = request.env["pos.session"].sudo().search([
                     ("config_id", "=", pos_config.id),
@@ -131,7 +154,8 @@ class PosDirectLoginHome(Home):
                 ], limit=1)
 
                 if not active_session and not user.pos_auto_open_session:
-                    return request.redirect("/web/session/logout")
+                    # Do NOT call /web/session/logout mid-flight - that destroys session and causes CSRF token mismatch!
+                    return request.redirect("/web/login")
 
                 _ensure_active_pos_session(user)
                 return request.redirect(f"/pos/ui/{pos_config.id}?from_backend=True")
@@ -143,10 +167,11 @@ class PosDirectLoginHome(Home):
         """Root redirect for direct login cashiers."""
         if request.db and request.session.uid:
             user = request.env["res.users"].sudo().browse(request.session.uid)
-            if user.exists() and user.pos_direct_login and user.pos_config_id:
-                pos_config = _ensure_active_pos_session(user)
-                if pos_config:
-                    return request.redirect(f"/pos/ui/{pos_config.id}?from_backend=True")
+            if user.exists() and user.pos_direct_login and user.pos_restrict_backend and user.pos_config_id:
+                if not _is_manager_or_admin(user):
+                    pos_config = _ensure_active_pos_session(user)
+                    if pos_config:
+                        return request.redirect(f"/pos/ui/{pos_config.id}?from_backend=True")
         return super().index(s_action=s_action, db=db, **kw)
 
 
