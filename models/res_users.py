@@ -85,10 +85,14 @@ class ResUsers(models.Model):
         go over, one boolean per feature that has a button.
         """
         rows = super()._load_pos_data_read(records, config)
+        Permission = self.env['pos.retail.access.permission']
+        mapping = Permission._pos_retail_till_capability_groups()
         for row in rows:
             user = self.browse(row['id'])
             for flag, group_xmlid in self.POS_RETAIL_SESSION_CAPABILITIES.items():
                 row[flag] = user.has_group(group_xmlid)
+            for flag, _label in Permission.TILL_CAPABILITIES:
+                row[flag] = Permission._pos_retail_user_has_till_capability(user, flag, mapping)
         return rows
 
     def _pos_retail_default_company(self):

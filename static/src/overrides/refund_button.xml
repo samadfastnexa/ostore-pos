@@ -28,7 +28,7 @@
         </xpath>
 
         <xpath expr="//button[hasclass('orders-button')]" position="after">
-            <button t-if="pos.getCashier()?._can_refund"
+            <button t-if="pos.getCashier()?._can_refund !== false"
                     class="pos-retail-refund-btn btn btn-lg lh-lg d-flex align-items-center justify-content-center"
                     t-on-click="() => this.posRetailStartRefund()"
                     title="Process Return / Refund">
