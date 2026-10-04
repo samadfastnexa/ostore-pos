@@ -27,7 +27,9 @@ Run every command as `root`. Allow about **an hour**, most of it waiting on step
 | 11 | Run it as a service | Survives logout, crash and reboot |
 | 12 | Web server | Reachable on port 80, POS live-sync included |
 | 13 | Nightly backup, proven | Before there is anything to lose |
-| 14 | Routine update & redeploy | Single command to pull git changes, upgrade modules, and restart |
+| 14 | PostgreSQL logging & disk safeguards | Prevents 80GB log explosions and crashes on aaPanel |
+| 15 | Live catalogue sheet imports | Automated imports for Bahria branch and standalone tabs |
+| 16 | Routine update & redeploy | Pull git changes, upgrade modules (`-u pos_retail`), and restart |
 
 Each step is written the same way: **what you are doing**, the commands, an **Expect**
 line telling you what success looks like, and **why** — because the reasons are the part
@@ -348,6 +350,7 @@ mkdir -p /etc/odoo /var/log/odoo && chown odoo:odoo /var/log/odoo
 cat > /etc/odoo/odoo.conf <<'EOF'
 [options]
 admin_passwd = CHANGEME_MASTER
+db_name = ostore_live
 db_host = 127.0.0.1
 db_port = 5432
 db_user = odoo
@@ -373,6 +376,7 @@ Edit both `CHANGEME` values before continuing.
 | Setting | Why it is there |
 |---|---|
 | `admin_passwd` | Guards database create/drop/restore. Not a login password. |
+| `db_name = ostore_live` | **Mandatory when `list_db = False`**. Directs requests straight to `ostore_live`. Without this line, any visitor to `/web/login` is redirected to `/web/database/selector`, which immediately errors with *"The database manager has been disabled by the administrator"*. |
 | `db_host = 127.0.0.1` | PostgreSQL listens on localhost only here. Keep it that way. |
 | `addons_path` | Where Odoo looks for modules; core first, then yours. |
 | `data_dir` | Attachments, product images and sessions on disk. |
@@ -767,7 +771,126 @@ does not survive that machine dying. `rsync` them somewhere else on a schedule t
 
 ---
 
-## 14. Routine updates and deployments
+## 14. PostgreSQL logging & disk safeguards (aaPanel specific)
+
+**What you are doing:** configuring PostgreSQL log rotation, automated log purging, and daemon lifecycle commands to prevent disk exhaustion.
+
+> ⚠️ **The 80GB Log Trap:** On aaPanel, PostgreSQL logs to `/www/server/pgsql/logs/`. By default, without log rotation or level filtering, PostgreSQL logs verbose connection and query telemetry, which can generate **80GB+ of log files** within weeks, consuming 100% of disk space (`No space left on device`). When disk space reaches 0MB, PostgreSQL immediately crashes and refuses connections (`psycopg2.OperationalError: connection to server at 127.0.0.1, port 5432 failed: Connection refused`), taking Odoo down with it.
+
+### A. Cap PostgreSQL Logging in `postgresql.conf`
+
+Edit `/www/server/pgsql/data/postgresql.conf`:
+
+```ini
+# Log rotation and verbosity settings
+logging_collector = on
+log_directory = '/www/server/pgsql/logs'
+log_filename = 'postgresql-%Y-%m-%d.log'
+log_rotation_age = 1d
+log_rotation_size = 100MB
+log_truncate_on_rotation = on
+log_min_messages = warning
+log_min_error_statement = error
+log_statement = 'none'
+```
+
+Reload PostgreSQL configuration:
+```bash
+sudo -u postgres /www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data reload
+```
+
+### B. Automated Daily Cleanup Cron
+
+Set up a daily cron job to delete PostgreSQL log files older than 7 days:
+
+```bash
+cat > /etc/cron.d/pgsql-log-cleanup <<'EOF'
+0 3 * * * root find /www/server/pgsql/logs/ -name "postgresql-*.log" -mtime +7 -delete
+EOF
+```
+
+### C. aaPanel PostgreSQL Service Lifecycle
+
+Because PostgreSQL on aaPanel is installed under `/www/server/` and not as a native systemd unit, control it directly with `pg_ctl` as the `postgres` user:
+
+```bash
+# Start PostgreSQL:
+sudo -u postgres /www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data -l /www/server/pgsql/logs/postgresql-$(date +%F).log start
+
+# Stop PostgreSQL:
+sudo -u postgres /www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data stop -m fast
+
+# Restart PostgreSQL:
+sudo -u postgres /www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data -l /www/server/pgsql/logs/postgresql-$(date +%F).log restart
+
+# Status:
+sudo -u postgres /www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data status
+```
+
+> **Never run `pg_ctl` as `root`**: It will fail with `pg_ctl: cannot be run as root`. Always use `sudo -u postgres ...`.
+
+### D. Emergency Disk Recovery Checklist (If Disk Reaches 100%)
+
+When the server runs out of disk space (`df -h /` shows 100%):
+1. **Never delete actively open log files with `rm`** while the daemon is running, because Linux does not release unlinked disk space held by open file descriptors.
+2. Truncate active logs:
+   ```bash
+   sudo truncate -s 0 /www/server/pgsql/logs/postgresql-$(date +%F).log
+   sudo truncate -s 0 /var/log/odoo/odoo.log
+   ```
+3. Delete old log archives:
+   ```bash
+   find /www/server/pgsql/logs/ -name "*.log" ! -name "postgresql-$(date +%F).log" -delete
+   sudo journalctl --vacuum-size=50M
+   sudo apt-get clean
+   ```
+4. Restart PostgreSQL and Odoo once disk headroom is restored:
+   ```bash
+   sudo -u postgres /www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data -l /www/server/pgsql/logs/postgresql-$(date +%F).log start
+   sudo systemctl restart odoo
+   ```
+
+---
+
+## 15. Live catalogue sheet imports
+
+**What you are doing:** syncing inventory products, barcodes, brands, sizes, and opening stock from the Google Spreadsheet into Odoo.
+
+### A. Main Bahria Catalogue Import
+
+Imports and synchronizes all standard Bahria department tabs:
+
+```bash
+cd /opt/odoo/custom_addons/pos_retail
+
+# 1. Preview changes (Dry-run check, writes nothing):
+bash scripts/run_import_catalogue.sh
+
+# 2. Apply to live database:
+APPLY=1 bash scripts/run_import_catalogue.sh
+```
+
+### B. Standalone "1st oct 2026" Tab Import
+
+Imports **ONLY** the `1st oct 2026` tab without touching, comparing, or overwriting products created by other tabs:
+- Creates product templates under XML ID prefix `tab_1st_oct_2026_` in module `__import__`.
+- Automatically maps departments (Sanitary & Plumbing, Paints/Chemicals, Electric, Hardware).
+- Merges duplicate lines by adding quantities together.
+- Creates opening inventory counts in the Bahria warehouse.
+
+```bash
+cd /opt/odoo/custom_addons/pos_retail
+
+# 1. Preview changes (Dry-run check, writes nothing):
+bash scripts/run_import_1st_oct_2026.sh
+
+# 2. Apply to live database:
+APPLY=1 bash scripts/run_import_1st_oct_2026.sh
+```
+
+---
+
+## 16. Routine updates and deployments
 
 **What you are doing:** pulling the pushed code, upgrading `pos_retail`, then
 restarting and checking the live Odoo service. Run this as `root` after every addon
@@ -845,6 +968,10 @@ accounts, demo products and posted journal entries.
 
 | Symptom | Cause | Fix |
 |---|---|---|
+| `The database manager has been disabled by the administrator` | `db_name = ostore_live` missing in `odoo.conf` while `list_db = False` | Add `db_name = ostore_live` under `[options]` in `/etc/odoo/odoo.conf` and `systemctl restart odoo` |
+| `No space left on device` (Disk 100% full) | PostgreSQL logs in `/www/server/pgsql/logs/` exploded to 80GB+ without rotation | Truncate active log (`truncate -s 0`), delete old logs (`find ... -delete`), and apply Step 14 log rotation |
+| `connection to server at "127.0.0.1", port 5432 failed: Connection refused` | PostgreSQL daemon is stopped (often crashed when disk hit 100%) | Start PG with `sudo -u postgres /www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data -l /www/server/pgsql/logs/postgresql-$(date +%F).log start` |
+| `pg_ctl: cannot be run as root` | PostgreSQL security safeguard prevents execution by root | Run with `sudo -u postgres ...` |
 | `Using the database user 'postgres' … aborting` | `db_user` wrong in odoo.conf | must be `odoo` |
 | `role "odoo" does not exist` | step 6 not run | re-run step 6 |
 | `no pg_hba.conf entry for host` | PostgreSQL rejecting TCP auth | check `pg_hba.conf`; restore `/root/preinstall/pg_hba.conf.orig` |
@@ -852,7 +979,7 @@ accounts, demo products and posted journal entries.
 | Login page loads unstyled | `node-less` / `rtlcss` missing | re-run step 5, `systemctl restart odoo` |
 | Addon not in the Apps list | cloned to the wrong folder name | must be `pos_retail` |
 | `This account is currently not available` | `--system` user has no shell | keep `-s /bin/bash` |
-| Everything "running" but every page errors | PostgreSQL did not start after a reboot | step 2; `systemctl start pgsql` |
+| Everything "running" but every page errors | PostgreSQL did not start after a reboot | step 2; `systemctl start pgsql` or step 14 `pg_ctl start` |
 | Invoices download but look wrong | wkhtmltopdf is not the patched-Qt build | step 5; version must say *with patched qt* |
 | No PDF at all | `workers` is 1 | set 2 or more; see step 9 |
 | `pg_dump: server version mismatch` | using Ubuntu's client 16 against server 18 | step 3; never `apt install postgresql-client` |
