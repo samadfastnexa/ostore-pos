@@ -801,11 +801,11 @@ sudo -u postgres /www/server/pgsql/bin/pg_ctl -D /www/server/pgsql/data reload
 
 ### B. Automated Daily Cleanup Cron
 
-Set up a daily cron job to delete PostgreSQL log files older than 7 days:
+Set up a daily cron job to delete PostgreSQL log files older than 14 days:
 
 ```bash
 cat > /etc/cron.d/pgsql-log-cleanup <<'EOF'
-0 3 * * * root find /www/server/pgsql/logs/ -name "postgresql-*.log" -mtime +7 -delete
+0 3 * * * root find /www/server/pgsql/logs/ -name "postgresql-*.log" -mtime +14 -delete
 EOF
 ```
 
