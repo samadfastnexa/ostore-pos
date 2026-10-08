@@ -256,15 +256,44 @@
                          narrower "Adjust Customer Khata" permission, so the
                          person who settles udhaar at the counter can do it
                          without also being handed the books. -->
+                    <!-- CUSTOMER khata. Hidden on a contact who is a vendor and not
+                         a customer: used there, they put the supplier in the Customer
+                         Ledger as owing the shop (see pos_retail_ledger_sides.py). -->
                     <button name="action_open_ledger_adjustment" type="object"
                             string="Adjust Khata / Edit Ledger" class="btn-primary" icon="fa-sliders"
+                            invisible="supplier_rank and not customer_rank"
                             groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups,point_of_sale.group_pos_user,point_of_sale.group_pos_manager"/>
                     <button name="action_open_khata_payment" type="object"
                             string="Receive Payment" class="btn-success" icon="fa-money"
+                            invisible="supplier_rank and not customer_rank"
                             groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups,point_of_sale.group_pos_user,point_of_sale.group_pos_manager"/>
+                    <!-- VENDOR khata: its own buttons, only on a vendor. -->
+                    <button name="action_open_vendor_payment" type="object"
+                            string="Pay Vendor" class="btn-warning text-dark" icon="fa-truck"
+                            invisible="not supplier_rank"
+                            groups="account.group_account_invoice,purchase.group_purchase_manager,point_of_sale.group_pos_manager"/>
                     <button name="action_open_vendor_ledger_adjustment" type="object"
                             string="Vendor Khata Adjustment" class="btn-warning text-dark" icon="fa-sliders"
                             invisible="not supplier_rank"
+                            groups="account.group_account_invoice,purchase.group_purchase_manager,point_of_sale.group_pos_manager"/>
+                    <button name="action_view_vendor_ledger" type="object"
+                            string="Vendor Ledger" class="btn-secondary" icon="fa-book"
+                            invisible="not supplier_rank"
+                            groups="account.group_account_invoice,account.group_account_readonly,purchase.group_purchase_manager,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_view_res_groups"/>
+                    <button name="action_print_vendor_statement" type="object"
+                            string="Vendor Statement PDF" class="btn-secondary" icon="fa-file-pdf-o"
+                            invisible="not supplier_rank"
+                            groups="account.group_account_invoice,account.group_account_readonly,purchase.group_purchase_manager,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_view_res_groups"/>
+                    <!-- A contact who really is both is made so on purpose. -->
+                    <button name="action_pos_retail_also_customer" type="object"
+                            string="Also a Customer" class="btn-link"
+                            invisible="not supplier_rank or customer_rank"
+                            confirm="Give this vendor a customer khata as well? Do this only if they also buy from the shop on credit."
+                            groups="account.group_account_invoice,point_of_sale.group_pos_manager"/>
+                    <button name="action_pos_retail_also_vendor" type="object"
+                            string="Also a Vendor" class="btn-link"
+                            invisible="supplier_rank or not customer_rank"
+                            confirm="Give this customer a vendor khata as well? Do this only if the shop also buys from them."
                             groups="account.group_account_invoice,purchase.group_purchase_manager,point_of_sale.group_pos_manager"/>
                     <button name="action_view_outstanding_invoices" type="object"
                             string="Outstanding Invoices"
@@ -272,9 +301,11 @@
                             invisible="not pos_outstanding_balance"/>
                     <button name="action_print_customer_ledger" type="object"
                             string="Print Ledger" icon="fa-print" class="btn-secondary"
+                            invisible="supplier_rank and not customer_rank"
                             groups="account.group_account_invoice,account.group_account_readonly,point_of_sale.group_pos_user,pos_retail.perm_customer_ledger_view_res_groups"/>
                     <button name="action_download_customer_ledger_pdf" type="object"
                             string="Download Ledger PDF" icon="fa-file-pdf-o" class="btn-secondary"
+                            invisible="supplier_rank and not customer_rank"
                             groups="account.group_account_invoice,account.group_account_readonly,point_of_sale.group_pos_user,pos_retail.perm_customer_ledger_view_res_groups"/>
 
                 </header>
@@ -317,9 +348,11 @@
                             <div class="d-flex align-items-center gap-2 mt-2 mb-2" colspan="2">
                                 <button name="action_open_ledger_adjustment" type="object"
                                         string="Adjust Khata / Edit Ledger" class="btn btn-sm btn-primary" icon="fa-sliders"
+                                        invisible="supplier_rank and not customer_rank"
                                         groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups,point_of_sale.group_pos_user,point_of_sale.group_pos_manager"/>
                                 <button name="action_open_khata_payment" type="object"
                                         string="Receive Payment" class="btn btn-sm btn-success" icon="fa-money"
+                                        invisible="supplier_rank and not customer_rank"
                                         groups="account.group_account_invoice,pos_retail.perm_khata_adjust_res_groups,point_of_sale.group_pos_user,point_of_sale.group_pos_manager"/>
                                 <button name="action_view_customer_ledger" type="object"
                                         string="View Full Ledger" class="btn btn-sm btn-outline-secondary" icon="fa-book"

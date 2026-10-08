@@ -606,16 +606,64 @@
         ])]"/>
     </record>
 
+    <!-- Pay Vendor (see models/pos_retail_ledger_sides.py): the vendor-side twin
+         of Receive Khata Payment. -->
+    <record id="pos_retail_vendor_payment_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.vendor.payment.form</field>
+        <field name="model">pos.retail.vendor.payment</field>
+        <field name="arch" type="xml">
+            <form string="Pay Vendor">
+                <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert">
+                    <i class="fa fa-truck mt-1" role="img" aria-label="Info" title="Info"/>
+                    <div>Records money the shop has paid to this vendor. The amount goes
+                         out of the till or the bank and comes off what the shop owes them,
+                         oldest bills first. To correct a vendor balance with no money
+                         changing hands, use Vendor Khata Adjustment.</div>
+                </div>
+                <group>
+                    <group>
+                        <field name="partner_id" readonly="context.get('default_partner_id')"/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="company_id" invisible="1"/>
+                        <field name="amount_owed" readonly="1"/>
+                        <field name="amount"/>
+                    </group>
+                    <group>
+                        <field name="journal_id" widget="radio"/>
+                        <field name="date"/>
+                        <field name="memo" placeholder="e.g. cheque no. 5512"/>
+                    </group>
+                </group>
+                <div class="alert alert-info mb-2" role="alert"
+                     invisible="amount &lt;= amount_owed">
+                    That is more than the shop owes this vendor. The extra is kept as an
+                    advance against their next bill.
+                </div>
+                <footer>
+                    <button name="action_confirm" type="object" string="Pay Vendor" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Reporting: "Customer Ledger" and "Vendor Ledger" side by side, each
+         with its full ledger and its outstanding list, and both open to the
+         shop manager. The vendor pair used to be visible only to purchase
+         managers and accountants, so a manager saw one khata button, not two. -->
+    <menuitem id="pos_retail_menu_vendor_ledger_root" name="Vendor Ledger"
+        parent="point_of_sale.menu_point_rep" sequence="9"
+        groups="base.group_system,point_of_sale.group_pos_manager,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
+
     <menuitem id="pos_retail_menu_vendor_ledger" name="Vendor Ledger"
-        parent="point_of_sale.menu_point_rep" action="action_pos_retail_vendor_ledger"
-        sequence="9"
-        groups="base.group_system,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
+        parent="pos_retail_menu_vendor_ledger_root" action="action_pos_retail_vendor_ledger"
+        sequence="1"
+        groups="base.group_system,point_of_sale.group_pos_manager,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
 
     <menuitem id="pos_retail_menu_outstanding_vendor" name="Outstanding Vendors"
-
-        parent="point_of_sale.menu_point_rep" action="action_pos_retail_outstanding_vendor"
-        sequence="9"
-        groups="base.group_system,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
+        parent="pos_retail_menu_vendor_ledger_root" action="action_pos_retail_outstanding_vendor"
+        sequence="2"
+        groups="base.group_system,point_of_sale.group_pos_manager,purchase.group_purchase_manager,account.group_account_invoice,account.group_account_readonly,pos_retail.perm_vendor_ledger_view_res_groups"/>
 
     <menuitem id="pos_retail_menu_purchase_outstanding_vendor" name="Outstanding Vendors"
         parent="pos_retail.pos_retail_menu_vendor_reports" action="action_pos_retail_outstanding_vendor"

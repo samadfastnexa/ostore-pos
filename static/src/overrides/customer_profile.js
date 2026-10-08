@@ -81,8 +81,14 @@ export class PosRetailCustomerProfile extends Component {
                 [[partner.id]]
             );
             this.state.data = data;
-            // If partner is purely a supplier with no retail sales, default to vendor side
-            if (data.is_vendor && !data.sales_count && (data.purchase_orders_count || data.vendor_bills?.length)) {
+            // A vendor with nothing on the customer side opens on the vendor
+            // side -- including one just registered, with no bill yet. Such a
+            // vendor used to open on the customer side, where "Adjust Khata"
+            // and "Receive Payment" put his balance in the customer ledger.
+            const hasCustomerSide = data.sales_count
+                || Math.abs(data.customer_balance?.amount || 0) > 0.005
+                || data.payments?.length || data.charges?.length;
+            if (data.is_vendor && !hasCustomerSide) {
                 this.state.activeSide = "vendor";
             } else {
                 this.state.activeSide = "customer";
@@ -502,7 +508,7 @@ export class PosRetailCustomerProfile extends Component {
             }
         } else {
             const bills = this.state.data?.vendor_bills_total?.formatted || "0.00";
-            const paid = this.state.data?.vendor_payments_total?.formatted || "0.00";
+            const paid = this.state.data?.vendor_paid_total?.formatted || "0.00";
             const balance = this.state.data?.vendor_balance?.formatted || "0.00";
             lines.push(`*Total Vendor Bills:* ${bills}`);
             lines.push(`*Total Payments Made:* ${paid}`);

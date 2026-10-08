@@ -55,3 +55,4 @@ from . import pos_retail_thermal_label_wizard
 from . import product_barcode_columns
 from . import product_brand_columns
 from . import pos_retail_vendor
+from . import pos_retail_ledger_sides
