@@ -69,6 +69,10 @@ access_pos_retail_ledger_entry_edit_purchase,pos.retail.ledger.entry.edit.purcha
 access_pos_retail_ledger_entry_edit_pos_manager,pos.retail.ledger.entry.edit.pos.manager,model_pos_retail_ledger_entry_edit,point_of_sale.group_pos_manager,1,1,1,1
 access_pos_retail_ledger_adjustment_pos_manager,pos.retail.ledger.adjustment.pos.manager,model_pos_retail_ledger_adjustment,point_of_sale.group_pos_manager,1,1,1,1
 access_pos_retail_khata_payment_pos_manager,pos.retail.khata.payment.pos.manager,model_pos_retail_khata_payment,point_of_sale.group_pos_manager,1,1,1,1
+access_pos_retail_ledger_contact_add_admin,pos.retail.ledger.contact.add.admin,model_pos_retail_ledger_contact_add,base.group_system,1,1,1,1
+access_pos_retail_ledger_contact_add_invoice,pos.retail.ledger.contact.add.invoice,model_pos_retail_ledger_contact_add,account.group_account_invoice,1,1,1,1
+access_pos_retail_ledger_contact_add_purchase,pos.retail.ledger.contact.add.purchase,model_pos_retail_ledger_contact_add,purchase.group_purchase_manager,1,1,1,1
+access_pos_retail_ledger_contact_add_pos_manager,pos.retail.ledger.contact.add.pos_manager,model_pos_retail_ledger_contact_add,point_of_sale.group_pos_manager,1,1,1,1
 access_account_journal_internal_user,account.journal.internal.user,account.model_account_journal,base.group_user,1,0,0,0
 access_pos_retail_customer_refund_user,pos.retail.customer.refund.user,model_pos_retail_customer_refund,base.group_user,1,1,1,0
 access_pos_retail_customer_refund_pos_manager,pos.retail.customer.refund.pos.manager,model_pos_retail_customer_refund,point_of_sale.group_pos_manager,1,1,1,1

@@ -29,6 +29,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 from .pos_retail_ledger_sides import SIDES, check_may_enter as _check_may_correct
+from .res_company import TRADING_COMPANY_DOMAIN
 
 RELOAD = {'type': 'ir.actions.client', 'tag': 'soft_reload'}
 
@@ -285,4 +286,71 @@ class PosRetailLedgerEntryEdit(models.TransientModel):
             })
             move.action_post()
         _reconcile_open(self.env, partner, self.side, company)
+        return RELOAD
+
+
+class PosRetailLedgerContactAdd(models.TransientModel):
+    """Add a customer or a vendor from the ledger, with the balance they start on.
+
+    The ledgers list entries, so a contact with no entry is not on them and
+    there was nothing on the screen to add one: the shop had to leave the
+    ledger, create the contact elsewhere, come back and adjust. This is the one
+    dialog for both, and it files the contact on the side it was opened from.
+    """
+    _name = 'pos.retail.ledger.contact.add'
+    _description = "Add Customer / Vendor from the Ledger"
+
+    side = fields.Selection([('customer', "Customer"), ('vendor', "Vendor")], required=True, readonly=True,
+                            default=lambda self: self.env.context.get('default_side') or 'customer')
+    name = fields.Char(required=True)
+    phone = fields.Char()
+    city = fields.Char()
+    company_id = fields.Many2one(
+        'res.company', string="Branch", required=True, domain=TRADING_COMPANY_DOMAIN,
+        default=lambda self: self._default_company(),
+        help="The branch this customer or vendor belongs to. Their khata is kept in this branch.")
+    currency_id = fields.Many2one(related='company_id.currency_id')
+    opening_balance = fields.Monetary(
+        currency_field='currency_id',
+        help="For a customer: what they already owe the shop, brought over from the paper khata. "
+             "For a vendor: what the shop already owes them. Leave at zero to start from nothing.")
+    opening_date = fields.Date(string="Balance As Of", required=True, default=fields.Date.context_today)
+    note = fields.Char(help="Shown on the opening line of the ledger.")
+
+    @api.model
+    def _default_company(self):
+        company = self.env.company
+        if not company.child_ids:
+            return company
+        return self.env.companies.filtered(lambda c: not c.child_ids)[:1]
+
+    def action_confirm(self):
+        self.ensure_one()
+        _check_may_correct(self.env, self.side)
+        name = (self.name or '').strip()
+        if not name:
+            raise UserError(_("Enter a name."))
+        if self.opening_balance < 0:
+            raise UserError(_("The opening balance cannot be negative."))
+        Partner = self.env['res.partner'].sudo().with_company(self.company_id)
+        rank = 'supplier_rank' if self.side == 'vendor' else 'customer_rank'
+        same = Partner.search([('name', '=ilike', name), (rank, '>', 0),
+                               ('company_id', 'in', [False, self.company_id.id])], limit=1)
+        if same:
+            raise UserError(_(
+                "%(name)s is already a %(side)s in this branch. Choose them in the payment or "
+                "adjustment dialog instead of adding them again.",
+                name=same.display_name, side=_("vendor") if self.side == 'vendor' else _("customer")))
+        values = {'name': name, 'phone': (self.phone or '').strip(), 'city': (self.city or '').strip(),
+                  'company_id': self.company_id.id}
+        if self.side == 'vendor':
+            values.update(supplier_rank=1, customer_rank=0, is_company=True)
+        else:
+            values.update(customer_rank=1)
+        partner = Partner.create(values)
+        if self.opening_balance:
+            reason = self.note or _("Opening balance / paper khata")
+            method = (Partner.pos_retail_adjust_vendor_khata if self.side == 'vendor'
+                      else Partner.pos_retail_adjust_customer_khata)
+            method(partner.id, self.opening_balance, 'increase', reason, False, False, self.opening_date)
         return RELOAD

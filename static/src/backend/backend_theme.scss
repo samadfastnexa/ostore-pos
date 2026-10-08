@@ -408,3 +408,33 @@ $zx-muted: #6b6790;
         color: #fff;
     }
 }
+
+// ---------------------------------------------------------------------------
+// Ledger rows: the four correction buttons (views/pos_retail_ledgers_views.xml)
+// Small soft pills, one colour per action, so a row of them reads at a glance
+// and stays on one line instead of pushing the columns off the screen.
+// ---------------------------------------------------------------------------
+.o_list_view .o_data_row {
+    td:has(> div > .pos-retail-row-btn) > div {
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+    }
+
+    .btn.pos-retail-row-btn {
+        padding: 2px 10px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        line-height: 1.5;
+        white-space: nowrap;
+        text-decoration: none;
+
+        &:hover { filter: brightness(0.95); text-decoration: none; }
+
+        &.pos-retail-row-btn--edit   { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+        &.pos-retail-row-btn--pay    { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
+        &.pos-retail-row-btn--cancel { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+        &.pos-retail-row-btn--move   { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    }
+}

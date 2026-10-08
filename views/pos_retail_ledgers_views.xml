@@ -107,18 +107,23 @@
                 <field name="company_id" optional="hide" groups="base.group_multi_company"/>
                 <field name="origin" optional="hide"/>
                 <field name="reference" optional="show"/>
-                <button name="action_open_move" type="object" string="View" icon="fa-file-text-o" title="View Journal Entry / Invoice"/>
-                <!-- Corrections (pos_retail_ledger_corrections.py): the same
-                     three on the vendor ledger. Adjustments and payments only. -->
+                <!-- Row actions (pos_retail_ledger_corrections.py), the same four on
+                     both ledgers. View and Adjust are in the bar above the table
+                     and on the entry's own form: six links a row pushed the
+                     columns off the screen. -->
                 <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil"
+                        class="btn-link pos-retail-row-btn pos-retail-row-btn--edit"
                         title="Change the amount, direction, date or note of this entry"
                         invisible="transaction_type not in ('adjustment', 'payment')"/>
-                <button name="action_adjust_balance" type="object" string="Adjust" icon="fa-sliders" title="Adjust Khata Balance"/>
-                <button name="action_receive_payment" type="object" string="Pay" icon="fa-money" title="Receive Khata Payment"/>
-                <button name="action_reverse_entry" type="object" string="Cancel" icon="fa-undo"
+                <button name="action_receive_payment" type="object" string="Pay" icon="fa-money"
+                        class="btn-link pos-retail-row-btn pos-retail-row-btn--pay"
+                        title="Receive a khata payment from this customer"/>
+                <button name="action_reverse_entry" type="object" string="Cancel" icon="fa-times"
+                        class="btn-link pos-retail-row-btn pos-retail-row-btn--cancel"
                         title="Cancel this entry: a mistake, entered twice, wrong contact"
                         invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
                 <button name="action_move_to_other_ledger" type="object" string="To Vendor" icon="fa-exchange"
+                        class="btn-link pos-retail-row-btn pos-retail-row-btn--move"
                         title="Entered on the wrong side: move this entry to the Vendor Ledger"
                         invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the VENDOR ledger? Use this when a vendor's balance, or money paid to a vendor, was entered as a customer entry."/>
             </list>
@@ -294,16 +299,23 @@
                 <field name="user_id" optional="show"/>
                 <field name="company_id" optional="hide" groups="base.group_multi_company"/>
                 <field name="reference" optional="show"/>
-                <button name="action_open_move" type="object" string="View" icon="fa-file-text-o" title="View Journal Entry / Bill"/>
+                <!-- Row actions (pos_retail_ledger_corrections.py), the same four on
+                     both ledgers. View and Adjust are in the bar above the table
+                     and on the entry's own form: six links a row pushed the
+                     columns off the screen. -->
                 <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil"
+                        class="btn-link pos-retail-row-btn pos-retail-row-btn--edit"
                         title="Change the amount, direction, date or note of this entry"
                         invisible="transaction_type not in ('adjustment', 'payment')"/>
-                <button name="action_adjust_balance" type="object" string="Adjust" icon="fa-sliders" title="Adjust Vendor Khata Balance"/>
-                <button name="action_pay_vendor" type="object" string="Pay" icon="fa-truck" title="Pay this vendor"/>
-                <button name="action_reverse_entry" type="object" string="Cancel" icon="fa-undo"
+                <button name="action_pay_vendor" type="object" string="Pay" icon="fa-truck"
+                        class="btn-link pos-retail-row-btn pos-retail-row-btn--pay"
+                        title="Pay this vendor"/>
+                <button name="action_reverse_entry" type="object" string="Cancel" icon="fa-times"
+                        class="btn-link pos-retail-row-btn pos-retail-row-btn--cancel"
                         title="Cancel this entry: a mistake, entered twice, wrong contact"
                         invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
                 <button name="action_move_to_other_ledger" type="object" string="To Customer" icon="fa-exchange"
+                        class="btn-link pos-retail-row-btn pos-retail-row-btn--move"
                         title="Entered on the wrong side: move this entry to the Customer Ledger"
                         invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the CUSTOMER ledger? Use this when a customer's balance, or money received from a customer, was entered as a vendor entry."/>
             </list>
@@ -623,6 +635,45 @@
             ref('pos_retail.perm_expenses_delete_res_groups'),
             ref('pos_retail.perm_reporting_res_groups'),
         ])]"/>
+    </record>
+
+    <!-- Add Customer / Add Vendor from the ledger toolbar. -->
+    <record id="pos_retail_ledger_contact_add_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.ledger.contact.add.form</field>
+        <field name="model">pos.retail.ledger.contact.add</field>
+        <field name="arch" type="xml">
+            <form string="Add to the Ledger">
+                <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                    <i class="fa fa-user-plus mt-1" role="img" aria-label="Info" title="Info"/>
+                    <div>
+                        <span invisible="side != 'customer'">Adds a new <b>customer</b>. Enter what they
+                            already owe the shop as the opening balance, or leave it at zero.</span>
+                        <span invisible="side != 'vendor'">Adds a new <b>vendor</b>. Enter what the shop
+                            already owes them as the opening balance, or leave it at zero.</span>
+                        A contact shows in the ledger once it has an entry.
+                    </div>
+                </div>
+                <group>
+                    <group>
+                        <field name="side" invisible="1"/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="name" placeholder="e.g. Anmol Sanitary"/>
+                        <field name="phone"/>
+                        <field name="city"/>
+                        <field name="company_id" options="{'no_create': True, 'no_open': True}"/>
+                    </group>
+                    <group>
+                        <field name="opening_balance"/>
+                        <field name="opening_date" invisible="not opening_balance"/>
+                        <field name="note" invisible="not opening_balance" placeholder="e.g. balance from paper khata"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Add" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
     </record>
 
     <!-- Edit Khata Entry (see models/pos_retail_ledger_corrections.py): one

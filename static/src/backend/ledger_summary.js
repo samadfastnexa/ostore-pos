@@ -113,6 +113,35 @@ export class PosRetailLedgerSummary extends Component {
         });
     }
 
+    // Add Customer / Add Vendor: the ledgers list entries, so a contact with
+    // none is not on them -- this is the way onto the ledger from the ledger.
+    onClickAddContact(side) {
+        this.action.doAction({
+            name: side === "vendor" ? "Add Vendor" : "Add Customer",
+            type: "ir.actions.act_window",
+            res_model: "pos.retail.ledger.contact.add",
+            views: [[false, "form"]],
+            target: "new",
+            context: { default_side: side },
+        });
+    }
+
+    onClickPayVendor() {
+        const context = {};
+        const pid = this.partnerIdFromDomain;
+        if (pid) {
+            context.default_partner_id = pid;
+        }
+        this.action.doAction({
+            name: "Pay Vendor",
+            type: "ir.actions.act_window",
+            res_model: "pos.retail.vendor.payment",
+            views: [[false, "form"]],
+            target: "new",
+            context: context,
+        });
+    }
+
     onClickAdjustVendorKhata() {
         const context = {};
         const pid = this.partnerIdFromDomain;

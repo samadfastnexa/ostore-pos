@@ -31,6 +31,12 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <t t-if="isCustomerLedger">
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold shadow-sm d-flex align-items-center gap-1"
+                                t-on-click="() => this.onClickAddContact('customer')"
+                                title="Add a new customer, with the balance they already owe">
+                            <i class="fa fa-user-plus"/>
+                            <span>Add Customer</span>
+                        </button>
                         <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm d-flex align-items-center gap-1"
                                 t-on-click="onClickAdjustCustomerKhata"
                                 title="Adjust customer khata, enter opening balance, or waive debt">
@@ -45,6 +51,18 @@
                         </button>
                     </t>
                     <t t-elif="isVendorLedger">
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold shadow-sm d-flex align-items-center gap-1"
+                                t-on-click="() => this.onClickAddContact('vendor')"
+                                title="Add a new vendor, with the balance the shop already owes them">
+                            <i class="fa fa-user-plus"/>
+                            <span>Add Vendor</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm d-flex align-items-center gap-1"
+                                t-on-click="onClickPayVendor"
+                                title="Record money paid to a vendor">
+                            <i class="fa fa-truck"/>
+                            <span>Pay Vendor</span>
+                        </button>
                         <button type="button" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm d-flex align-items-center gap-1"
                                 t-on-click="onClickAdjustVendorKhata"
                                 title="Adjust vendor khata balance, volume rebate, or enter opening payable">
