@@ -888,6 +888,22 @@ bash scripts/run_import_1st_oct_2026.sh
 APPLY=1 bash scripts/run_import_1st_oct_2026.sh
 ```
 
+### C. Standalone "2nd Oct 2026" and "3rd oct 2026" Tab Imports
+
+One script per tab, each importing **ONLY** its own tab under its own XML ID prefix (`tab_2nd_oct_2026_`, `tab_3rd_oct_2026_`). Both use the rules in `scripts/import_1st_oct_2026.py`, so that file must be on the server as well.
+
+```bash
+cd /opt/odoo/custom_addons/pos_retail
+
+# 1. Preview changes (Dry-run check, writes nothing):
+bash scripts/run_import_2nd_oct_2026.sh
+bash scripts/run_import_3rd_oct_2026.sh
+
+# 2. Apply to live database, one tab at a time, after reading its preview:
+APPLY=1 bash scripts/run_import_2nd_oct_2026.sh
+APPLY=1 bash scripts/run_import_3rd_oct_2026.sh
+```
+
 ---
 
 ## 16. Routine updates and deployments

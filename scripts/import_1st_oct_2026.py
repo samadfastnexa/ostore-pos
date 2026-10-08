@@ -2,6 +2,8 @@
 
     Server:  bash scripts/run_import_1st_oct_2026.sh           (check -- writes nothing)
              APPLY=1 bash scripts/run_import_1st_oct_2026.sh   (create / update)
+             bash scripts/run_import_2nd_oct_2026.sh           (the "2nd Oct 2026" tab, same two steps)
+             bash scripts/run_import_3rd_oct_2026.sh           (the "3rd oct 2026" tab)
     Local:   IMPORT_BRANCH="Branch 2" venv/Scripts/python.exe odoo/odoo-bin shell \
                  -c odoo.conf -d OStore --no-http < custom_addons/pos_retail/scripts/import_1st_oct_2026.py
 
@@ -19,14 +21,17 @@ would load, and the rows it skips. Nothing is written.
 How a row becomes a product -- the same rules as the Bahria import:
   * the department comes from the section heading above the row (a name on
     its own after an empty row): Sanitary/plumbering, PAINT& CHEMICALS,
-    ELECTRIC, HARDWARE; the Product Category column wins when it is filled.
+    ELECTRIC, HARDWARE ("Hardware Inventory" is Hardware too); the Product
+    Category column wins when it is filled.
   * name exactly as in the sheet; size into the Size field; brand from the
     first Brand column; sold at the Bahria branch only; cost in every company.
   * identity: name + size + brand within this tab. Rows that repeat one
     product are merged (quantities added); a row repeating an earlier row's
     name, price and quantity is skipped as a copy.
   * a quantity or price with a unit ("50 ft", "150 kg") makes the product in
-    that unit; "pcs" and "set" are pieces.
+    that unit; "pcs" and "set" are pieces. A count typed "33 + 12" is added
+    up; a number the sheet shows as a date (cell formatted as Date) is read
+    as the number -- both are listed as notes.
   * opening stock = the quantity, loaded ONCE per product; after that sales
     and adjustments keep it right and the sheet never overwrites it.
   * no sales price: imported at 0 and listed -- the till refuses to sell it
@@ -88,6 +93,7 @@ SECTION_NAMES = {'handbrush': 'Brushes', 'spraypaints': 'Spray Paint', 'spray pa
 DEEP_SECTIONS = {'chemicals', 'brackets'}
 SECTION_ORDER = ['Distemper', 'Oil Paint', 'Putty', 'Brushes', 'Spray Paint', 'Paint Tubes', 'Sandpaper',
                  'Polish', 'Chemicals', 'Electric Items', 'Brackets']
+SUM = re.compile(r'\d+(?:\.\d+)?(?:\s*\+\s*\d+(?:\.\d+)?)+')  # a count typed as "33 + 12"
 
 
 def clean(value):
@@ -115,13 +121,19 @@ def row_ranges(numbers):
 
 
 def amount(value):
-    """480 -> (480, ''), '50 ft' -> (50, 'ft'), '12 pcs' -> (12, ''), empty -> (None, '')."""
+    """480 -> (480, ''), '50 ft' -> (50, 'ft'), '12 pcs' -> (12, ''), '33 + 12' -> (45, ''), empty -> (None, '')."""
     if isinstance(value, (int, float)):
         return float(value), ''
+    if isinstance(value, datetime.datetime):
+        # A number in a cell formatted as a date (180 shows as 6/28/1900): back to the number.
+        days = (value - datetime.datetime(1899, 12, 30)).days
+        return float(days if days >= 60 else days - 1), ''
     s = clean(value)
     if not s or s.lower() in ('none', '-', '.'):
         return None, ''
     s = re.sub(r'(\d)[oO](?=\D|$)', r'\g<1>0', s)
+    if SUM.fullmatch(s):
+        return sum(float(n) for n in s.split('+')), ''
     match = re.search(r'\d+(?:\.\d+)?', s)
     if not match:
         return None, ''
@@ -248,13 +260,24 @@ for rownum, row in enumerate(rows[1:], start=2):
             notes.append(f"row {rownum} {name}: SIZE '{size_raw}' taken as {in_hand:g} {in_hand_unit} in hand")
             qty, q_unit, size_raw = in_hand, in_hand_unit, ''
     categ_raw = clean(get('categ'))
+    if all(re.search(r'[a-z]', t, re.I) and not re.search(r'\d', t)
+           for t in (clean(get(k)) for k in ('qty', 'cost', 'price'))):
+        skips.append(('column titles repeated inside the table', rownum, name))
+        continue
     if not any(v is not None for v in (price, cost, qty, minimum, mrp)) and not size_raw and not categ_raw:
         if was_blank:
-            dept = SECTION_DEPTS.get(slug(name), [name.title()])
+            dept = SECTION_DEPTS.get(re.sub(r'_inventory$', '', slug(name)), [name.title()])
             skips.append(('section heading', rownum, f"{name} -> {' / '.join(dept)}"))
         else:
             skips.append(('no price, quantity or size', rownum, name))
         continue
+    for field in ('qty', 'cost', 'price'):
+        raw = get(field)
+        if isinstance(raw, datetime.datetime):
+            notes.append(f"row {rownum} {name}: {field} is formatted as a date in the sheet, "
+                         f"read as {amount(raw)[0]:g}")
+        elif SUM.fullmatch(clean(raw)):
+            notes.append(f"row {rownum} {name}: {field} '{clean(raw)}' added up to {amount(raw)[0]:g}")
     categ = category_path(categ_raw) if categ_raw else list(dept or [tab.title()])
     size = tidy_size(size_raw)
     # As typed ("PPR", "I.I.L"), only an all-lowercase one capitalised ("local").
@@ -282,12 +305,15 @@ for rownum, row in enumerate(rows[1:], start=2):
     p = {'row': rownum, 'name': name, 'size': size, 'brand': brand, 'price': price, 'cost': cost,
          'minimum': minimum, 'mrp': mrp, 'qty': qty, 'categ': categ,
          'unit': units.pop() if len(units) == 1 else '',
-         'key': PREFIX + slug(name, size, brand)}
+         # "(+)" and "(-)" tell two screwdrivers apart; slug() alone would drop them.
+         'key': PREFIX + slug(name.replace('(+)', ' plus ').replace('(-)', ' minus '), size, brand)}
     first = by_key.get(p['key'])
     if first:
         if qty:
             first['qty'] = (first['qty'] or 0.0) + qty
-        notes.append(f"row {rownum} {name}: same name/size/brand as row {first['row']}, merged (quantities added)")
+        notes.append(f"row {rownum} {name}: same name/size/brand as row {first['row']}, merged (quantities added)"
+                     + (f" -- but priced {price:g} against {first['price']:g}: if these are two products, "
+                        f"name them apart" if abs(first['price'] - price) >= 0.01 else ""))
         continue
     twin = by_name.get(slug(name))
     if twin and abs(twin['price'] - price) < 0.01 and (twin['qty'] or 0) == (qty or 0):
