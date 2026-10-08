@@ -32,6 +32,31 @@ from odoo.exceptions import UserError
 from .res_company import TRADING_COMPANY_DOMAIN
 
 
+SIDES = {
+    'customer': {
+        'account_type': 'asset_receivable', 'property': 'property_account_receivable_id',
+        'payment_type': 'inbound', 'partner_type': 'customer', 'other': 'vendor',
+        'groups': ('base.group_system', 'account.group_account_invoice', 'point_of_sale.group_pos_manager',
+                   'pos_retail.perm_khata_adjust_res_groups'),
+    },
+    'vendor': {
+        'account_type': 'liability_payable', 'property': 'property_account_payable_id',
+        'payment_type': 'outbound', 'partner_type': 'supplier', 'other': 'customer',
+        'groups': ('base.group_system', 'account.group_account_invoice', 'point_of_sale.group_pos_manager',
+                   'purchase.group_purchase_manager'),
+    },
+}
+
+
+def check_may_enter(env, side):
+    """Who may write to a khata. The entries are posted with sudo -- a shop
+    manager has no rights on journal entries, and should not need them to
+    correct a balance -- so the permission is checked here instead."""
+    if env.su or any(env.user.has_group(group) for group in SIDES[side]['groups']):
+        return
+    raise UserError(_("You are not allowed to change khata entries. Ask a manager."))
+
+
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
@@ -130,7 +155,10 @@ class PosRetailLedgerAdjustment(models.TransientModel):
 
     def action_confirm(self):
         self.partner_id._pos_retail_check_customer_side()
-        return super().action_confirm()
+        check_may_enter(self.env, 'customer')
+        # The button is offered to shop managers, who cannot post a journal
+        # entry themselves; it used to end in an access error for them.
+        return super(PosRetailLedgerAdjustment, self.sudo()).action_confirm()
 
 
 class PosRetailKhataPayment(models.TransientModel):
@@ -149,7 +177,8 @@ class PosRetailVendorLedgerAdjustment(models.TransientModel):
 
     def action_confirm(self):
         self.partner_id._pos_retail_check_vendor_side()
-        return super().action_confirm()
+        check_may_enter(self.env, 'vendor')
+        return super(PosRetailVendorLedgerAdjustment, self.sudo()).action_confirm()
 
 
 class PosRetailVendorPayment(models.TransientModel):
@@ -229,6 +258,7 @@ class PosRetailVendorPayment(models.TransientModel):
         self.ensure_one()
         partner = self.partner_id
         partner._pos_retail_check_vendor_side()
+        check_may_enter(self.env, 'vendor')
         if self.amount <= 0:
             raise UserError(_("Enter how much was paid to the vendor."))
         payable = partner.property_account_payable_id

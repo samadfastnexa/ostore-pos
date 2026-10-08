@@ -108,12 +108,19 @@
                 <field name="origin" optional="hide"/>
                 <field name="reference" optional="show"/>
                 <button name="action_open_move" type="object" string="View" icon="fa-file-text-o" title="View Journal Entry / Invoice"/>
-                <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil" title="Edit / Modify Entry"
-                        invisible="transaction_type != 'adjustment'"/>
+                <!-- Corrections (pos_retail_ledger_corrections.py): the same
+                     three on the vendor ledger. Adjustments and payments only. -->
+                <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil"
+                        title="Change the amount, direction, date or note of this entry"
+                        invisible="transaction_type not in ('adjustment', 'payment')"/>
                 <button name="action_adjust_balance" type="object" string="Adjust" icon="fa-sliders" title="Adjust Khata Balance"/>
                 <button name="action_receive_payment" type="object" string="Pay" icon="fa-money" title="Receive Khata Payment"/>
-                <button name="action_reverse_entry" type="object" string="Reverse" icon="fa-undo" title="Reverse / Cancel Entry"
-                        invisible="transaction_type not in ('adjustment', 'payment')"/>
+                <button name="action_reverse_entry" type="object" string="Cancel" icon="fa-undo"
+                        title="Cancel this entry: a mistake, entered twice, wrong contact"
+                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
+                <button name="action_move_to_other_ledger" type="object" string="To Vendor" icon="fa-exchange"
+                        title="Entered on the wrong side: move this entry to the Vendor Ledger"
+                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the VENDOR ledger? Use this when a vendor's balance, or money paid to a vendor, was entered as a customer entry."/>
             </list>
         </field>
     </record>
@@ -126,12 +133,14 @@
             <form string="Customer Ledger Entry" create="false" delete="false">
                 <header>
                     <button name="action_open_move" type="object" string="View Journal Entry / Invoice" class="btn-primary" icon="fa-file-text-o"/>
-                    <button name="action_edit_entry" type="object" string="Edit / Modify Entry" class="btn-outline-primary" icon="fa-pencil"
-                            invisible="transaction_type != 'adjustment'"/>
+                    <button name="action_edit_entry" type="object" string="Edit Entry" class="btn-outline-primary" icon="fa-pencil"
+                            invisible="transaction_type not in ('adjustment', 'payment')"/>
                     <button name="action_adjust_balance" type="object" string="Khata Adjustment" class="btn-secondary" icon="fa-sliders"/>
                     <button name="action_receive_payment" type="object" string="Receive Payment" class="btn-success" icon="fa-money"/>
-                    <button name="action_reverse_entry" type="object" string="Reverse / Cancel Entry" class="btn-outline-danger" icon="fa-undo"
-                            invisible="transaction_type not in ('adjustment', 'payment')"/>
+                    <button name="action_reverse_entry" type="object" string="Cancel Entry" class="btn-outline-danger" icon="fa-undo"
+                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
+                    <button name="action_move_to_other_ledger" type="object" string="Move to Vendor Ledger" class="btn-outline-warning" icon="fa-exchange"
+                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the VENDOR ledger? Use this when a vendor's balance, or money paid to a vendor, was entered as a customer entry."/>
                     <field name="payment_status" widget="statusbar" statusbar_visible="unpaid,partial,paid" invisible="not total_amount"/>
                 </header>
                 <sheet>
@@ -250,6 +259,7 @@
                   create="false" delete="false">
                 <header>
                     <button name="action_adjust_balance" type="object" string="Adjust Vendor Khata" class="btn-warning text-dark" icon="fa-sliders"/>
+                    <button name="action_pay_vendor" type="object" string="Pay Vendor" class="btn-success" icon="fa-truck"/>
                 </header>
                 <field name="currency_id" column_invisible="True"/>
                 <field name="datetime" optional="show"/>
@@ -285,11 +295,17 @@
                 <field name="company_id" optional="hide" groups="base.group_multi_company"/>
                 <field name="reference" optional="show"/>
                 <button name="action_open_move" type="object" string="View" icon="fa-file-text-o" title="View Journal Entry / Bill"/>
-                <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil" title="Edit / Modify Entry"
-                        invisible="transaction_type != 'adjustment'"/>
-                <button name="action_adjust_balance" type="object" string="Adjust" icon="fa-sliders" title="Adjust Vendor Khata Balance"/>
-                <button name="action_reverse_entry" type="object" string="Reverse" icon="fa-undo" title="Reverse / Cancel Entry"
+                <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil"
+                        title="Change the amount, direction, date or note of this entry"
                         invisible="transaction_type not in ('adjustment', 'payment')"/>
+                <button name="action_adjust_balance" type="object" string="Adjust" icon="fa-sliders" title="Adjust Vendor Khata Balance"/>
+                <button name="action_pay_vendor" type="object" string="Pay" icon="fa-truck" title="Pay this vendor"/>
+                <button name="action_reverse_entry" type="object" string="Cancel" icon="fa-undo"
+                        title="Cancel this entry: a mistake, entered twice, wrong contact"
+                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
+                <button name="action_move_to_other_ledger" type="object" string="To Customer" icon="fa-exchange"
+                        title="Entered on the wrong side: move this entry to the Customer Ledger"
+                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the CUSTOMER ledger? Use this when a customer's balance, or money received from a customer, was entered as a vendor entry."/>
             </list>
         </field>
     </record>
@@ -302,11 +318,14 @@
             <form string="Vendor Ledger Entry" create="false" delete="false">
                 <header>
                     <button name="action_open_move" type="object" string="View Journal Entry / Bill" class="btn-primary" icon="fa-file-text-o"/>
-                    <button name="action_edit_entry" type="object" string="Edit / Modify Entry" class="btn-outline-primary" icon="fa-pencil"
-                            invisible="transaction_type != 'adjustment'"/>
-                    <button name="action_adjust_balance" type="object" string="Vendor Khata Adjustment" class="btn-warning" icon="fa-sliders"/>
-                    <button name="action_reverse_entry" type="object" string="Reverse / Cancel Entry" class="btn-outline-danger" icon="fa-undo"
+                    <button name="action_edit_entry" type="object" string="Edit Entry" class="btn-outline-primary" icon="fa-pencil"
                             invisible="transaction_type not in ('adjustment', 'payment')"/>
+                    <button name="action_adjust_balance" type="object" string="Vendor Khata Adjustment" class="btn-warning" icon="fa-sliders"/>
+                    <button name="action_pay_vendor" type="object" string="Pay Vendor" class="btn-success" icon="fa-truck"/>
+                    <button name="action_reverse_entry" type="object" string="Cancel Entry" class="btn-outline-danger" icon="fa-undo"
+                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
+                    <button name="action_move_to_other_ledger" type="object" string="Move to Customer Ledger" class="btn-outline-warning" icon="fa-exchange"
+                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the CUSTOMER ledger? Use this when a customer's balance, or money received from a customer, was entered as a vendor entry."/>
                     <field name="payment_status" widget="statusbar" statusbar_visible="unpaid,partial,paid" invisible="not total_amount"/>
                 </header>
                 <sheet>
@@ -604,6 +623,43 @@
             ref('pos_retail.perm_expenses_delete_res_groups'),
             ref('pos_retail.perm_reporting_res_groups'),
         ])]"/>
+    </record>
+
+    <!-- Edit Khata Entry (see models/pos_retail_ledger_corrections.py): one
+         dialog for both ledgers, an adjustment or a payment. -->
+    <record id="pos_retail_ledger_entry_edit_view_form" model="ir.ui.view">
+        <field name="name">pos.retail.ledger.entry.edit.form</field>
+        <field name="model">pos.retail.ledger.entry.edit</field>
+        <field name="arch" type="xml">
+            <form string="Edit Khata Entry">
+                <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+                    <i class="fa fa-pencil mt-1" role="img" aria-label="Info" title="Info"/>
+                    <div>Corrects this one entry in place. The ledger and the balance
+                         change as soon as you save. To take the entry out altogether,
+                         close this and use Cancel Entry.</div>
+                </div>
+                <group>
+                    <group>
+                        <field name="move_id" invisible="1"/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="side"/>
+                        <field name="partner_id"/>
+                        <field name="kind"/>
+                    </group>
+                    <group>
+                        <field name="amount"/>
+                        <field name="direction" widget="radio" invisible="kind == 'payment'"
+                               required="kind != 'payment'"/>
+                        <field name="date"/>
+                        <field name="reason" placeholder="e.g. corrected: was typed as 5,000"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Save Changes" class="btn-primary"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
     </record>
 
     <!-- Pay Vendor (see models/pos_retail_ledger_sides.py): the vendor-side twin
