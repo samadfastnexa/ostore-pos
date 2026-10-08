@@ -26,8 +26,12 @@ How a row becomes a product -- the same rules as the Bahria import:
   * name exactly as in the sheet; size into the Size field; brand from the
     first Brand column; sold at the Bahria branch only; cost in every company.
   * identity: name + size + brand within this tab. Rows that repeat one
-    product are merged (quantities added); a row repeating an earlier row's
-    name, price and quantity is skipped as a copy.
+    product at the same price are merged (quantities added); the same name at
+    ANOTHER price is a product of its own, named as the sheet names it. Where an
+    earlier run had merged such a row, its pieces are taken off the first
+    product and counted on the new one. Not in the "1st oct 2026" tab: it
+    went live with such rows merged and is left as it is. A row repeating an
+    earlier row's name, price and quantity is skipped as a copy.
   * a quantity or price with a unit ("50 ft", "150 kg") makes the product in
     that unit; "pcs" and "set" are pieces. A count typed "33 + 12" is added
     up; a number the sheet shows as a date (cell formatted as Date) is read
@@ -58,6 +62,9 @@ SHEET_URL = ('https://docs.google.com/spreadsheets/d/'
 XLSX = os.environ.get('IMPORT_XLSX', SHEET_URL)
 BRANCH = os.environ.get('IMPORT_BRANCH', 'Bahria').strip()
 TAB = os.environ.get('IMPORT_TAB', '1st oct 2026').strip()
+# The 1st oct tab went live with same-name rows merged whatever their price,
+# and stays exactly that way; later tabs make each price a product of its own.
+MERGE_ANY_PRICE = TAB.lower() == '1st oct 2026'
 XMLID_MODULE = '__import__'
 
 COLUMNS = {
@@ -307,6 +314,13 @@ for rownum, row in enumerate(rows[1:], start=2):
          'unit': units.pop() if len(units) == 1 else '',
          # "(+)" and "(-)" tell two screwdrivers apart; slug() alone would drop them.
          'key': PREFIX + slug(name.replace('(+)', ' plus ').replace('(-)', ' minus '), size, brand)}
+    # The same name at another price is a product of its own, not a second
+    # count of the first: it gets "<key>__2" (slug() never makes "__").
+    base, copy = p['key'], 1
+    while (not MERGE_ANY_PRICE and price and by_key.get(p['key'], p)['price']
+           and abs(by_key.get(p['key'], p)['price'] - price) >= 0.01):
+        copy += 1
+        p['key'] = f"{base}__{copy}"
     first = by_key.get(p['key'])
     if first:
         if qty:
@@ -315,6 +329,10 @@ for rownum, row in enumerate(rows[1:], start=2):
                      + (f" -- but priced {price:g} against {first['price']:g}: if these are two products, "
                         f"name them apart" if abs(first['price'] - price) >= 0.01 else ""))
         continue
+    if copy > 1:
+        p['split_from'] = by_key[base]
+        notes.append(f"row {rownum} {name}: same name as row {by_key[base]['row']} but priced {price:g} against "
+                     f"{by_key[base]['price']:g} -> added as a product of its own")
     twin = by_name.get(slug(name))
     if twin and abs(twin['price'] - price) < 0.01 and (twin['qty'] or 0) == (qty or 0):
         if p['unit'] and not twin['unit']:
@@ -389,6 +407,29 @@ already = counted(Template.browse(list(claimed)))
 new = [p for p in products if not p['template']]
 changed = [(p, d) for p in products if p['template'] for d in [differences(p)] if d]
 stock_load = [p for p in products if p['qty'] and (not p['template'] or p['template'].id not in already)]
+# A product imported while rows at another price were still merged into it was
+# counted with their pieces in it. Those pieces now load on the new product, so
+# they come off this one -- only when its first count is exactly that merged sum.
+split_qty = {}
+for p in new:
+    first = p.get('split_from')
+    if p['qty'] and first and first['template'] and first['template'].id in already:
+        split_qty[first['row']] = split_qty.get(first['row'], 0.0) + p['qty']
+take_back = []
+for first in [p for p in products if p['row'] in split_qty]:
+    variant, extra = first['template'].product_variant_id, split_qty[first['row']]
+    opening = env['stock.move'].sudo().search([
+        ('product_id', '=', variant.id), ('company_id', '=', branch.id),
+        ('is_inventory', '=', True), ('state', '=', 'done')], order='date, id', limit=1)
+    if abs(opening.product_uom_qty - ((first['qty'] or 0.0) + extra)) > 0.001:
+        continue
+    in_hand = sum(env['stock.quant'].sudo().search([
+        ('product_id', '=', variant.id), ('location_id', '=', warehouse.lot_stock_id.id)]).mapped('quantity'))
+    if in_hand < extra:
+        notes.append(f"row {first['row']} {first['name']}: {extra:g} of its count belong to the product split "
+                     f"off it, but only {in_hand:g} are left -- correct both by hand in Odoo")
+        continue
+    take_back.append((first, in_hand, in_hand - extra))
 print(f"\n{tab}: {len(products)} products  |  {len(new)} new, {len(changed)} to update, "
       f"{len(products) - len(new) - len(changed)} unchanged")
 print(f"  categories:    {sorted({' / '.join(p['categ']) for p in products})}")
@@ -407,6 +448,10 @@ if changed:
     print(f"  TO UPDATE ({len(changed)}):")
     for p, d in changed[:40]:
         print(f"    ~ row {p['row']} {p['name']}: " + '; '.join(f"{f} {a} -> {b}" for f, (a, b) in d.items()))
+if take_back:
+    print(f"  STOCK MOVED TO THE SPLIT-OFF PRODUCT ({len(take_back)}):")
+    for p, in_hand, left in take_back:
+        print(f"    ~ row {p['row']} {p['name']}: {in_hand:g} in hand -> {left:g}")
 empty_qty = [p for p in products if not p['qty']]
 if empty_qty:
     print(f"  NO QUANTITY ({len(empty_qty)}) -- will show out of stock: rows {row_ranges([p['row'] for p in empty_qty])}")
@@ -515,15 +560,17 @@ else:
         wanted = {p['template']: p['qty'] for p in products if p['qty']}
         done = counted(Template.browse([t.id for t in wanted]))
         load = {t: q for t, q in wanted.items() if t.id not in done}
-        if load:
+        counts = list(load.items()) + [(p['template'], left) for p, in_hand, left in take_back]
+        if counts:
             quants = env['stock.quant'].sudo().with_company(branch).with_context(inventory_mode=True).create([{
                 'product_id': t.product_variant_id.id, 'location_id': warehouse.lot_stock_id.id,
-                'inventory_quantity': q} for t, q in load.items()])
+                'inventory_quantity': q} for t, q in counts])
             if isinstance(quants.action_apply_inventory(), dict):
                 raise SystemExit("Odoo asked to resolve an inventory conflict; nothing was saved. "
                                  "Check Inventory > Physical Inventory for this branch.")
     env.cr.commit()
-    print(f"  {tab}: created {len(new)}, updated {updated}, opening stock on {len(load)} products")
+    print(f"  {tab}: created {len(new)}, updated {updated}, opening stock on {len(load)} products"
+          + (f", stock moved off {len(take_back)} to the product split from it" if take_back else ""))
     print("=" * 78)
     print("Import finished. Reload the till pages.")
     print("=" * 78)
