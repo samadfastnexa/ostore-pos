@@ -22,6 +22,23 @@ class SaleOrder(models.Model):
     )
 
     @api.model
+    def _pos_retail_validity_date(self, value):
+        """The till's "valid until" as a date, or False when none was given.
+
+        The till sends text. A date it built from a mistyped number of days
+        ("15995-08-25") used to crash the save inside the ORM, so it is read
+        here and refused in words the cashier can act on.
+        """
+        if not value:
+            return False
+        try:
+            return fields.Date.to_date(value)
+        except (TypeError, ValueError):
+            raise UserError(_(
+                "The quotation's validity date could not be read. Enter the "
+                "validity again as a number of days, for example 7 or 30."))
+
+    @api.model
     def pos_retail_create_quotation(self, vals):
         """Create a draft sale.order (quotation) from a POS cart.
 
@@ -48,8 +65,9 @@ class SaleOrder(models.Model):
             for line in vals['lines']
         ]
         order_vals = {'partner_id': partner_id, 'order_line': order_lines}
-        if vals.get('validity_date'):
-            order_vals['validity_date'] = vals['validity_date']
+        validity_date = self._pos_retail_validity_date(vals.get('validity_date'))
+        if validity_date:
+            order_vals['validity_date'] = validity_date
         if vals.get('approved'):
             order_vals['pos_customer_approved'] = True
             order_vals['pos_approved_by'] = vals.get('approved_by')
@@ -193,6 +211,8 @@ class SaleOrder(models.Model):
                 "from the till. Duplicate it instead.", name=order.name))
         if not vals.get('lines'):
             raise UserError(_("Add at least one product before updating a quotation."))
+        # Read before the old lines are removed, so a refusal changes nothing.
+        validity_date = self._pos_retail_validity_date(vals.get('validity_date'))
 
         order.order_line.unlink()
         order_lines = [
@@ -205,7 +225,7 @@ class SaleOrder(models.Model):
         ]
         update_vals = {'order_line': order_lines}
         if vals.get('validity_date') is not None:
-            update_vals['validity_date'] = vals['validity_date'] or False
+            update_vals['validity_date'] = validity_date
         if vals.get('partner_id') and vals['partner_id'] != order.partner_id.id:
             update_vals['partner_id'] = vals['partner_id']
         if 'note' in vals:

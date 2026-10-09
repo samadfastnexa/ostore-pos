@@ -7,6 +7,8 @@ import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/n
 import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { PosRetailQuotationPicker } from "@pos_retail/overrides/quotation_picker";
 
+const POS_RETAIL_MAX_VALIDITY_DAYS = 365;
+
 // Quotations from the till: turn the current POS cart into a Sales quotation
 // (sale.order) instead of ringing it up. The quotation is later settled back
 // into the POS for payment via pos_sale's native "Quotation" button.
@@ -50,11 +52,26 @@ patch(ControlButtons.prototype, {
         // company default; a positive number sets an explicit validity date.
         let validityDate = false;
         if (askValidity) {
+            // The popup takes any number. A date typed into it by mistake
+            // (5102026) became a year the server could not store, so anything
+            // past a year is refused, with the reason on screen.
+            const tooLong = (buffer) => parseInt(buffer) > POS_RETAIL_MAX_VALIDITY_DAYS;
+            const tooLongMessage = _t(
+                "Enter a number of days, %s at most - not a date.",
+                POS_RETAIL_MAX_VALIDITY_DAYS
+            );
             const daysInput = await makeAwaitable(this.dialog, NumberPopup, {
                 title: _t("Quotation validity (days) - optional"),
                 startingValue: 0,
+                isValid: (buffer) => !tooLong(buffer),
+                feedback: (buffer) => (tooLong(buffer) ? tooLongMessage : false),
             });
             const days = parseInt(daysInput);
+            // The Enter key confirms the popup even while Confirm is disabled.
+            if (tooLong(days)) {
+                this.notification.add(tooLongMessage, { type: "warning" });
+                return false;
+            }
             if (days > 0) {
                 const d = new Date();
                 d.setDate(d.getDate() + days);
