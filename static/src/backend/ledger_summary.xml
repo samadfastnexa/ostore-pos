@@ -83,6 +83,8 @@
                             <t t-if="state.loading"><i class="fa fa-circle-o-notch fa-spin text-muted"/></t>
                             <t t-else="" t-esc="display(card)"/>
                         </div>
+                        <div t-if="card.note" class="small text-muted" style="max-width: 16rem; line-height: 1.25;"
+                             t-esc="card.note"/>
                     </div>
                 </t>
             </div>

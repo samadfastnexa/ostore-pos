@@ -114,8 +114,25 @@
                         <field name="memo" placeholder="e.g. receipt no. 214"/>
                     </group>
                 </group>
+                <!-- What each field means, in Roman Urdu, for the shop staff. -->
+                <div class="alert alert-light border small mb-2" role="status">
+                    <b>Har khanay ka matlab (asaan Urdu):</b>
+                    <ul class="mb-1 ps-3">
+                        <li><b>Currently Owes:</b> abhi is customer ne dukaan ko itne paisay dene
+                            hain. Agar minus (-) ho to customer zyada de chuka hai.</li>
+                        <li><b>Amount Received:</b> abhi customer ne kitne paisay diye. Yeh raqam us
+                            ke udhaar mein se kam ho jayegi.</li>
+                        <li><b>Received In:</b> paisay kahan aaye: galla (cash) ya bank / online.</li>
+                        <li><b>Date:</b> jis din paisay mile.</li>
+                        <li><b>Note:</b> receipt number ya koi yaad-dasht. Zaroori nahi.</li>
+                    </ul>
+                    Misaal: udhaar 40,000 tha, 10,000 mile, to baqi 30,000 reh gaye.
+                    <div><b class="text-danger">Zaroori:</b> yeh sirf tab use karein jab customer ne
+                        paisay DIYE hon. Discount dena ho ya ghalti theek karni ho to
+                        "Khata Adjustment" use karein.</div>
+                </div>
                 <div class="alert alert-warning mb-2" role="alert"
-                     invisible="amount &lt;= amount_owed">
+                     invisible="amount &lt;= 0 or amount &lt;= amount_owed">
                     That is more than this customer owes. The extra is kept as credit
                     against their next purchase.
                 </div>
@@ -178,6 +195,27 @@
                         <field name="company_id" invisible="1"/>
                     </group>
                 </group>
+                <!-- What each field means, in Roman Urdu, for the shop staff. -->
+                <div class="alert alert-light border small mb-2" role="status">
+                    <b>Har khanay ka matlab (asaan Urdu):</b>
+                    <ul class="mb-1 ps-3">
+                        <li><b>Current Balance:</b> abhi is customer ne dukaan ko itne paisay dene
+                            hain. Agar minus (-) ho to customer zyada de chuka hai.</li>
+                        <li><b>Customer owes MORE:</b> customer ka udhaar barhega. Purana khata ya
+                            udhaar par diya hua maal likhna ho to yeh chunein.</li>
+                        <li><b>Customer owes LESS:</b> customer ka udhaar kam hoga. Discount, maafi,
+                            maal wapsi ya ghalti theek karni ho to yeh chunein.</li>
+                        <li><b>Set Exact Target Balance:</b> seedha likh dein ke naya balance kitna
+                            hona chahiye.</li>
+                        <li><b>Amount:</b> kitni raqam se balance badalna hai. Sirf raqam likhein.</li>
+                        <li><b>Date:</b> jis din ka yeh hisaab hai.</li>
+                        <li><b>Reason:</b> wajah likhein. Yeh ledger mein nazar aayegi.</li>
+                    </ul>
+                    <div><b class="text-danger">Zaroori:</b> MORE aur LESS dhyan se chunein. Ghalat
+                        chuna to balance ulta ho jayega.</div>
+                    <div><b class="text-danger">Zaroori:</b> customer ne paisay diye hain to yahan na
+                        likhein, "Receive Khata Payment" use karein.</div>
+                </div>
                 <!-- The accounting side is filled in from the direction above, so a
                      shopkeeper never has to know which ledger account a khata
                      correction belongs to. Shown only to users with accounting
@@ -222,6 +260,28 @@
                         <field name="company_id" invisible="1"/>
                     </group>
                 </group>
+                <!-- What each field means, in Roman Urdu, for the shop staff: the
+                     direction was being posted the wrong way round. -->
+                <div class="alert alert-light border small mb-2" role="status">
+                    <b>Har khanay ka matlab (asaan Urdu):</b>
+                    <ul class="mb-1 ps-3">
+                        <li><b>Current Payable:</b> abhi dukaan ne is vendor ko itne paisay dene hain.
+                            Agar minus (-) ho to hum zyada de chuke hain.</li>
+                        <li><b>Shop owes MORE:</b> dukaan ka udhaar barhega. Purana khata ya naya
+                            maal likhna ho to yeh chunein.</li>
+                        <li><b>Shop owes LESS:</b> dukaan ka udhaar kam hoga. Discount, maal wapsi
+                            ya ghalti theek karni ho to yeh chunein.</li>
+                        <li><b>Set Exact Target Payable:</b> seedha likh dein ke naya balance kitna
+                            hona chahiye.</li>
+                        <li><b>Amount:</b> kitni raqam se balance badalna hai. Sirf raqam likhein.</li>
+                        <li><b>Date:</b> jis din ka yeh hisaab hai.</li>
+                        <li><b>Reason:</b> wajah likhein. Yeh ledger mein nazar aayegi.</li>
+                    </ul>
+                    <div><b class="text-danger">Zaroori:</b> MORE aur LESS dhyan se chunein. Ghalat
+                        chuna to balance ulta (minus) ho jayega.</div>
+                    <div><b class="text-danger">Zaroori:</b> vendor ko paisay diye hain to yahan na
+                        likhein, "Pay Vendor" use karein.</div>
+                </div>
                 <group string="Accounting" groups="account.group_account_readonly">
                     <field name="counterpart_account_id"/>
                     <field name="journal_id"/>

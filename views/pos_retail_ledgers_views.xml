@@ -691,6 +691,24 @@
                         <field name="note" invisible="not opening_balance" placeholder="e.g. balance from paper khata"/>
                     </group>
                 </group>
+                <!-- What each field means, in Roman Urdu, for the shop staff. -->
+                <div class="alert alert-light border small mb-2" role="status">
+                    <b>Har khanay ka matlab (asaan Urdu):</b>
+                    <ul class="mb-1 ps-3">
+                        <li><b>Name:</b> <span invisible="side != 'customer'">customer ka naam.</span>
+                            <span invisible="side != 'vendor'">vendor ya us ki dukaan ka naam.</span></li>
+                        <li><b>Opening Balance:</b>
+                            <span invisible="side != 'customer'">is customer ne pehle se dukaan ko
+                                kitne paisay dene hain (purana khata).</span>
+                            <span invisible="side != 'vendor'">dukaan ne is vendor ko pehle se kitne
+                                paisay dene hain (purana khata).</span>
+                            Kuch nahi dena to 0 rehne dein.</li>
+                        <li><b>Balance As Of:</b> yeh balance kis din tak ka hai.</li>
+                        <li><b>Note:</b> yaad-dasht, maslan "purane khatay se".</li>
+                    </ul>
+                    <div><b class="text-danger">Zaroori:</b> sirf raqam likhein, minus (-) na
+                        lagayein.</div>
+                </div>
                 <footer>
                     <button name="action_confirm" type="object" string="Add" class="btn-primary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
@@ -728,6 +746,29 @@
                         <field name="reason" placeholder="e.g. corrected: was typed as 5,000"/>
                     </group>
                 </group>
+                <!-- What each field means, in Roman Urdu, for the shop staff: UP and
+                     DOWN read differently on the two ledgers, so each side gets its
+                     own wording. A payment has no direction to choose. -->
+                <div class="alert alert-light border small mb-2" role="status">
+                    <b>Har khanay ka matlab (asaan Urdu):</b>
+                    <ul class="mb-1 ps-3">
+                        <li><b>Amount:</b> is entry ki sahi raqam.</li>
+                        <li invisible="kind == 'payment'"><b>Balance goes UP:</b> udhaar barhega.
+                            <span invisible="side != 'customer'">Customer ne dukaan ko zyada dena hai.</span>
+                            <span invisible="side != 'vendor'">Dukaan ne vendor ko zyada dena hai.</span>
+                            Purana khata ya udhaar likhna ho to yeh chunein.</li>
+                        <li invisible="kind == 'payment'"><b>Balance goes DOWN:</b> udhaar kam hoga.
+                            <span invisible="side != 'customer'">Customer ne dukaan ko kam dena hai.</span>
+                            <span invisible="side != 'vendor'">Dukaan ne vendor ko kam dena hai.</span>
+                            Discount, maal wapsi ya zyada likha gaya ho to yeh chunein.</li>
+                        <li><b>Date:</b> jis din ka yeh hisaab hai.</li>
+                        <li><b>Note:</b> likhein ke kya theek kiya.</li>
+                    </ul>
+                    <div invisible="kind == 'payment'"><b class="text-danger">Zaroori:</b> UP aur DOWN
+                        dhyan se chunein. Ghalat chuna to balance ulta ho jayega.</div>
+                    <div invisible="kind != 'payment'"><b class="text-danger">Zaroori:</b> payment
+                        hamesha udhaar kam karti hai. Yahan sirf raqam, date ya note theek karein.</div>
+                </div>
                 <footer>
                     <button name="action_confirm" type="object" string="Save Changes" class="btn-primary"/>
                     <button string="Close" class="btn-secondary" special="cancel"/>
@@ -764,8 +805,25 @@
                         <field name="memo" placeholder="e.g. cheque no. 5512"/>
                     </group>
                 </group>
+                <!-- What each field means, in Roman Urdu, for the shop staff. -->
+                <div class="alert alert-light border small mb-2" role="status">
+                    <b>Har khanay ka matlab (asaan Urdu):</b>
+                    <ul class="mb-1 ps-3">
+                        <li><b>Shop Currently Owes:</b> abhi dukaan ne is vendor ko itne paisay dene
+                            hain. Agar minus (-) ho to hum zyada de chuke hain.</li>
+                        <li><b>Amount Paid:</b> abhi vendor ko kitne paisay diye. Yeh raqam udhaar
+                            mein se kam ho jayegi.</li>
+                        <li><b>Paid From:</b> paisay kahan se diye: galla (cash) ya bank / online.</li>
+                        <li><b>Date:</b> jis din paisay diye.</li>
+                        <li><b>Note:</b> cheque number ya koi yaad-dasht. Zaroori nahi.</li>
+                    </ul>
+                    Misaal: dena 40,000 tha, 10,000 diye, to baqi 30,000 reh gaye.
+                    <div><b class="text-danger">Zaroori:</b> yeh sirf tab use karein jab vendor ko
+                        paisay DIYE hon. Discount mila ho ya ghalti theek karni ho to
+                        "Vendor Khata Adjustment" use karein.</div>
+                </div>
                 <div class="alert alert-info mb-2" role="alert"
-                     invisible="amount &lt;= amount_owed">
+                     invisible="amount &lt;= 0 or amount &lt;= amount_owed">
                     That is more than the shop owes this vendor. The extra is kept as an
                     advance against their next bill.
                 </div>

@@ -162,34 +162,50 @@ export class PosRetailLedgerSummary extends Component {
 // Which cards each ledger shows. Kept separate on purpose: the vendor ledger
 // counts purchases and payments MADE, the customer ledger sales and payments
 // RECEIVED, and one shared set of labels would read wrong on one of them.
+// `note` is a line of Roman Urdu shown under each figure, for the shop staff --
+// above all what a minus balance means, which was being read as a debt.
 const CARDS = {
     "pos.retail.customer.ledger.line": [
-        { key: "sale_amount", label: "Total Sales", tone: "primary" },
-        { key: "payment_received", label: "Total Payments Received", tone: "success" },
-        { key: "refund_amount", label: "Total Refunds", tone: "warning" },
+        { key: "sale_amount", label: "Total Sales", tone: "primary",
+          note: "Customers ko itne ka maal becha. Purana khata is mein nahi aata." },
+        { key: "payment_received", label: "Total Payments Received", tone: "success",
+          note: "Customers se itne paisay mile." },
+        { key: "refund_amount", label: "Total Refunds", tone: "warning",
+          note: "Customers ne itne ka maal wapas kiya." },
         { key: "balance", label: "Total Outstanding", tone: "danger",
-          hint: "What customers owed at their last transaction shown." },
-        { key: "count", label: "Number of Transactions", tone: "secondary", kind: "count" },
+          hint: "What customers owed at their last transaction shown.",
+          note: "Customers ne dukaan ko itna dena hai. Minus (-) ho to customer zyada de chuka hai." },
+        { key: "count", label: "Number of Transactions", tone: "secondary", kind: "count",
+          note: "Is list mein itni entries hain." },
     ],
     "pos.retail.vendor.ledger.line": [
-        { key: "purchase_amount", label: "Total Purchases", tone: "primary" },
-        { key: "payment_made", label: "Total Payments Made", tone: "success" },
-        { key: "refund_amount", label: "Total Vendor Refunds", tone: "warning" },
+        { key: "purchase_amount", label: "Total Purchases", tone: "primary",
+          note: "Vendors se itne ka maal liya. Purana khata is mein nahi aata." },
+        { key: "payment_made", label: "Total Payments Made", tone: "success",
+          note: "Vendors ko itne paisay diye." },
+        { key: "refund_amount", label: "Total Vendor Refunds", tone: "warning",
+          note: "Vendors ko itne ka maal wapas kiya." },
         { key: "balance", label: "Total Payable", tone: "danger",
-          hint: "What the shop owed suppliers at their last transaction shown." },
-        { key: "count", label: "Number of Transactions", tone: "secondary", kind: "count" },
+          hint: "What the shop owed suppliers at their last transaction shown.",
+          note: "Dukaan ne vendors ko itna dena hai. Minus (-) ho to dukaan zyada de chuki hai." },
+        { key: "count", label: "Number of Transactions", tone: "secondary", kind: "count",
+          note: "Is list mein itni entries hain." },
     ],
     // One row per partner already, so there is no "as of last transaction"
     // subtlety here -- just a plain sum and count over whatever is filtered.
     "pos.retail.outstanding.customer": [
         { key: "total_outstanding", label: "Total Outstanding", tone: "danger",
-          hint: "What every customer shown owes the shop right now." },
-        { key: "count", label: "Number of Customers", tone: "secondary", kind: "count" },
+          hint: "What every customer shown owes the shop right now.",
+          note: "Customers ne dukaan ko itna dena hai. Minus (-) ho to customer zyada de chuka hai." },
+        { key: "count", label: "Number of Customers", tone: "secondary", kind: "count",
+          note: "Is list mein itne customers hain." },
     ],
     "pos.retail.outstanding.vendor": [
         { key: "total_outstanding", label: "Total Payable", tone: "danger",
-          hint: "What the shop owes every supplier shown right now." },
-        { key: "count", label: "Number of Vendors", tone: "secondary", kind: "count" },
+          hint: "What the shop owes every supplier shown right now.",
+          note: "Dukaan ne vendors ko itna dena hai. Minus (-) ho to dukaan zyada de chuki hai." },
+        { key: "count", label: "Number of Vendors", tone: "secondary", kind: "count",
+          note: "Is list mein itne vendors hain." },
     ],
 };
 
