@@ -30,7 +30,7 @@
                     </span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <t t-if="isCustomerLedger">
+                    <t t-if="isCustomerLedger and state.totals.can_create">
                         <button type="button" class="btn btn-sm btn-outline-primary fw-bold shadow-sm d-flex align-items-center gap-1"
                                 t-on-click="() => this.onClickAddContact('customer')"
                                 title="Add a new customer, with the balance they already owe">
@@ -50,7 +50,7 @@
                             <span>Receive Payment</span>
                         </button>
                     </t>
-                    <t t-elif="isVendorLedger">
+                    <t t-elif="isVendorLedger and state.totals.can_create">
                         <button type="button" class="btn btn-sm btn-outline-primary fw-bold shadow-sm d-flex align-items-center gap-1"
                                 t-on-click="() => this.onClickAddContact('vendor')"
                                 title="Add a new vendor, with the balance the shop already owes them">

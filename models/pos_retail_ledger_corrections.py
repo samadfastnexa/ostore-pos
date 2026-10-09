@@ -28,7 +28,7 @@ coming in when it had gone out.
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
-from .pos_retail_ledger_sides import SIDES, check_may_enter as _check_may_correct
+from .pos_retail_ledger_sides import SIDES, check_may_enter as _check_may_correct, may_enter
 from .res_company import TRADING_COMPANY_DOMAIN
 
 RELOAD = {'type': 'ir.actions.client', 'tag': 'soft_reload'}
@@ -36,7 +36,8 @@ RELOAD = {'type': 'ir.actions.client', 'tag': 'soft_reload'}
 
 def _entry(line, side):
     """(journal entry, payment or empty, 'payment' | 'adjustment') behind a ledger row."""
-    line.ensure_one()
+    if len(line) != 1:
+        raise UserError(_("Choose one ledger row."))
     env = line.env
     move = line.move_id.sudo()
     if not move:
@@ -58,6 +59,18 @@ def _check_plain_currency(move):
     """These corrections rewrite amounts in the company currency only."""
     if any(l.currency_id and l.currency_id != move.company_currency_id for l in move.line_ids):
         raise UserError(_("%(entry)s is in a foreign currency; correct it in Accounting.", entry=move.name))
+
+
+def _renumber_if_period_changed(move):
+    """Let an entry whose date left its number's month (or year) take a new number.
+
+    MISC/2026/09/0003 says September, and Odoo refuses to post it dated August
+    ("isn't aligned with the existing sequence number"). Cleared while still in
+    draft, the entry gets the next number of its new period on posting; the old
+    number stays unused.
+    """
+    if move and move.name and move.name != '/' and not move._sequence_matches_date():
+        move.name = False
 
 
 def _side_lines(move, partner, side):
@@ -101,7 +114,7 @@ def _refresh_customer_rank(env, partner):
 
 def _cancel_entry(line, side):
     env = line.env
-    _check_may_correct(env, side)
+    _check_may_correct(env, side, 'delete')
     move, payment, _kind = _entry(line, side)
     partner, company = line.partner_id.sudo(), move.company_id
     # Cancelled, not deleted: the entry stays in the books marked cancelled and
@@ -120,8 +133,8 @@ def _move_entry(line, side):
     """Put an entry made on the wrong side onto the other ledger."""
     env = line.env
     other = SIDES[side]['other']
-    _check_may_correct(env, side)
-    _check_may_correct(env, other)
+    _check_may_correct(env, side, 'delete')   # it leaves this ledger ...
+    _check_may_correct(env, other, 'create')  # ... and becomes an entry on the other
     move, payment, _kind = _entry(line, side)
     partner, company = line.partner_id.sudo(), move.company_id
     target_account = partner.with_company(company)[SIDES[other]['property']]
@@ -159,7 +172,7 @@ def _move_entry(line, side):
 
 
 def _open_edit(line, side):
-    _check_may_correct(line.env, side)
+    _check_may_correct(line.env, side, 'edit')
     move, _payment, _kind = _entry(line, side)
     return {
         'type': 'ir.actions.act_window',
@@ -253,7 +266,7 @@ class PosRetailLedgerEntryEdit(models.TransientModel):
 
     def action_confirm(self):
         self.ensure_one()
-        _check_may_correct(self.env, self.side)
+        _check_may_correct(self.env, self.side, 'edit')
         if self.amount <= 0:
             raise UserError(_("The amount must be more than zero. To remove the entry, use Cancel Entry."))
         move = self.move_id.sudo()
@@ -262,6 +275,7 @@ class PosRetailLedgerEntryEdit(models.TransientModel):
         if payment:
             payment.action_draft()
             payment.write({'amount': self.amount, 'date': self.date, 'memo': self.reason or payment.memo})
+            _renumber_if_period_changed(payment.move_id)
             payment.action_post()
         else:
             own = _side_lines(move, partner, self.side)
@@ -284,6 +298,7 @@ class PosRetailLedgerEntryEdit(models.TransientModel):
                     'amount_currency': self.amount * (own_sign if l == own else -own_sign),
                 }) for l in move.line_ids],
             })
+            _renumber_if_period_changed(move)
             move.action_post()
         _reconcile_open(self.env, partner, self.side, company)
         return RELOAD
@@ -326,7 +341,7 @@ class PosRetailLedgerContactAdd(models.TransientModel):
 
     def action_confirm(self):
         self.ensure_one()
-        _check_may_correct(self.env, self.side)
+        _check_may_correct(self.env, self.side, 'create')
         name = (self.name or '').strip()
         if not name:
             raise UserError(_("Enter a name."))
@@ -354,3 +369,46 @@ class PosRetailLedgerContactAdd(models.TransientModel):
                       else Partner.pos_retail_adjust_customer_khata)
             method(partner.id, self.opening_balance, 'increase', reason, False, False, self.opening_date)
         return RELOAD
+
+
+# The bar above each ledger (static/src/backend/ledger_summary.*) asks the
+# server what the reader may do, and shows only those buttons: Add, Pay and
+# Adjust all add entries, so they follow the Create checkbox.
+class PosRetailCustomerLedgerLineRights(models.Model):
+    _inherit = 'pos.retail.customer.ledger.line'
+
+    @api.model
+    def pos_retail_ledger_summary(self, domain):
+        totals = super().pos_retail_ledger_summary(domain)
+        totals['can_create'] = may_enter(self.env, 'customer', 'create')
+        return totals
+
+
+class PosRetailVendorLedgerLineRights(models.Model):
+    _inherit = 'pos.retail.vendor.ledger.line'
+
+    @api.model
+    def pos_retail_ledger_summary(self, domain):
+        totals = super().pos_retail_ledger_summary(domain)
+        totals['can_create'] = may_enter(self.env, 'vendor', 'create')
+        return totals
+
+
+class PosRetailOutstandingCustomerRights(models.Model):
+    _inherit = 'pos.retail.outstanding.customer'
+
+    @api.model
+    def pos_retail_ledger_summary(self, domain):
+        totals = super().pos_retail_ledger_summary(domain)
+        totals['can_create'] = may_enter(self.env, 'customer', 'create')
+        return totals
+
+
+class PosRetailOutstandingVendorRights(models.Model):
+    _inherit = 'pos.retail.outstanding.vendor'
+
+    @api.model
+    def pos_retail_ledger_summary(self, domain):
+        totals = super().pos_retail_ledger_summary(domain)
+        totals['can_create'] = may_enter(self.env, 'vendor', 'create')
+        return totals

@@ -66,8 +66,10 @@
             <list string="Customer Ledger" js_class="pos_retail_ledger_list"
                   create="false" delete="false">
                 <header>
-                    <button name="action_adjust_balance" type="object" string="Adjust Khata / Edit Balance" class="btn-primary" icon="fa-sliders"/>
-                    <button name="action_receive_payment" type="object" string="Receive Payment" class="btn-success" icon="fa-money"/>
+                    <button name="action_adjust_balance" type="object" string="Adjust Khata / Edit Balance" class="btn-primary" icon="fa-sliders"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_create_res_groups,pos_retail.perm_khata_adjust_res_groups"/>
+                    <button name="action_receive_payment" type="object" string="Receive Payment" class="btn-success" icon="fa-money"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_create_res_groups,pos_retail.perm_khata_adjust_res_groups"/>
                 </header>
                 <field name="currency_id" column_invisible="True"/>
                 <field name="datetime" optional="show"/>
@@ -114,18 +116,22 @@
                 <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil"
                         class="btn-link pos-retail-row-btn pos-retail-row-btn--edit"
                         title="Change the amount, direction, date or note of this entry"
-                        invisible="transaction_type not in ('adjustment', 'payment')"/>
+                        invisible="transaction_type not in ('adjustment', 'payment')"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_edit_res_groups"/>
                 <button name="action_receive_payment" type="object" string="Pay" icon="fa-money"
                         class="btn-link pos-retail-row-btn pos-retail-row-btn--pay"
-                        title="Receive a khata payment from this customer"/>
+                        title="Receive a khata payment from this customer"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_create_res_groups,pos_retail.perm_khata_adjust_res_groups"/>
                 <button name="action_reverse_entry" type="object" string="Cancel" icon="fa-times"
                         class="btn-link pos-retail-row-btn pos-retail-row-btn--cancel"
                         title="Cancel this entry: a mistake, entered twice, wrong contact"
-                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
+                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_delete_res_groups"/>
                 <button name="action_move_to_other_ledger" type="object" string="To Vendor" icon="fa-exchange"
                         class="btn-link pos-retail-row-btn pos-retail-row-btn--move"
                         title="Entered on the wrong side: move this entry to the Vendor Ledger"
-                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the VENDOR ledger? Use this when a vendor's balance, or money paid to a vendor, was entered as a customer entry."/>
+                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the VENDOR ledger? Use this when a vendor's balance, or money paid to a vendor, was entered as a customer entry."
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_delete_res_groups"/>
             </list>
         </field>
     </record>
@@ -139,13 +145,18 @@
                 <header>
                     <button name="action_open_move" type="object" string="View Journal Entry / Invoice" class="btn-primary" icon="fa-file-text-o"/>
                     <button name="action_edit_entry" type="object" string="Edit Entry" class="btn-outline-primary" icon="fa-pencil"
-                            invisible="transaction_type not in ('adjustment', 'payment')"/>
-                    <button name="action_adjust_balance" type="object" string="Khata Adjustment" class="btn-secondary" icon="fa-sliders"/>
-                    <button name="action_receive_payment" type="object" string="Receive Payment" class="btn-success" icon="fa-money"/>
+                            invisible="transaction_type not in ('adjustment', 'payment')"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_edit_res_groups"/>
+                    <button name="action_adjust_balance" type="object" string="Khata Adjustment" class="btn-secondary" icon="fa-sliders"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_create_res_groups,pos_retail.perm_khata_adjust_res_groups"/>
+                    <button name="action_receive_payment" type="object" string="Receive Payment" class="btn-success" icon="fa-money"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_create_res_groups,pos_retail.perm_khata_adjust_res_groups"/>
                     <button name="action_reverse_entry" type="object" string="Cancel Entry" class="btn-outline-danger" icon="fa-undo"
-                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
+                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_delete_res_groups"/>
                     <button name="action_move_to_other_ledger" type="object" string="Move to Vendor Ledger" class="btn-outline-warning" icon="fa-exchange"
-                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the VENDOR ledger? Use this when a vendor's balance, or money paid to a vendor, was entered as a customer entry."/>
+                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the VENDOR ledger? Use this when a vendor's balance, or money paid to a vendor, was entered as a customer entry."
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_customer_ledger_delete_res_groups"/>
                     <field name="payment_status" widget="statusbar" statusbar_visible="unpaid,partial,paid" invisible="not total_amount"/>
                 </header>
                 <sheet>
@@ -263,8 +274,10 @@
             <list string="Vendor Ledger" js_class="pos_retail_ledger_list"
                   create="false" delete="false">
                 <header>
-                    <button name="action_adjust_balance" type="object" string="Adjust Vendor Khata" class="btn-warning text-dark" icon="fa-sliders"/>
-                    <button name="action_pay_vendor" type="object" string="Pay Vendor" class="btn-success" icon="fa-truck"/>
+                    <button name="action_adjust_balance" type="object" string="Adjust Vendor Khata" class="btn-warning text-dark" icon="fa-sliders"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_create_res_groups,purchase.group_purchase_manager"/>
+                    <button name="action_pay_vendor" type="object" string="Pay Vendor" class="btn-success" icon="fa-truck"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_create_res_groups,purchase.group_purchase_manager"/>
                 </header>
                 <field name="currency_id" column_invisible="True"/>
                 <field name="datetime" optional="show"/>
@@ -306,18 +319,22 @@
                 <button name="action_edit_entry" type="object" string="Edit" icon="fa-pencil"
                         class="btn-link pos-retail-row-btn pos-retail-row-btn--edit"
                         title="Change the amount, direction, date or note of this entry"
-                        invisible="transaction_type not in ('adjustment', 'payment')"/>
+                        invisible="transaction_type not in ('adjustment', 'payment')"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_edit_res_groups,purchase.group_purchase_manager"/>
                 <button name="action_pay_vendor" type="object" string="Pay" icon="fa-truck"
                         class="btn-link pos-retail-row-btn pos-retail-row-btn--pay"
-                        title="Pay this vendor"/>
+                        title="Pay this vendor"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_create_res_groups,purchase.group_purchase_manager"/>
                 <button name="action_reverse_entry" type="object" string="Cancel" icon="fa-times"
                         class="btn-link pos-retail-row-btn pos-retail-row-btn--cancel"
                         title="Cancel this entry: a mistake, entered twice, wrong contact"
-                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
+                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_delete_res_groups,purchase.group_purchase_manager"/>
                 <button name="action_move_to_other_ledger" type="object" string="To Customer" icon="fa-exchange"
                         class="btn-link pos-retail-row-btn pos-retail-row-btn--move"
                         title="Entered on the wrong side: move this entry to the Customer Ledger"
-                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the CUSTOMER ledger? Use this when a customer's balance, or money received from a customer, was entered as a vendor entry."/>
+                        invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the CUSTOMER ledger? Use this when a customer's balance, or money received from a customer, was entered as a vendor entry."
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_delete_res_groups,purchase.group_purchase_manager"/>
             </list>
         </field>
     </record>
@@ -331,13 +348,18 @@
                 <header>
                     <button name="action_open_move" type="object" string="View Journal Entry / Bill" class="btn-primary" icon="fa-file-text-o"/>
                     <button name="action_edit_entry" type="object" string="Edit Entry" class="btn-outline-primary" icon="fa-pencil"
-                            invisible="transaction_type not in ('adjustment', 'payment')"/>
-                    <button name="action_adjust_balance" type="object" string="Vendor Khata Adjustment" class="btn-warning" icon="fa-sliders"/>
-                    <button name="action_pay_vendor" type="object" string="Pay Vendor" class="btn-success" icon="fa-truck"/>
+                            invisible="transaction_type not in ('adjustment', 'payment')"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_edit_res_groups,purchase.group_purchase_manager"/>
+                    <button name="action_adjust_balance" type="object" string="Vendor Khata Adjustment" class="btn-warning" icon="fa-sliders"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_create_res_groups,purchase.group_purchase_manager"/>
+                    <button name="action_pay_vendor" type="object" string="Pay Vendor" class="btn-success" icon="fa-truck"
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_create_res_groups,purchase.group_purchase_manager"/>
                     <button name="action_reverse_entry" type="object" string="Cancel Entry" class="btn-outline-danger" icon="fa-undo"
-                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."/>
+                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Cancel this entry? It is taken out of the ledger and the balance goes back to what it was without it."
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_delete_res_groups,purchase.group_purchase_manager"/>
                     <button name="action_move_to_other_ledger" type="object" string="Move to Customer Ledger" class="btn-outline-warning" icon="fa-exchange"
-                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the CUSTOMER ledger? Use this when a customer's balance, or money received from a customer, was entered as a vendor entry."/>
+                            invisible="transaction_type not in ('adjustment', 'payment')" confirm="Move this entry to the CUSTOMER ledger? Use this when a customer's balance, or money received from a customer, was entered as a vendor entry."
+                        groups="base.group_system,account.group_account_invoice,point_of_sale.group_pos_manager,pos_retail.perm_vendor_ledger_delete_res_groups,purchase.group_purchase_manager"/>
                     <field name="payment_status" widget="statusbar" statusbar_visible="unpaid,partial,paid" invisible="not total_amount"/>
                 </header>
                 <sheet>
@@ -621,6 +643,7 @@
             ref('pos_retail.perm_config_lists_create_res_groups'),
             ref('pos_retail.perm_config_lists_edit_res_groups'),
             ref('pos_retail.perm_config_lists_delete_res_groups'),
+            ref('pos_retail.perm_config_lists_view_res_groups'),
             ref('pos_retail.perm_products_view_res_groups'),
             ref('pos_retail.perm_products_create_res_groups'),
             ref('pos_retail.perm_products_edit_res_groups'),

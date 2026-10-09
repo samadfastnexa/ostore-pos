@@ -154,4 +154,110 @@
         <field name="description">Refund a previous sale from the till. Money leaves the drawer, so a shop that wants refunds limited to senior staff should put this permission on their role and take the till capability off "Use Point of Sale (Till)". Until that is done every cashier can refund, which is how the shop worked before this permission existed.</field>
     </record>
 
+
+    <!-- Promotions had View and Manage only; Configuration Lists had Create,
+         Edit and Delete but no View. These complete the four boxes for both,
+         the same split every other area has. "Manage" stays as the one box
+         that grants all of it. -->
+
+    <record id="perm_promotions_create" model="pos.retail.access.permission">
+        <field name="name">Create Promotions &amp; Discounts</field>
+        <field name="category">pos</field>
+        <field name="sequence">42</field>
+        <field name="description">Add a new promotion. Does not allow changing or removing existing ones.</field>
+    </record>
+    <record id="access_perm_promotions_create_pos_retail_brand_campaign" model="ir.model.access">
+        <field name="name">Permission Create Promotions and Discounts: pos.retail.brand.campaign</field>
+        <field name="model_id" ref="model_pos_retail_brand_campaign"/>
+        <field name="group_id" ref="perm_promotions_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_promotions_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Promotions &amp; Discounts</field>
+        <field name="category">pos</field>
+        <field name="sequence">43</field>
+        <field name="description">Change an existing promotion: its dates, its discount, the products it covers. Does not allow adding or removing promotions.</field>
+    </record>
+    <record id="access_perm_promotions_edit_pos_retail_brand_campaign" model="ir.model.access">
+        <field name="name">Permission Edit Promotions and Discounts: pos.retail.brand.campaign</field>
+        <field name="model_id" ref="model_pos_retail_brand_campaign"/>
+        <field name="group_id" ref="perm_promotions_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_promotions_delete" model="pos.retail.access.permission">
+        <field name="name">Delete Promotions &amp; Discounts</field>
+        <field name="category">pos</field>
+        <field name="sequence">44</field>
+        <field name="description">Remove a promotion. Does not allow adding or changing promotions.</field>
+    </record>
+    <record id="access_perm_promotions_delete_pos_retail_brand_campaign" model="ir.model.access">
+        <field name="name">Permission Delete Promotions and Discounts: pos.retail.brand.campaign</field>
+        <field name="model_id" ref="model_pos_retail_brand_campaign"/>
+        <field name="group_id" ref="perm_promotions_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <record id="perm_config_lists_view" model="pos.retail.access.permission">
+        <field name="name">View Configuration Lists (Read-Only)</field>
+        <field name="category">configuration</field>
+        <field name="sequence">5</field>
+        <field name="description">See the POS configuration lists (membership levels, discount roles and reasons, return reasons, price reasons and the rest) without being able to add, change or remove anything.</field>
+    </record>
+    <record id="access_perm_config_lists_view_pos_membership_level" model="ir.model.access">
+        <field name="name">Permission View Configuration Lists: pos.membership.level</field>
+        <field name="model_id" ref="model_pos_membership_level"/>
+        <field name="group_id" ref="perm_config_lists_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_view_pos_retail_discount_role" model="ir.model.access">
+        <field name="name">Permission View Configuration Lists: pos.retail.discount.role</field>
+        <field name="model_id" ref="model_pos_retail_discount_role"/>
+        <field name="group_id" ref="perm_config_lists_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_view_pos_retail_discount_reason" model="ir.model.access">
+        <field name="name">Permission View Configuration Lists: pos.retail.discount.reason</field>
+        <field name="model_id" ref="model_pos_retail_discount_reason"/>
+        <field name="group_id" ref="perm_config_lists_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_view_pos_retail_return_reason" model="ir.model.access">
+        <field name="name">Permission View Configuration Lists: pos.retail.return.reason</field>
+        <field name="model_id" ref="model_pos_retail_return_reason"/>
+        <field name="group_id" ref="perm_config_lists_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_config_lists_view_pos_retail_price_reason" model="ir.model.access">
+        <field name="name">Permission View Configuration Lists: pos.retail.price.reason</field>
+        <field name="model_id" ref="model_pos_retail_price_reason"/>
+        <field name="group_id" ref="perm_config_lists_view_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
 </odoo>

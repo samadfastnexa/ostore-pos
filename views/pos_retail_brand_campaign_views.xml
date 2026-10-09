@@ -146,10 +146,12 @@
         </field>
     </record>
 
-    <!-- Point of Sale > Configuration > Promotions &amp; Discounts -->
+    <!-- Point of Sale > Configuration > Promotions &amp; Discounts. Open to the
+         promotions permissions themselves: it used to list only the
+         configuration-list ones, so "Manage Promotions" alone could not reach it. -->
     <menuitem id="pos_retail_menu_brand_campaign" name="Promotions &amp; Discounts"
         parent="point_of_sale.menu_point_config_product" action="pos_retail_brand_campaign_action"
         sequence="65"
-        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups,perm_config_lists_view_res_groups,perm_promotions_view_res_groups,perm_promotions_manage_res_groups,perm_promotions_create_res_groups,perm_promotions_edit_res_groups,perm_promotions_delete_res_groups"/>
 
 </odoo>

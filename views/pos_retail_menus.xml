@@ -158,7 +158,7 @@
         parent="point_of_sale.menu_point_config_product"
         action="pos_membership_level_action"
         sequence="60"
-        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups,perm_config_lists_view_res_groups"/>
 
     <!-- Configuration > Discount Roles -->
     <menuitem id="menu_pos_retail_discount_role"
@@ -166,7 +166,7 @@
         parent="point_of_sale.menu_point_config_product"
         action="pos_retail_discount_role_action"
         sequence="70"
-        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups,perm_config_lists_view_res_groups"/>
 
     <!-- Configuration > Discount Reasons -->
     <menuitem id="menu_pos_retail_discount_reason"
@@ -174,7 +174,7 @@
         parent="point_of_sale.menu_point_config_product"
         action="pos_retail_discount_reason_action"
         sequence="80"
-        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups,perm_config_lists_view_res_groups"/>
 
     <!-- Configuration > Return Reasons -->
     <menuitem id="menu_pos_retail_return_reason"
@@ -182,7 +182,7 @@
         parent="point_of_sale.menu_point_config_product"
         action="pos_retail_return_reason_action"
         sequence="85"
-        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups,perm_config_lists_view_res_groups"/>
 
     <!-- Configuration > Price Reasons -->
     <menuitem id="menu_pos_retail_price_reason"
@@ -190,7 +190,7 @@
         parent="point_of_sale.menu_point_config_product"
         action="pos_retail_price_reason_action"
         sequence="86"
-        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups"/>
+        groups="point_of_sale.group_pos_manager,perm_config_lists_res_groups,perm_config_lists_create_res_groups,perm_config_lists_edit_res_groups,perm_config_lists_delete_res_groups,perm_config_lists_view_res_groups"/>
 
     <!-- Reporting > Customer Ledger. Gated on POS Manager, the persona this
          was built for: point_of_sale's own ACL already grants POS users READ
@@ -559,6 +559,12 @@ else:
             (4, ref('perm_config_lists_create_res_groups')),
             (4, ref('perm_config_lists_edit_res_groups')),
             (4, ref('perm_config_lists_delete_res_groups')),
+            (4, ref('perm_config_lists_view_res_groups')),
+            (4, ref('perm_promotions_view_res_groups')),
+            (4, ref('perm_promotions_manage_res_groups')),
+            (4, ref('perm_promotions_create_res_groups')),
+            (4, ref('perm_promotions_edit_res_groups')),
+            (4, ref('perm_promotions_delete_res_groups')),
             (4, ref('perm_sales_view_res_groups')),
             (4, ref('perm_sales_create_res_groups')),
             (4, ref('perm_sales_edit_res_groups')),
@@ -571,6 +577,12 @@ else:
             (4, ref('perm_config_lists_create_res_groups')),
             (4, ref('perm_config_lists_edit_res_groups')),
             (4, ref('perm_config_lists_delete_res_groups')),
+            (4, ref('perm_config_lists_view_res_groups')),
+            (4, ref('perm_promotions_view_res_groups')),
+            (4, ref('perm_promotions_manage_res_groups')),
+            (4, ref('perm_promotions_create_res_groups')),
+            (4, ref('perm_promotions_edit_res_groups')),
+            (4, ref('perm_promotions_delete_res_groups')),
         ]"/>
     </record>
     <!-- Purchase > Reporting parent is manager-gated in core; open it to

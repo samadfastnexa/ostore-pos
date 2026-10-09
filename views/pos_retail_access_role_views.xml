@@ -93,6 +93,11 @@
                                            widget="pos_retail_checkboxes_select_all"
                                            domain="[('category', '=', 'inventory')]"/>
                                 </group>
+                                <group string="Customer &amp; Vendor Ledgers">
+                                    <field name="permission_ids" nolabel="1" colspan="2"
+                                           widget="pos_retail_checkboxes_select_all"
+                                           domain="[('category', '=', 'ledgers')]"/>
+                                </group>
                                 <group string="Invoicing">
                                     <field name="permission_ids" nolabel="1" colspan="2"
                                            widget="pos_retail_checkboxes_select_all"

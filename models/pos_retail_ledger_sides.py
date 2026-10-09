@@ -36,25 +36,102 @@ SIDES = {
     'customer': {
         'account_type': 'asset_receivable', 'property': 'property_account_receivable_id',
         'payment_type': 'inbound', 'partner_type': 'customer', 'other': 'vendor',
-        'groups': ('base.group_system', 'account.group_account_invoice', 'point_of_sale.group_pos_manager',
-                   'pos_retail.perm_khata_adjust_res_groups'),
     },
     'vendor': {
         'account_type': 'liability_payable', 'property': 'property_account_payable_id',
         'payment_type': 'outbound', 'partner_type': 'supplier', 'other': 'customer',
-        'groups': ('base.group_system', 'account.group_account_invoice', 'point_of_sale.group_pos_manager',
-                   'purchase.group_purchase_manager'),
     },
 }
 
 
-def check_may_enter(env, side):
+# Who holds a ledger right whatever the catalogue says: the accounts core and
+# this addon already trust with the books and the till (see
+# TILL_SUPERUSER_GROUPS on the permission model). Everybody else needs the
+# checkbox ticked on their role -- Roles & Permissions > Customer & Vendor
+# Ledgers.
+ALWAYS_ALLOWED = ('base.group_system', 'account.group_account_invoice', 'point_of_sale.group_pos_manager')
+LEDGER_ACTIONS = {
+    'create': "add entries to",
+    'edit': "edit entries in",
+    'delete': "cancel or move entries in",
+}
+
+
+def ledger_groups(side, action):
+    """xmlids of every group that may `action` on `side`'s ledger."""
+    groups = ALWAYS_ALLOWED + (f'pos_retail.perm_{side}_ledger_{action}_res_groups',)
+    if side == 'vendor':
+        groups += ('purchase.group_purchase_manager',)
+    elif action == 'create':
+        # "Adjust Customer Khata" predates the ledger checkboxes and granted
+        # exactly this; nobody who had it loses it.
+        groups += ('pos_retail.perm_khata_adjust_res_groups',)
+    return groups
+
+
+def may_enter(env, side, action='create'):
+    if env.su:
+        return True
+    held = env.user.sudo().all_group_ids
+    return any((group := env.ref(xmlid, raise_if_not_found=False)) and group in held
+               for xmlid in ledger_groups(side, action))
+
+
+def check_may_enter(env, side, action='create'):
     """Who may write to a khata. The entries are posted with sudo -- a shop
     manager has no rights on journal entries, and should not need them to
     correct a balance -- so the permission is checked here instead."""
-    if env.su or any(env.user.has_group(group) for group in SIDES[side]['groups']):
+    if may_enter(env, side, action):
         return
-    raise UserError(_("You are not allowed to change khata entries. Ask a manager."))
+    raise UserError(_(
+        "You are not allowed to %(action)s the %(side)s ledger.\n\n"
+        "Ask the owner to tick it on your role: Configuration > Roles & Permissions > "
+        "Customer & Vendor Ledgers.",
+        action=LEDGER_ACTIONS[action], side=_("vendor") if side == 'vendor' else _("customer")))
+
+
+class PosRetailAccessPermission(models.Model):
+    _inherit = 'pos.retail.access.permission'
+
+    category = fields.Selection(
+        selection_add=[('ledgers', "Customer & Vendor Ledgers")],
+        ondelete={'ledgers': 'set default'})
+
+    @api.model
+    def _pos_retail_file_ledger_permissions(self):
+        """Gather the khata permissions under one heading, and give the Admin
+        role the new ones once.
+
+        The data files are noupdate, so the three permissions that existed
+        before -- the two "View ... Ledger" in Reporting and "Adjust Customer
+        Khata" in Invoicing -- would stay where they were, away from the
+        Create / Edit / Delete boxes added beside them. Moved only while they
+        still sit in their original category, so a shop that re-filed one
+        keeps its choice. The Admin role is the one role meant to hold
+        everything; it is topped up a single time, so a box the owner later
+        unticks stays unticked.
+        """
+        moves = {'perm_customer_ledger_view': ('reporting', 10), 'perm_vendor_ledger_view': ('reporting', 50),
+                 'perm_khata_adjust': ('accounting', 15)}
+        for xmlid, (was, sequence) in moves.items():
+            permission = self.env.ref(f'pos_retail.{xmlid}', raise_if_not_found=False)
+            if permission and permission.category == was:
+                permission.write({'category': 'ledgers', 'sequence': sequence})
+        Config = self.env['ir.config_parameter'].sudo()
+        if Config.get_param('pos_retail.ledger_crud_permissions_seeded'):
+            return True
+        admin = self.env.ref('pos_retail.access_role_admin', raise_if_not_found=False)
+        new = self.browse()
+        for side in ('customer', 'vendor'):
+            for action in LEDGER_ACTIONS:
+                new |= self.env.ref(f'pos_retail.perm_{side}_ledger_{action}', raise_if_not_found=False) or self.browse()
+        for xmlid in ('perm_promotions_create', 'perm_promotions_edit', 'perm_promotions_delete',
+                      'perm_config_lists_view'):
+            new |= self.env.ref(f'pos_retail.{xmlid}', raise_if_not_found=False) or self.browse()
+        if admin and new:
+            admin.sudo().write({'permission_ids': [(4, permission.id) for permission in new]})
+        Config.set_param('pos_retail.ledger_crud_permissions_seeded', '1')
+        return True
 
 
 class ResPartner(models.Model):
@@ -155,7 +232,7 @@ class PosRetailLedgerAdjustment(models.TransientModel):
 
     def action_confirm(self):
         self.partner_id._pos_retail_check_customer_side()
-        check_may_enter(self.env, 'customer')
+        check_may_enter(self.env, 'customer', 'create')
         # The button is offered to shop managers, who cannot post a journal
         # entry themselves; it used to end in an access error for them.
         return super(PosRetailLedgerAdjustment, self.sudo()).action_confirm()
@@ -177,7 +254,7 @@ class PosRetailVendorLedgerAdjustment(models.TransientModel):
 
     def action_confirm(self):
         self.partner_id._pos_retail_check_vendor_side()
-        check_may_enter(self.env, 'vendor')
+        check_may_enter(self.env, 'vendor', 'create')
         return super(PosRetailVendorLedgerAdjustment, self.sudo()).action_confirm()
 
 
@@ -258,7 +335,7 @@ class PosRetailVendorPayment(models.TransientModel):
         self.ensure_one()
         partner = self.partner_id
         partner._pos_retail_check_vendor_side()
-        check_may_enter(self.env, 'vendor')
+        check_may_enter(self.env, 'vendor', 'create')
         if self.amount <= 0:
             raise UserError(_("Enter how much was paid to the vendor."))
         payable = partner.property_account_payable_id

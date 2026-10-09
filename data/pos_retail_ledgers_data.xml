@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="1">
+<odoo>
+<data noupdate="1">
 
     <!-- Customer Ledger and Vendor Ledger as two permissions that never imply
          each other. Who customers owe and who the shop owes are different
@@ -78,5 +79,257 @@
         <field name="perm_create" eval="False"/>
         <field name="perm_unlink" eval="False"/>
     </record>
+
+
+    <!-- Create / Edit / Delete for each ledger, beside the two View
+         permissions above, so the khata has the same four boxes as every
+         other area. They are what the ledger buttons check (see
+         models/pos_retail_ledger_sides.py): Add, Pay and Adjust follow
+         Create; Edit follows Edit; Cancel and To Vendor / To Customer follow
+         Delete. Filed under their own heading, "Customer & Vendor Ledgers". -->
+
+    <record id="perm_customer_ledger_create" model="pos.retail.access.permission">
+        <field name="name">Add Customer Ledger Entries</field>
+        <field name="category">ledgers</field>
+        <field name="sequence">20</field>
+        <field name="description">The Add buttons on the Customer Ledger: add a new customer with the balance they already owe, post a khata adjustment, and receive a payment. Each one changes what a customer owes and posts a real accounting entry.</field>
+    </record>
+    <record id="access_perm_customer_ledger_create_customer_ledger_line" model="ir.model.access">
+        <field name="name">Permission Add Customer Ledger Entries: pos.retail.customer.ledger.line</field>
+        <field name="model_id" ref="model_pos_retail_customer_ledger_line"/>
+        <field name="group_id" ref="perm_customer_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_customer_ledger_create_outstanding_customer" model="ir.model.access">
+        <field name="name">Permission Add Customer Ledger Entries: pos.retail.outstanding.customer</field>
+        <field name="model_id" ref="model_pos_retail_outstanding_customer"/>
+        <field name="group_id" ref="perm_customer_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_customer_ledger_create_ledger_adjustment" model="ir.model.access">
+        <field name="name">Permission Add Customer Ledger Entries: pos.retail.ledger.adjustment</field>
+        <field name="model_id" ref="model_pos_retail_ledger_adjustment"/>
+        <field name="group_id" ref="perm_customer_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_customer_ledger_create_khata_payment" model="ir.model.access">
+        <field name="name">Permission Add Customer Ledger Entries: pos.retail.khata.payment</field>
+        <field name="model_id" ref="model_pos_retail_khata_payment"/>
+        <field name="group_id" ref="perm_customer_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_customer_ledger_create_ledger_contact_add" model="ir.model.access">
+        <field name="name">Permission Add Customer Ledger Entries: pos.retail.ledger.contact.add</field>
+        <field name="model_id" ref="model_pos_retail_ledger_contact_add"/>
+        <field name="group_id" ref="perm_customer_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_customer_ledger_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Customer Ledger Entries</field>
+        <field name="category">ledgers</field>
+        <field name="sequence">30</field>
+        <field name="description">The Edit button on a Customer Ledger row: change the amount, the direction, the date or the note of a khata adjustment or a payment already entered. Sales and invoices are never edited here.</field>
+    </record>
+    <record id="access_perm_customer_ledger_edit_customer_ledger_line" model="ir.model.access">
+        <field name="name">Permission Edit Customer Ledger Entries: pos.retail.customer.ledger.line</field>
+        <field name="model_id" ref="model_pos_retail_customer_ledger_line"/>
+        <field name="group_id" ref="perm_customer_ledger_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_customer_ledger_edit_outstanding_customer" model="ir.model.access">
+        <field name="name">Permission Edit Customer Ledger Entries: pos.retail.outstanding.customer</field>
+        <field name="model_id" ref="model_pos_retail_outstanding_customer"/>
+        <field name="group_id" ref="perm_customer_ledger_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_customer_ledger_edit_ledger_entry_edit" model="ir.model.access">
+        <field name="name">Permission Edit Customer Ledger Entries: pos.retail.ledger.entry.edit</field>
+        <field name="model_id" ref="model_pos_retail_ledger_entry_edit"/>
+        <field name="group_id" ref="perm_customer_ledger_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_customer_ledger_delete" model="pos.retail.access.permission">
+        <field name="name">Cancel Customer Ledger Entries</field>
+        <field name="category">ledgers</field>
+        <field name="sequence">40</field>
+        <field name="description">The Cancel and To Vendor buttons on a Customer Ledger row: take a mistaken adjustment or payment out of the ledger, or move one entered on the wrong side to the Vendor Ledger (moving also needs Add Vendor Ledger Entries). The entry stays in the books marked cancelled; nothing is deleted.</field>
+    </record>
+    <record id="access_perm_customer_ledger_delete_customer_ledger_line" model="ir.model.access">
+        <field name="name">Permission Cancel Customer Ledger Entries: pos.retail.customer.ledger.line</field>
+        <field name="model_id" ref="model_pos_retail_customer_ledger_line"/>
+        <field name="group_id" ref="perm_customer_ledger_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_customer_ledger_delete_outstanding_customer" model="ir.model.access">
+        <field name="name">Permission Cancel Customer Ledger Entries: pos.retail.outstanding.customer</field>
+        <field name="model_id" ref="model_pos_retail_outstanding_customer"/>
+        <field name="group_id" ref="perm_customer_ledger_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_vendor_ledger_create" model="pos.retail.access.permission">
+        <field name="name">Add Vendor Ledger Entries</field>
+        <field name="category">ledgers</field>
+        <field name="sequence">60</field>
+        <field name="description">The Add buttons on the Vendor Ledger: add a new vendor with the balance the shop already owes them, post a vendor khata adjustment, and pay a vendor. Each one changes what the shop owes and posts a real accounting entry.</field>
+    </record>
+    <record id="access_perm_vendor_ledger_create_vendor_ledger_line" model="ir.model.access">
+        <field name="name">Permission Add Vendor Ledger Entries: pos.retail.vendor.ledger.line</field>
+        <field name="model_id" ref="model_pos_retail_vendor_ledger_line"/>
+        <field name="group_id" ref="perm_vendor_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_vendor_ledger_create_outstanding_vendor" model="ir.model.access">
+        <field name="name">Permission Add Vendor Ledger Entries: pos.retail.outstanding.vendor</field>
+        <field name="model_id" ref="model_pos_retail_outstanding_vendor"/>
+        <field name="group_id" ref="perm_vendor_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_vendor_ledger_create_vendor_ledger_adjustment" model="ir.model.access">
+        <field name="name">Permission Add Vendor Ledger Entries: pos.retail.vendor.ledger.adjustment</field>
+        <field name="model_id" ref="model_pos_retail_vendor_ledger_adjustment"/>
+        <field name="group_id" ref="perm_vendor_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_vendor_ledger_create_vendor_payment" model="ir.model.access">
+        <field name="name">Permission Add Vendor Ledger Entries: pos.retail.vendor.payment</field>
+        <field name="model_id" ref="model_pos_retail_vendor_payment"/>
+        <field name="group_id" ref="perm_vendor_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_vendor_ledger_create_ledger_contact_add" model="ir.model.access">
+        <field name="name">Permission Add Vendor Ledger Entries: pos.retail.ledger.contact.add</field>
+        <field name="model_id" ref="model_pos_retail_ledger_contact_add"/>
+        <field name="group_id" ref="perm_vendor_ledger_create_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_vendor_ledger_edit" model="pos.retail.access.permission">
+        <field name="name">Edit Vendor Ledger Entries</field>
+        <field name="category">ledgers</field>
+        <field name="sequence">70</field>
+        <field name="description">The Edit button on a Vendor Ledger row: change the amount, the direction, the date or the note of a vendor khata adjustment or a payment already entered. Bills are never edited here.</field>
+    </record>
+    <record id="access_perm_vendor_ledger_edit_vendor_ledger_line" model="ir.model.access">
+        <field name="name">Permission Edit Vendor Ledger Entries: pos.retail.vendor.ledger.line</field>
+        <field name="model_id" ref="model_pos_retail_vendor_ledger_line"/>
+        <field name="group_id" ref="perm_vendor_ledger_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_vendor_ledger_edit_outstanding_vendor" model="ir.model.access">
+        <field name="name">Permission Edit Vendor Ledger Entries: pos.retail.outstanding.vendor</field>
+        <field name="model_id" ref="model_pos_retail_outstanding_vendor"/>
+        <field name="group_id" ref="perm_vendor_ledger_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_vendor_ledger_edit_ledger_entry_edit" model="ir.model.access">
+        <field name="name">Permission Edit Vendor Ledger Entries: pos.retail.ledger.entry.edit</field>
+        <field name="model_id" ref="model_pos_retail_ledger_entry_edit"/>
+        <field name="group_id" ref="perm_vendor_ledger_edit_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="perm_vendor_ledger_delete" model="pos.retail.access.permission">
+        <field name="name">Cancel Vendor Ledger Entries</field>
+        <field name="category">ledgers</field>
+        <field name="sequence">80</field>
+        <field name="description">The Cancel and To Customer buttons on a Vendor Ledger row: take a mistaken adjustment or payment out of the ledger, or move one entered on the wrong side to the Customer Ledger (moving also needs Add Customer Ledger Entries). The entry stays in the books marked cancelled; nothing is deleted.</field>
+    </record>
+    <record id="access_perm_vendor_ledger_delete_vendor_ledger_line" model="ir.model.access">
+        <field name="name">Permission Cancel Vendor Ledger Entries: pos.retail.vendor.ledger.line</field>
+        <field name="model_id" ref="model_pos_retail_vendor_ledger_line"/>
+        <field name="group_id" ref="perm_vendor_ledger_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="access_perm_vendor_ledger_delete_outstanding_vendor" model="ir.model.access">
+        <field name="name">Permission Cancel Vendor Ledger Entries: pos.retail.outstanding.vendor</field>
+        <field name="model_id" ref="model_pos_retail_outstanding_vendor"/>
+        <field name="group_id" ref="perm_vendor_ledger_delete_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- "Adjust Customer Khata" came first and counts as Add on the customer
+         ledger, so it has to open the Add Customer dialog as well; without
+         this row the button showed and the dialog refused. -->
+    <record id="access_perm_khata_adjust_contact_add" model="ir.model.access">
+        <field name="name">Permission Adjust Customer Khata: pos.retail.ledger.contact.add</field>
+        <field name="model_id" ref="model_pos_retail_ledger_contact_add"/>
+        <field name="group_id" ref="perm_khata_adjust_res_groups"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+</data>
+
+    <!-- Outside noupdate, so it runs on every install and upgrade: files the
+         three khata permissions that existed before under the new heading,
+         and ticks the new ones on the Admin role once. -->
+    <data noupdate="0">
+        <function model="pos.retail.access.permission" name="_pos_retail_file_ledger_permissions"/>
+    </data>
 
 </odoo>
