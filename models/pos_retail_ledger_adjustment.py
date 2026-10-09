@@ -254,13 +254,16 @@ class PosRetailVendorLedgerAdjustment(models.TransientModel):
         help="Enter the exact new payable amount you want this vendor to have.",
     )
     direction = fields.Selection(
+        # MORE first and preselected, as on the customer dialog: the usual entry
+        # is a balance brought over from the paper khata, and with LESS
+        # preselected a vendor owed 40,000 was posted as -40,000.
         [
-            ('decrease', "Shop owes LESS (rebate / discount / waiver / correction)"),
             ('increase', "Shop owes MORE (unbilled invoice / old paper debt)"),
+            ('decrease', "Shop owes LESS (rebate / discount / waiver / correction)"),
         ],
-        required=True, default='decrease',
-        help="Choose 'Shop owes LESS' for supplier discounts, waivers, or return credits; "
-             "choose 'Shop owes MORE' to bring in unbilled deliveries or opening balances.",
+        required=True, default='increase',
+        help="Choose 'Shop owes MORE' to bring in unbilled deliveries or opening balances; "
+             "choose 'Shop owes LESS' for supplier discounts, waivers, or return credits.",
     )
     amount = fields.Monetary(
         required=True, default=0.0, currency_field='currency_id',
