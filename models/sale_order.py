@@ -26,8 +26,9 @@ class SaleOrder(models.Model):
         """The till's "valid until" as a date, or False when none was given.
 
         The till sends text. A date it built from a mistyped number of days
-        ("15995-08-25") used to crash the save inside the ORM, so it is read
-        here and refused in words the cashier can act on.
+        ("15995-08-25"), or a year typed with a digit too many in the
+        quotation editor ("20261-10-10"), used to crash the save inside the
+        ORM, so it is read here and refused in words the cashier can act on.
         """
         if not value:
             return False
@@ -35,8 +36,9 @@ class SaleOrder(models.Model):
             return fields.Date.to_date(value)
         except (TypeError, ValueError):
             raise UserError(_(
-                "The quotation's validity date could not be read. Enter the "
-                "validity again as a number of days, for example 7 or 30."))
+                "The validity date %(value)s is not a real date, so the "
+                "quotation was not saved. Correct it and save again.",
+                value=value))
 
     @api.model
     def pos_retail_create_quotation(self, vals):

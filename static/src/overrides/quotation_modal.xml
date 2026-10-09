@@ -247,7 +247,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small text-muted mb-1">Validity Date (Optional)</label>
-                                <input type="date" class="form-control form-control-sm" max="9999-12-31"
+                                <input type="date" class="form-control form-control-sm"
                                        t-model="state.editValidityDate"/>
                             </div>
                             <div class="col-md-2">

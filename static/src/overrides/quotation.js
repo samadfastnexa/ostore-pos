@@ -104,6 +104,15 @@ patch(ControlButtons.prototype, {
         this.props.close?.();
     },
 
+    /** Say why the server refused. A caught error reaches no dialog of its
+     *  own, so without this the button simply appeared to do nothing. */
+    posRetailShowQuotationError(error) {
+        this.notification.add(
+            error?.data?.message || error?.message || _t("The quotation could not be saved."),
+            { type: "danger" }
+        );
+    },
+
     async posRetailSaveQuotation({ draft }) {
         const vals = await this.posRetailBuildQuotationVals();
         if (!vals) {
@@ -114,9 +123,9 @@ patch(ControlButtons.prototype, {
             result = await this.pos.data.call("sale.order", "pos_retail_create_quotation", [
                 { ...vals, draft },
             ]);
-        } catch {
-            // The server raises a readable UserError which POS surfaces as a
-            // dialog; keep the cart intact so the cashier can retry.
+        } catch (error) {
+            // Keep the cart intact so the cashier can retry.
+            this.posRetailShowQuotationError(error);
             return;
         }
         this.notification.add(
@@ -163,7 +172,8 @@ patch(ControlButtons.prototype, {
                 quote.id,
                 vals,
             ]);
-        } catch {
+        } catch (error) {
+            this.posRetailShowQuotationError(error);
             return;
         }
         this.notification.add(
@@ -183,7 +193,8 @@ patch(ControlButtons.prototype, {
             result = await this.pos.data.call("sale.order", "pos_retail_duplicate_quotation", [
                 quote.id,
             ]);
-        } catch {
+        } catch (error) {
+            this.posRetailShowQuotationError(error);
             return;
         }
         // Duplicating copies a whole document server-side (delivery terms,
